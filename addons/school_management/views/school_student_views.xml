@@ -1,4 +1,18 @@
 <odoo>
+    <record id="view_school_student_tree" model="ir.ui.view">
+        <field name="name">school.student.tree</field>
+        <field name="model">school.student</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="regno"/>
+                <field name="name"/>
+                <field name="class_id"/>
+                <field name="guardian_name"/>
+                <field name="registration_status"/>
+            </tree>
+        </field>
+    </record>
+
     <record id="view_school_student_form" model="ir.ui.view">
         <field name="name">school.student.form</field>
         <field name="model">school.student</field>
@@ -44,6 +58,6 @@
     <record id="action_school_student" model="ir.actions.act_window">
         <field name="name">Students</field>
         <field name="res_model">school.student</field>
-        <field name="view_mode">form,tree</field>
+        <field name="view_mode">tree,form</field>
     </record>
 </odoo>
