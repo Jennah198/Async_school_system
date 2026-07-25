@@ -42,5 +42,16 @@
               parent="menu_school_academic"
               action="action_school_student"
               sequence="10"/>
+              
+    <record id="action_school_class" model="ir.actions.act_window">
+        <field name="name">Classes</field>
+        <field name="res_model">school.class</field>
+        <field name="view_mode">tree,form</field>
+    </record>
 
+    <menuitem id="menu_school_class"
+              name="Classes"
+              parent="menu_school_academic"
+              action="action_school_class"
+              sequence="20"/>
 </odoo>
