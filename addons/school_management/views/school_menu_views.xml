@@ -1,17 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!--  Root menu  -->
-    <menuitem
-        id="school_management_root_menu"
-        name="School Management"
-    />
-     
-     <!-- attendance menu  -->
-    <menuitem
-        id="school_attendance_menu"
-        name="Attendance"
-        parent="school_management_root_menu"
-        action="action_school_attendance"
-    />
 
+    <!-- ======================================================= -->
+    <!-- 1. ACTIONS                                              -->
+    <!-- ======================================================= -->
+
+    <!-- Action: Students -->
+    <record id="action_school_student" model="ir.actions.act_window">
+        <field name="name">Students</field>
+        <field name="res_model">school.student</field>
+        <field name="view_mode">tree,form,kanban</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Register your first student!
+            </p>
+        </field>
+    </record>
+
+
+    <!-- ======================================================= -->
+    <!-- 2. MAIN ROOT MENU                                       -->
+    <!-- ======================================================= -->
+
+    <menuitem id="menu_school_root"
+              name="School"
+              web_icon="school_management,static/description/icon.png"
+              sequence="10"/>
+
+
+    <!-- ======================================================= -->
+    <!-- 3. TOP CATEGORIES & SUB-MENUS                           -->
+    <!-- ======================================================= -->
+
+    <menuitem id="menu_school_academic"
+              name="Academic"
+              parent="menu_school_root"
+              sequence="10"/>
+
+    <menuitem id="menu_school_student"
+              name="Students"
+              parent="menu_school_academic"
+              action="action_school_student"
+              sequence="10"/>
+              
+    <record id="action_school_class" model="ir.actions.act_window">
+        <field name="name">Classes</field>
+        <field name="res_model">school.class</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_school_class"
+              name="Classes"
+              parent="menu_school_academic"
+              action="action_school_class"
+              sequence="20"/>
 </odoo>
