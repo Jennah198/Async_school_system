@@ -43,14 +43,14 @@ class SchoolStaff(models.Model):
         ('female', 'Female'),
         ('other', 'Other'),
     ], string='Gender')
-    date_of_birth = fields.Date(string='Date of Birth')
+    date_of_birth = fields.Date(string='Date of Birth', groups='base.group_system')
 
     phone = fields.Char(string='Phone')
     mobile = fields.Char(string='Mobile')
     email = fields.Char(string='Email')
-    address = fields.Text(string='Address')
-    emergency_contact_name = fields.Char(string='Emergency Contact')
-    emergency_contact_phone = fields.Char(string='Emergency Phone')
+    address = fields.Text(string='Address', groups='base.group_system')
+    emergency_contact_name = fields.Char(string='Emergency Contact', groups='base.group_system')
+    emergency_contact_phone = fields.Char(string='Emergency Phone', groups='base.group_system')
 
     department = fields.Selection([
         ('administration', 'Administration'),
@@ -82,7 +82,7 @@ class SchoolStaff(models.Model):
         ('terminated', 'Terminated'),
         ('retired', 'Retired'),
     ], string='Employment Status', default='active')
-    notes = fields.Text(string='Notes')
+    notes = fields.Text(string='Notes', groups='base.group_system')
 
     active = fields.Boolean(string='Active', default=True)
     user_id = fields.Many2one('res.users', string='Linked User')
@@ -90,11 +90,16 @@ class SchoolStaff(models.Model):
     _sql_constraints = [
         ('staff_id_unique', 'unique(staff_id)',
          'Staff ID must be unique.'),
-        ('user_id_unique', 'unique(user_id)',
-         'A user can only be linked to one staff member.'),
         ('end_date_after_hire', 'CHECK(end_date IS NULL OR hire_date IS NULL OR end_date >= hire_date)',
          'End date cannot be before hire date.'),
     ]
+
+    def init(self):
+        self.env.cr.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS school_staff_user_id_active_uniq
+            ON school_staff (user_id)
+            WHERE active AND user_id IS NOT NULL
+        """)
 
     @api.onchange('department')
     def _onchange_department(self):

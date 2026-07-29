@@ -138,4 +138,24 @@
         </field>
     </record>
 
+    <!-- Job Titles -->
+
+    <record id="view_school_job_title_tree" model="ir.ui.view">
+        <field name="name">school.job.title.tree</field>
+        <field name="model">school.job.title</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="name"/>
+                <field name="department"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_school_job_title" model="ir.actions.act_window">
+        <field name="name">Job Titles</field>
+        <field name="res_model">school.job.title</field>
+        <field name="view_mode">tree</field>
+    </record>
+
 </odoo>

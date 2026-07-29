@@ -54,6 +54,13 @@
               action="action_school_staff"
               sequence="10"/>
 
+    <menuitem id="menu_school_job_title"
+              name="Job Titles"
+              parent="menu_school_administration"
+              action="action_school_job_title"
+              groups="base.group_system"
+              sequence="20"/>
+
     <record id="action_school_class" model="ir.actions.act_window">
         <field name="name">Classes</field>
         <field name="res_model">school.class</field>
