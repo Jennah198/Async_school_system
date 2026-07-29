@@ -16,12 +16,14 @@ attendance tracking and mark/result entry referencing the same student record.
 
     'category': 'Education',
     'version': '0.1',
+    'license': 'LGPL-3',
 
     'depends': ['base', 'mail'],
 
     'data': [
         'security/school_security.xml',
         'security/ir.model.access.csv',
+        'security/school_record_rules.xml',
         'data/school_sequence.xml',
         'data/school_staff_sequence.xml',
         'data/school_job_title_seed_data.xml',
@@ -37,6 +39,8 @@ attendance tracking and mark/result entry referencing the same student record.
         'views/school_room_views.xml',
         'views/school_program_views.xml',
         'views/school_class_schedule_views.xml',
+        'views/school_announcement_views.xml',
+        'views/school_dashboard_views.xml',
         'views/school_menu_views.xml',
         'report/school_student_report.xml',
     ],

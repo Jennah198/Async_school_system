@@ -12,3 +12,6 @@ from . import school_teacher_assignment
 from . import school_room
 from . import school_program
 from . import school_class_schedule
+from . import school_announcement
+from . import school_documents
+from . import res_users

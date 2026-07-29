@@ -58,7 +58,7 @@
               name="Job Titles"
               parent="menu_school_administration"
               action="action_school_job_title"
-              groups="base.group_system"
+              groups="school_management.group_school_registrar"
               sequence="20"/>
 
     <record id="action_school_class" model="ir.actions.act_window">
@@ -112,5 +112,105 @@
               name="Rooms"
               parent="menu_school_administration"
               action="action_school_room"
+              groups="school_management.group_school_admin"
               sequence="30"/>
+
+    <menuitem id="menu_school_attendance"
+              name="Attendance"
+              parent="menu_school_academic"
+              action="action_school_attendance"
+              groups="school_management.group_school_teacher"
+              sequence="60"/>
+
+    <menuitem id="menu_school_mark"
+              name="Mark List"
+              parent="menu_school_academic"
+              action="action_school_mark"
+              groups="school_management.group_school_teacher"
+              sequence="70"/>
+
+    <!-- ======================================================= -->
+    <!-- COMMUNICATION                                           -->
+    <!-- ======================================================= -->
+
+    <menuitem id="menu_school_communication"
+              name="Communication"
+              parent="menu_school_root"
+              sequence="18"/>
+
+    <menuitem id="menu_school_announcement_feed"
+              name="My Announcements"
+              parent="menu_school_communication"
+              action="action_school_announcement_feed"
+              groups="school_management.group_school_staff"
+              sequence="10"/>
+
+    <menuitem id="menu_school_announcement"
+              name="All Announcements"
+              parent="menu_school_communication"
+              action="action_school_announcement"
+              groups="school_management.group_school_academic_director"
+              sequence="20"/>
+
+    <!-- ======================================================= -->
+    <!-- MY WORK (teacher self-service)                          -->
+    <!-- ======================================================= -->
+
+    <menuitem id="menu_school_my_work"
+              name="My Work"
+              parent="menu_school_root"
+              groups="school_management.group_school_teacher"
+              sequence="5"/>
+
+    <menuitem id="menu_school_my_timetable"
+              name="My Timetable"
+              parent="menu_school_my_work"
+              action="action_school_my_timetable"
+              sequence="10"/>
+
+    <menuitem id="menu_school_my_attendance_tasks"
+              name="Attendance Entry"
+              parent="menu_school_my_work"
+              action="action_school_my_attendance_tasks"
+              sequence="20"/>
+
+    <menuitem id="menu_school_my_mark_tasks"
+              name="Mark Entry"
+              parent="menu_school_my_work"
+              action="action_school_my_mark_tasks"
+              sequence="30"/>
+
+    <!-- ======================================================= -->
+    <!-- ANALYSIS                                                -->
+    <!-- ======================================================= -->
+
+    <menuitem id="menu_school_analysis"
+              name="Analysis"
+              parent="menu_school_root"
+              groups="school_management.group_school_department_head"
+              sequence="90"/>
+
+    <menuitem id="menu_school_dashboard_results"
+              name="Results Analysis"
+              parent="menu_school_analysis"
+              action="action_school_dashboard_results"
+              sequence="10"/>
+
+    <menuitem id="menu_school_dashboard_attendance"
+              name="Attendance Analysis"
+              parent="menu_school_analysis"
+              action="action_school_dashboard_attendance"
+              sequence="20"/>
+
+    <menuitem id="menu_school_dashboard_workload"
+              name="Teacher Workload"
+              parent="menu_school_analysis"
+              action="action_school_dashboard_workload"
+              sequence="30"/>
+
+    <menuitem id="menu_school_dashboard_schedule_load"
+              name="Schedule Coverage"
+              parent="menu_school_analysis"
+              action="action_school_dashboard_schedule_load"
+              sequence="40"/>
 </odoo>
