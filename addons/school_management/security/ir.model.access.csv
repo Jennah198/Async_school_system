@@ -11,3 +11,9 @@ access_school_subject_admin,access.school.subject.admin,model_school_subject,bas
 access_school_subject_user,access.school.subject.user,model_school_subject,base.group_user,1,0,0,0
 access_school_teacher_assignment_admin,access.school.teacher.assignment.admin,model_school_teacher_assignment,base.group_system,1,1,1,1
 access_school_teacher_assignment_user,access.school.teacher.assignment.user,model_school_teacher_assignment,base.group_user,1,0,0,0
+access_school_room_admin,access.school.room.admin,model_school_room,base.group_system,1,1,1,1
+access_school_room_user,access.school.room.user,model_school_room,base.group_user,1,0,0,0
+access_school_program_admin,access.school.program.admin,model_school_program,base.group_system,1,1,1,1
+access_school_program_user,access.school.program.user,model_school_program,base.group_user,1,0,0,0
+access_school_class_schedule_admin,access.school.class.schedule.admin,model_school_class_schedule,base.group_system,1,1,1,1
+access_school_class_schedule_user,access.school.class.schedule.user,model_school_class_schedule,base.group_user,1,0,0,0

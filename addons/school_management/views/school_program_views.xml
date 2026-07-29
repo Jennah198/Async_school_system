@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_school_program_tree" model="ir.ui.view">
+        <field name="name">school.program.tree</field>
+        <field name="model">school.program</field>
+        <field name="arch" type="xml">
+            <tree decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="program_type"/>
+                <field name="audience_type"/>
+                <field name="start_datetime"/>
+                <field name="end_datetime"/>
+                <field name="location"/>
+                <field name="organizer_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'published'"
+                       decoration-danger="state == 'cancelled'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_school_program_form" model="ir.ui.view">
+        <field name="name">school.program.form</field>
+        <field name="model">school.program</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_publish" string="Publish" type="object"
+                            class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_complete" string="Mark Completed" type="object"
+                            invisible="state != 'published'"/>
+                    <button name="action_cancel" string="Cancel" type="object"
+                            invisible="state in ['cancelled', 'completed']"/>
+                    <button name="action_reset_draft" string="Reset to Draft" type="object"
+                            invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,published,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. Staff Meeting"/></h1>
+                    </div>
+                    <group>
+                        <group string="Schedule">
+                            <field name="program_type"/>
+                            <field name="start_datetime"/>
+                            <field name="end_datetime"/>
+                            <field name="location"/>
+                        </group>
+                        <group string="Ownership">
+                            <field name="organizer_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="Audience">
+                        <field name="audience_type"/>
+                        <field name="department" invisible="audience_type != 'department'"
+                               required="audience_type == 'department'"/>
+                        <field name="responsibility" invisible="audience_type != 'responsibility'"
+                               required="audience_type == 'responsibility'"/>
+                        <field name="teacher_ids" widget="many2many_tags"
+                               invisible="audience_type != 'teacher_group'"
+                               required="audience_type == 'teacher_group'"/>
+                        <field name="subject_ids" widget="many2many_tags"
+                               invisible="audience_type != 'subject_group'"
+                               required="audience_type == 'subject_group'"/>
+                        <field name="class_ids" widget="many2many_tags"
+                               invisible="audience_type != 'class_section'"
+                               required="audience_type == 'class_section'"/>
+                        <field name="staff_ids" widget="many2many_tags"
+                               invisible="audience_type != 'selected_staff'"
+                               required="audience_type == 'selected_staff'"/>
+                    </group>
+                    <notebook>
+                        <page string="Description">
+                            <field name="description"
+                                   placeholder="Purpose, instructions, and required preparation."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_school_program_calendar" model="ir.ui.view">
+        <field name="name">school.program.calendar</field>
+        <field name="model">school.program</field>
+        <field name="arch" type="xml">
+            <calendar date_start="start_datetime" date_stop="end_datetime"
+                      color="program_type" mode="month" quick_create="0">
+                <field name="name"/>
+                <field name="program_type"/>
+                <field name="location"/>
+                <field name="state"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="view_school_program_search" model="ir.ui.view">
+        <field name="name">school.program.search</field>
+        <field name="model">school.program</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="organizer_id"/>
+                <field name="location"/>
+                <filter string="Published" name="published" domain="[('state', '=', 'published')]"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
+                <separator/>
+                <filter string="Upcoming" name="upcoming"
+                        domain="[('start_datetime', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Program Type" name="group_type" context="{'group_by': 'program_type'}"/>
+                    <filter string="Audience" name="group_audience" context="{'group_by': 'audience_type'}"/>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Start Date" name="group_start" context="{'group_by': 'start_datetime:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_school_program" model="ir.actions.act_window">
+        <field name="name">Programs</field>
+        <field name="res_model">school.program</field>
+        <field name="view_mode">tree,calendar,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first school program.
+            </p>
+        </field>
+    </record>
+</odoo>

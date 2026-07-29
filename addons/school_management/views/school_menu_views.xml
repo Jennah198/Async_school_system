@@ -84,4 +84,33 @@
               parent="menu_school_academic"
               action="action_school_subject"
               sequence="40"/>
+
+    <menuitem id="menu_school_scheduling"
+              name="Scheduling"
+              parent="menu_school_root"
+              sequence="15"/>
+
+    <menuitem id="menu_school_class_schedule"
+              name="Class Schedule"
+              parent="menu_school_scheduling"
+              action="action_school_class_schedule"
+              sequence="10"/>
+
+    <menuitem id="menu_school_weekly_timetable"
+              name="Weekly Timetable"
+              parent="menu_school_scheduling"
+              action="action_school_weekly_timetable"
+              sequence="20"/>
+
+    <menuitem id="menu_school_program"
+              name="Programs"
+              parent="menu_school_scheduling"
+              action="action_school_program"
+              sequence="30"/>
+
+    <menuitem id="menu_school_room"
+              name="Rooms"
+              parent="menu_school_administration"
+              action="action_school_room"
+              sequence="30"/>
 </odoo>
