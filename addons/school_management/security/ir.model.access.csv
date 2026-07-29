@@ -5,3 +5,9 @@ access_school_staff_admin,access.school.staff.admin,model_school_staff,base.grou
 access_school_staff_user,access.school.staff.user,model_school_staff,base.group_user,1,0,0,0
 access_school_job_title_admin,access.school.job.title.admin,model_school_job_title,base.group_system,1,1,1,1
 access_school_job_title_user,access.school.job.title.user,model_school_job_title,base.group_user,1,0,0,0
+access_school_teacher_admin,access.school.teacher.admin,model_school_teacher,base.group_system,1,1,1,1
+access_school_teacher_user,access.school.teacher.user,model_school_teacher,base.group_user,1,0,0,0
+access_school_subject_admin,access.school.subject.admin,model_school_subject,base.group_system,1,1,1,1
+access_school_subject_user,access.school.subject.user,model_school_subject,base.group_user,1,0,0,0
+access_school_teacher_assignment_admin,access.school.teacher.assignment.admin,model_school_teacher_assignment,base.group_system,1,1,1,1
+access_school_teacher_assignment_user,access.school.teacher.assignment.user,model_school_teacher_assignment,base.group_user,1,0,0,0
