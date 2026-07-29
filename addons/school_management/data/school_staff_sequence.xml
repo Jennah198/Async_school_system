@@ -4,7 +4,7 @@
         <record id="seq_school_staff" model="ir.sequence">
             <field name="name">Staff ID</field>
             <field name="code">school.staff</field>
-            <field name="prefix">STF</field>
+            <field name="prefix">STF-</field>
             <field name="padding">5</field>
             <field name="number_increment">1</field>
         </record>

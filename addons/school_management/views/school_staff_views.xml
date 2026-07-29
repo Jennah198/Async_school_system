@@ -42,7 +42,7 @@
                         <group>
                             <field name="staff_id" readonly="1"/>
                             <field name="department"/>
-                            <field name="job_title_id" options="{'no_create_edit': False}"/>
+                            <field name="job_title_id" options="{'no_quick_create': True, 'no_create_edit': True}"/>
                         </group>
                         <group>
                             <field name="employment_status"/>
@@ -80,13 +80,13 @@
                                     <field name="end_date"/>
                                 </group>
                                 <group string="Status">
-                                    <field name="active"/>
+                                    <field name="active" widget="boolean_toggle"/>
                                 </group>
                             </group>
                         </page>
 
                         <!-- Notes -->
-                        <page string="Notes" name="notes">
+                        <page string="Notes" name="notes" groups="base.group_system">
                             <field name="notes" placeholder="Internal notes about this staff member..."/>
                         </page>
                     </notebook>

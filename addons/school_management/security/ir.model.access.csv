@@ -3,4 +3,5 @@ access_school_student_user,access.school.student.user,model_school_student,base.
 access_school_class_user,access.school.class.user,model_school_class,base.group_user,1,1,1,1
 access_school_staff_admin,access.school.staff.admin,model_school_staff,base.group_system,1,1,1,1
 access_school_staff_user,access.school.staff.user,model_school_staff,base.group_user,1,0,0,0
-access_school_job_title_user,access.school.job.title.user,model_school_job_title,base.group_user,1,1,1,1
+access_school_job_title_admin,access.school.job.title.admin,model_school_job_title,base.group_system,1,1,1,1
+access_school_job_title_user,access.school.job.title.user,model_school_job_title,base.group_user,1,0,0,0

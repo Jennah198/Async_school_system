@@ -1,5 +1,6 @@
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
+from odoo.tools import email_normalize
 
 
 class SchoolJobTitle(models.Model):
@@ -18,6 +19,7 @@ class SchoolJobTitle(models.Model):
         ('counseling', 'Counseling'),
         ('sports', 'Sports'),
     ], string='Department', required=True)
+    active = fields.Boolean(string='Active', default=True)
 
     _sql_constraints = [
         ('name_department_unique', 'unique(name, department)',
@@ -59,10 +61,11 @@ class SchoolStaff(models.Model):
         ('facilities', 'Facilities'),
         ('counseling', 'Counseling'),
         ('sports', 'Sports'),
-    ], string='Department')
+    ], string='Department', required=True)
     job_title_id = fields.Many2one(
         'school.job.title', string='Job Title',
         domain="[('department', '=', department)]",
+        ondelete='restrict',
     )
     employment_type = fields.Selection([
         ('full_time', 'Full Time'),
@@ -87,6 +90,8 @@ class SchoolStaff(models.Model):
     _sql_constraints = [
         ('staff_id_unique', 'unique(staff_id)',
          'Staff ID must be unique.'),
+        ('user_id_unique', 'unique(user_id)',
+         'A user can only be linked to one staff member.'),
         ('end_date_after_hire', 'CHECK(end_date IS NULL OR hire_date IS NULL OR end_date >= hire_date)',
          'End date cannot be before hire date.'),
     ]
@@ -96,17 +101,26 @@ class SchoolStaff(models.Model):
         """Clear job title when department changes (old title may not belong to new department)."""
         self.job_title_id = False
 
+    @api.constrains('department', 'job_title_id')
+    def _check_job_title_department(self):
+        for rec in self:
+            if rec.job_title_id and rec.department and rec.job_title_id.department != rec.department:
+                raise ValidationError("Job title does not belong to the selected department.")
+
     @api.constrains('date_of_birth')
     def _check_date_of_birth(self):
         today = fields.Date.context_today(self)
         for rec in self:
-            if rec.date_of_birth and rec.date_of_birth >= today:
-                raise ValidationError("Date of birth must be in the past.")
+            if rec.date_of_birth:
+                if rec.date_of_birth >= today:
+                    raise ValidationError("Date of birth must be in the past.")
+                if rec.date_of_birth.year < 1900:
+                    raise ValidationError("Date of birth cannot be before 1900.")
 
     @api.constrains('email')
     def _check_email(self):
         for rec in self:
-            if rec.email and '@' not in rec.email:
+            if rec.email and not email_normalize(rec.email):
                 raise ValidationError("Please enter a valid email address.")
 
     @api.model_create_multi
