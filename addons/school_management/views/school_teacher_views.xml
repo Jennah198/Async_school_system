@@ -42,7 +42,6 @@
                                 <tree editable="bottom">
                                     <field name="subject_id"/>
                                     <field name="class_id"/>
-                                    <field name="academic_year"/>
                                     <field name="term"/>
                                     <field name="responsibility"/>
                                     <field name="weekly_periods"/>
