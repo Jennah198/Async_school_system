@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Tree View -->
+
+    <record id="view_school_staff_tree" model="ir.ui.view">
+        <field name="name">school.staff.tree</field>
+        <field name="model">school.staff</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="staff_id"/>
+                <field name="name"/>
+                <field name="department"/>
+                <field name="job_title_id"/>
+                <field name="employment_type"/>
+                <field name="employment_status"
+                       decoration-success="employment_status == 'active'"
+                       decoration-warning="employment_status == 'on_leave'"
+                       decoration-danger="employment_status in ('resigned', 'terminated')"
+                       widget="badge"/>
+                <field name="phone"/>
+            </tree>
+        </field>
+    </record>
+
+     <!-- Form View  -->
+
+    <record id="view_school_staff_form" model="ir.ui.view">
+        <field name="name">school.staff.form</field>
+        <field name="model">school.staff</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <field name="photo" widget="image" class="oe_avatar"
+                           options="{'preview_image': 'photo'}"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Full Name"/></h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="staff_id" readonly="1"/>
+                            <field name="department"/>
+                            <field name="job_title_id" options="{'no_quick_create': True, 'no_create_edit': True}"/>
+                        </group>
+                        <group>
+                            <field name="employment_status"/>
+                            <field name="user_id"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Page 1: General -->
+                        <page string="General" name="general">
+                            <group>
+                                <group string="Identity">
+                                    <field name="gender"/>
+                                    <field name="date_of_birth"/>
+                                </group>
+                                <group string="Contact">
+                                    <field name="phone" widget="phone"/>
+                                    <field name="mobile" widget="phone"/>
+                                    <field name="email" widget="email"/>
+                                    <field name="address"/>
+                                </group>
+                            </group>
+                            <group string="Emergency Contact">
+                                <field name="emergency_contact_name"/>
+                                <field name="emergency_contact_phone" widget="phone"/>
+                            </group>
+                        </page>
+
+                        <!-- Page 2: Employment -->
+                        <page string="Employment" name="employment">
+                            <group>
+                                <group string="Contract Details">
+                                    <field name="employment_type"/>
+                                    <field name="hire_date"/>
+                                    <field name="end_date"/>
+                                </group>
+                                <group string="Status">
+                                    <field name="active" widget="boolean_toggle"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Notes -->
+                        <page string="Notes" name="notes" groups="base.group_system">
+                            <field name="notes" placeholder="Internal notes about this staff member..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+
+    <record id="view_school_staff_search" model="ir.ui.view">
+        <field name="name">school.staff.search</field>
+        <field name="model">school.staff</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="staff_id"/>
+                <field name="email"/>
+                <field name="department"/>
+                <field name="job_title_id"/>
+                <separator/>
+                <filter name="filter_active" string="Active"
+                        domain="[('active', '=', True)]"/>
+                <filter name="filter_inactive" string="Inactive"
+                        domain="[('active', '=', False)]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter name="group_department" string="Department"
+                            context="{'group_by': 'department'}"/>
+                    <filter name="group_employment_status" string="Employment Status"
+                            context="{'group_by': 'employment_status'}"/>
+                    <filter name="group_job_title" string="Job Title"
+                            context="{'group_by': 'job_title_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+
+    <record id="action_school_staff" model="ir.actions.act_window">
+        <field name="name">Staff</field>
+        <field name="res_model">school.staff</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Register your first staff member!
+            </p>
+        </field>
+    </record>
+
+    <!-- Job Titles -->
+
+    <record id="view_school_job_title_tree" model="ir.ui.view">
+        <field name="name">school.job.title.tree</field>
+        <field name="model">school.job.title</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="name"/>
+                <field name="department"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_school_job_title" model="ir.actions.act_window">
+        <field name="name">Job Titles</field>
+        <field name="res_model">school.job.title</field>
+        <field name="view_mode">tree</field>
+    </record>
+
+</odoo>
