@@ -17,5 +17,6 @@ class SchoolSubject(models.Model):
     active = fields.Boolean(string='Active', default=True)
 
     _sql_constraints = [
-        ('subject_name_unique', 'unique(name)', 'This subject already exists.'),
+        ('subject_name_unique', 'unique(name, education_level)',
+         'This subject already exists for this education level.'),
     ]
