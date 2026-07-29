@@ -15,15 +15,23 @@ class TestClassSchedule(TransactionCase):
             'academic_year': YEAR,
         })
         self.subject = self.env['school.subject'].create({'name': 'TEST Mathematics'})
-        self.teacher = self.env['school.teacher'].create({'name': 'TEST Teacher One'})
+        self.teacher = self._teacher('TEST Teacher One')
         self.room = self.env['school.room'].create({'name': 'TEST Room 101'})
         self.env['school.teacher.assignment'].create({
             'teacher_id': self.teacher.id,
             'subject_id': self.subject.id,
             'class_id': self.school_class.id,
-            'academic_year': YEAR,
             'term': 'term1',
         })
+
+    def _teacher(self, name):
+        """A teacher needs its own staff master record: staff_id is required and unique."""
+        staff = self.env['school.staff'].create({
+            'name': name,
+            'department': 'academic',
+            'employment_status': 'active',
+        })
+        return self.env['school.teacher'].create({'name': name, 'staff_id': staff.id})
 
     def _slot(self, **overrides):
         vals = {
@@ -54,7 +62,6 @@ class TestClassSchedule(TransactionCase):
             'teacher_id': self.teacher.id,
             'subject_id': self.subject.id,
             'class_id': self.school_class.id,
-            'academic_year': YEAR,
             'term': 'term2',
         })
         self.assertTrue(self._slot(term='term2'))
@@ -64,7 +71,7 @@ class TestClassSchedule(TransactionCase):
         self.assertTrue(self._slot())
 
     def test_teacher_without_assignment_is_blocked(self):
-        unassigned = self.env['school.teacher'].create({'name': 'TEST Teacher Two'})
+        unassigned = self._teacher('TEST Teacher Two')
         with self.assertRaises(ValidationError):
             self._slot(teacher_id=unassigned.id)
 
