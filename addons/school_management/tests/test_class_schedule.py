@@ -1,7 +1,8 @@
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-YEAR = '2026/2027'
+# Values are namespaced so the fixture never collides with seeded or demo records.
+YEAR = 'TEST/2026-2027'
 
 
 class TestClassSchedule(TransactionCase):
@@ -9,13 +10,13 @@ class TestClassSchedule(TransactionCase):
     def setUp(self):
         super().setUp()
         self.school_class = self.env['school.class'].create({
-            'name': 'Grade 5',
-            'section': 'A',
+            'name': 'TEST Grade 5',
+            'section': 'TEST-A',
             'academic_year': YEAR,
         })
-        self.subject = self.env['school.subject'].create({'name': 'Mathematics'})
-        self.teacher = self.env['school.teacher'].create({'name': 'Abebe Bekele'})
-        self.room = self.env['school.room'].create({'name': 'Room 101'})
+        self.subject = self.env['school.subject'].create({'name': 'TEST Mathematics'})
+        self.teacher = self.env['school.teacher'].create({'name': 'TEST Teacher One'})
+        self.room = self.env['school.room'].create({'name': 'TEST Room 101'})
         self.env['school.teacher.assignment'].create({
             'teacher_id': self.teacher.id,
             'subject_id': self.subject.id,
@@ -63,7 +64,7 @@ class TestClassSchedule(TransactionCase):
         self.assertTrue(self._slot())
 
     def test_teacher_without_assignment_is_blocked(self):
-        unassigned = self.env['school.teacher'].create({'name': 'Kebede Tadesse'})
+        unassigned = self.env['school.teacher'].create({'name': 'TEST Teacher Two'})
         with self.assertRaises(ValidationError):
             self._slot(teacher_id=unassigned.id)
 
@@ -87,7 +88,7 @@ class TestClassSchedule(TransactionCase):
     def test_program_audience_needs_values(self):
         with self.assertRaises(ValidationError):
             self.env['school.program'].create({
-                'name': 'Academic Briefing',
+                'name': 'TEST Academic Briefing',
                 'audience_type': 'subject_group',
                 'start_datetime': '2026-08-03 08:00:00',
                 'end_datetime': '2026-08-03 10:00:00',

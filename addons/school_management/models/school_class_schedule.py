@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 DAY_OF_WEEK = [
@@ -94,6 +94,9 @@ class SchoolClassSchedule(models.Model):
     def _compute_display_name(self):
         days = dict(DAY_OF_WEEK)
         for rec in self:
+            if not rec.subject_id or not rec.class_id:
+                rec.display_name = _('New')
+                continue
             when = fields.Date.to_string(rec.date) if rec.date else days.get(rec.day_of_week, '')
             hours, minutes = divmod(round(rec.start_time * 60), 60)
             rec.display_name = (
