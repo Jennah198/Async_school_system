@@ -42,7 +42,13 @@
               parent="menu_school_academic"
               action="action_school_student"
               sequence="10"/>
-              
+
+    <menuitem id="menu_school_staff"
+              name="Staff"
+              parent="menu_school_academic"
+              action="action_school_staff"
+              sequence="15"/>
+
     <record id="action_school_class" model="ir.actions.act_window">
         <field name="name">Classes</field>
         <field name="res_model">school.class</field>

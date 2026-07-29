@@ -3,5 +3,6 @@
 #from . import models
 from . import school_class
 from . import school_student
+from . import school_staff
 from . import school_attendance
 from . import school_mark
