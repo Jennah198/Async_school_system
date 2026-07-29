@@ -1,4 +1,6 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
+
 
 class SchoolTeacher(models.Model):
     _name = 'school.teacher'
@@ -8,10 +10,9 @@ class SchoolTeacher(models.Model):
     teacher_id = fields.Char(string='Teacher ID', required=True, copy=False, readonly=True, default='New')
     name = fields.Char(string='Full Name', required=True)
 
-    # Placeholder until school.staff exists — will become a Many2one once Staff Registration is built
-    staff_reference = fields.Char(string='Staff ID (temporary reference)',
-                                   help='Temporary text reference until school.staff model exists. '
-                                        'Will be replaced with a proper link once Staff Registration is built.')
+    staff_id = fields.Many2one('school.staff', string='Staff Record', required=True, ondelete='restrict',
+                                domain="[('employment_status', '=', 'active')]",
+                                help='Link to the official staff master record.')
 
     qualification = fields.Char(string='Highest Qualification')
     specialization = fields.Char(string='Specialization')
@@ -32,7 +33,9 @@ class SchoolTeacher(models.Model):
 
     _sql_constraints = [
         ('teacher_id_unique', 'unique(teacher_id)', 'Teacher ID must be unique.'),
+        ('staff_id_unique', 'unique(staff_id)', 'This staff member already has a teacher profile.'),
     ]
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:

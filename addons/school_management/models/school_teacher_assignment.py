@@ -7,6 +7,7 @@ class SchoolTeacherAssignment(models.Model):
     _description = 'Teacher Subject / Class Assignment'
     _order = 'academic_year desc, term'
 
+    weekly_periods = fields.Integer(string='Periods per Week', default=1, required=True)
     start_date = fields.Date(string='Start Date', required=True, default=lambda self: fields.Date.context_today(self))
     end_date = fields.Date(string='End Date')
     teacher_id = fields.Many2one('school.teacher', string='Teacher', required=True, ondelete='cascade')
@@ -44,4 +45,17 @@ class SchoolTeacherAssignment(models.Model):
             if rec.end_date and rec.end_date < rec.start_date:
                 raise ValidationError('End date cannot be before the start date.')
 
+    @api.constrains('weekly_periods', 'teacher_id', 'active')
+    def _check_workload(self):
+        for rec in self:
+            if not rec.teacher_id.max_weekly_workload:
+                continue
+            total = sum(rec.teacher_id.assignment_ids.filtered(
+                lambda a: a.active
+            ).mapped('weekly_periods'))
+            if total > rec.teacher_id.max_weekly_workload:
+                raise ValidationError(
+                    'This assignment brings %s to %s weekly periods, exceeding their maximum of %s.'
+                    % (rec.teacher_id.name, total, rec.teacher_id.max_weekly_workload)
+                )
    

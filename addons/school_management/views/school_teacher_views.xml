@@ -22,7 +22,7 @@
                         <group>
                             <field name="teacher_id" readonly="1"/>
                             <field name="name"/>
-                            <field name="staff_reference"/>
+                            <field name="staff_id"/>
                             <field name="teaching_status"/>
                         </group>
                         <group>
@@ -45,6 +45,7 @@
                                     <field name="academic_year"/>
                                     <field name="term"/>
                                     <field name="responsibility"/>
+                                    <field name="weekly_periods"/>
                                     <field name="start_date"/>
                                     <field name="end_date"/>
                                 </tree>
