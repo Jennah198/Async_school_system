@@ -54,4 +54,16 @@
               parent="menu_school_academic"
               action="action_school_class"
               sequence="20"/>
+    
+    <menuitem id="menu_school_teacher"
+              name="Teachers"
+              parent="menu_school_academic"
+              action="action_school_teacher"
+              sequence="30"/>
+
+    <menuitem id="menu_school_subject"
+              name="Subjects"
+              parent="menu_school_academic"
+              action="action_school_subject"
+              sequence="40"/>
 </odoo>
