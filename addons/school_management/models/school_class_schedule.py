@@ -129,7 +129,7 @@ class SchoolClassSchedule(models.Model):
                     f'({rec.academic_year}, {rec.term}).'
                 )
 
-    @api.constrains('state', 'teacher_id', 'subject_id')
+    @api.constrains('state', 'teacher_id', 'subject_id', 'class_id')
     def _check_published_records_are_active(self):
         for rec in self:
             if rec.state != 'published':
@@ -138,6 +138,8 @@ class SchoolClassSchedule(models.Model):
                 raise ValidationError('An inactive teacher cannot be used for a published schedule.')
             if not rec.subject_id.active:
                 raise ValidationError('An inactive subject cannot be used for a published schedule.')
+            if not rec.class_id.active:
+                raise ValidationError('An archived class cannot be used for a published schedule.')
 
     @api.constrains('state', 'reschedule_reason')
     def _check_reschedule_reason(self):

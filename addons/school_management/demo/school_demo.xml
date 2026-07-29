@@ -1,3 +1,296 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Fictional demonstration data. Every name, phone, and document here is made up.
+         Logins are demo_<role> with password demo. -->
+
+    <!-- ============ Rooms ============ -->
+
+    <record id="demo_room_101" model="school.room">
+        <field name="name">Room 101</field>
+        <field name="code">R101</field>
+        <field name="room_type">classroom</field>
+        <field name="capacity">40</field>
+    </record>
+
+    <record id="demo_room_lab" model="school.room">
+        <field name="name">Science Laboratory</field>
+        <field name="code">LAB1</field>
+        <field name="room_type">laboratory</field>
+        <field name="capacity">24</field>
+    </record>
+
+    <!-- ============ Subjects ============ -->
+
+    <record id="demo_subject_maths" model="school.subject">
+        <field name="name">Mathematics</field>
+        <field name="code">MATH</field>
+        <field name="education_level">primary</field>
+    </record>
+
+    <record id="demo_subject_science" model="school.subject">
+        <field name="name">General Science</field>
+        <field name="code">SCI</field>
+        <field name="education_level">primary</field>
+    </record>
+
+    <record id="demo_subject_amharic" model="school.subject">
+        <field name="name">Amharic</field>
+        <field name="code">AMH</field>
+        <field name="education_level">primary</field>
+    </record>
+
+    <!-- ============ Classes ============ -->
+
+    <record id="demo_class_g1a" model="school.class">
+        <field name="name">Grade 1</field>
+        <field name="section">A</field>
+        <field name="academic_year">2026/2027</field>
+        <field name="education_level">primary</field>
+        <field name="is_entry_level" eval="True"/>
+        <field name="min_age">6</field>
+        <field name="max_age">8</field>
+    </record>
+
+    <record id="demo_class_g2a" model="school.class">
+        <field name="name">Grade 2</field>
+        <field name="section">A</field>
+        <field name="academic_year">2026/2027</field>
+        <field name="education_level">primary</field>
+        <field name="is_entry_level" eval="True"/>
+        <field name="min_age">7</field>
+        <field name="max_age">9</field>
+    </record>
+
+    <!-- ============ Role logins ============ -->
+
+    <record id="demo_user_registrar" model="res.users">
+        <field name="name">Demo Registrar</field>
+        <field name="login">demo_registrar</field>
+        <field name="password">demo</field>
+        <field name="groups_id"
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_registrar')])]"/>
+    </record>
+
+    <record id="demo_user_director" model="res.users">
+        <field name="name">Demo Academic Director</field>
+        <field name="login">demo_director</field>
+        <field name="password">demo</field>
+        <field name="groups_id"
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_academic_director')])]"/>
+    </record>
+
+    <record id="demo_user_teacher_maths" model="res.users">
+        <field name="name">Demo Maths Teacher</field>
+        <field name="login">demo_teacher_maths</field>
+        <field name="password">demo</field>
+        <field name="groups_id"
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_teacher')])]"/>
+    </record>
+
+    <record id="demo_user_teacher_science" model="res.users">
+        <field name="name">Demo Science Teacher</field>
+        <field name="login">demo_teacher_science</field>
+        <field name="password">demo</field>
+        <field name="groups_id"
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_teacher')])]"/>
+    </record>
+
+    <record id="demo_user_librarian" model="res.users">
+        <field name="name">Demo Librarian</field>
+        <field name="login">demo_librarian</field>
+        <field name="password">demo</field>
+        <field name="groups_id"
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_staff')])]"/>
+    </record>
+
+    <!-- ============ Staff (job titles ship as seed data) ============ -->
+
+    <record id="demo_staff_maths" model="school.staff">
+        <field name="name">Almaz Tesfaye</field>
+        <field name="department">academic</field>
+        <field name="job_title_id" ref="jt_teacher"/>
+        <field name="employment_type">full_time</field>
+        <field name="employment_status">active</field>
+        <field name="phone">+251911000001</field>
+        <field name="user_id" ref="demo_user_teacher_maths"/>
+    </record>
+
+    <record id="demo_staff_science" model="school.staff">
+        <field name="name">Dawit Alemu</field>
+        <field name="department">academic</field>
+        <field name="job_title_id" ref="jt_teacher"/>
+        <field name="employment_type">full_time</field>
+        <field name="employment_status">active</field>
+        <field name="phone">+251911000002</field>
+        <field name="user_id" ref="demo_user_teacher_science"/>
+    </record>
+
+    <record id="demo_staff_librarian" model="school.staff">
+        <field name="name">Selam Bekele</field>
+        <field name="department">library</field>
+        <field name="job_title_id" ref="jt_librarian"/>
+        <field name="employment_type">full_time</field>
+        <field name="employment_status">active</field>
+        <field name="phone">+251911000003</field>
+        <field name="user_id" ref="demo_user_librarian"/>
+    </record>
+
+    <!-- ============ Teachers ============ -->
+
+    <record id="demo_teacher_maths" model="school.teacher">
+        <field name="name">Almaz Tesfaye</field>
+        <field name="staff_id" ref="demo_staff_maths"/>
+        <field name="qualification">BSc Mathematics</field>
+        <field name="specialization">Primary Mathematics</field>
+        <field name="years_of_experience">6</field>
+        <field name="teaching_status">active</field>
+        <field name="max_weekly_workload">24</field>
+        <field name="available_days">Mon-Fri</field>
+    </record>
+
+    <record id="demo_teacher_science" model="school.teacher">
+        <field name="name">Dawit Alemu</field>
+        <field name="staff_id" ref="demo_staff_science"/>
+        <field name="qualification">BSc Biology</field>
+        <field name="specialization">General Science</field>
+        <field name="years_of_experience">4</field>
+        <field name="teaching_status">active</field>
+        <field name="max_weekly_workload">20</field>
+        <field name="available_days">Mon-Fri</field>
+    </record>
+
+    <!-- ============ Assignments ============ -->
+
+    <record id="demo_assignment_maths_g1a" model="school.teacher.assignment">
+        <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="subject_id" ref="demo_subject_maths"/>
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="term">term1</field>
+        <field name="responsibility">homeroom</field>
+        <field name="weekly_periods">5</field>
+    </record>
+
+    <record id="demo_assignment_amharic_g1a" model="school.teacher.assignment">
+        <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="subject_id" ref="demo_subject_amharic"/>
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="term">term1</field>
+        <field name="responsibility">teacher</field>
+        <field name="weekly_periods">4</field>
+    </record>
+
+    <record id="demo_assignment_science_g2a" model="school.teacher.assignment">
+        <field name="teacher_id" ref="demo_teacher_science"/>
+        <field name="subject_id" ref="demo_subject_science"/>
+        <field name="class_id" ref="demo_class_g2a"/>
+        <field name="term">term1</field>
+        <field name="responsibility">department_head</field>
+        <field name="weekly_periods">4</field>
+    </record>
+
+    <!-- ============ Class schedule ============ -->
+
+    <record id="demo_schedule_maths_mon" model="school.class.schedule">
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="subject_id" ref="demo_subject_maths"/>
+        <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="term">term1</field>
+        <field name="day_of_week">0</field>
+        <field name="start_time">8.0</field>
+        <field name="end_time">9.0</field>
+        <field name="room_id" ref="demo_room_101"/>
+        <field name="schedule_type">regular</field>
+        <field name="state">published</field>
+    </record>
+
+    <record id="demo_schedule_amharic_mon" model="school.class.schedule">
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="subject_id" ref="demo_subject_amharic"/>
+        <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="term">term1</field>
+        <field name="day_of_week">0</field>
+        <field name="start_time">9.0</field>
+        <field name="end_time">10.0</field>
+        <field name="room_id" ref="demo_room_101"/>
+        <field name="schedule_type">regular</field>
+        <field name="state">published</field>
+    </record>
+
+    <record id="demo_schedule_science_mon" model="school.class.schedule">
+        <field name="class_id" ref="demo_class_g2a"/>
+        <field name="subject_id" ref="demo_subject_science"/>
+        <field name="teacher_id" ref="demo_teacher_science"/>
+        <field name="term">term1</field>
+        <field name="day_of_week">0</field>
+        <field name="start_time">8.0</field>
+        <field name="end_time">9.0</field>
+        <field name="room_id" ref="demo_room_lab"/>
+        <field name="schedule_type">laboratory</field>
+        <field name="state">published</field>
+    </record>
+
+    <!-- ============ Program ============ -->
+
+    <record id="demo_program_exam_week" model="school.program">
+        <field name="name">Term 1 Examination Week</field>
+        <field name="program_type">examination</field>
+        <field name="audience_type">all_staff</field>
+        <field name="start_datetime">2026-12-07 06:00:00</field>
+        <field name="end_datetime">2026-12-11 11:00:00</field>
+        <field name="location">Main Hall</field>
+        <field name="organizer_id" ref="demo_staff_science"/>
+        <field name="state">published</field>
+    </record>
+
+    <record id="demo_program_academic_meeting" model="school.program">
+        <field name="name">Academic Department Meeting</field>
+        <field name="program_type">meeting</field>
+        <field name="audience_type">department</field>
+        <field name="department">academic</field>
+        <field name="start_datetime">2026-08-10 07:00:00</field>
+        <field name="end_datetime">2026-08-10 09:00:00</field>
+        <field name="location">Staff Room</field>
+        <field name="organizer_id" ref="demo_staff_science"/>
+        <field name="state">published</field>
+    </record>
+
+    <!-- ============ Announcements ============ -->
+
+    <record id="demo_announcement_all_staff" model="school.announcement">
+        <field name="name">Term 1 Opening Assembly</field>
+        <field name="category">general</field>
+        <field name="audience_type">all_staff</field>
+        <field name="priority">1</field>
+        <field name="message" type="html">
+            <p>All staff should gather in the Main Hall before the first period on Monday.</p>
+        </field>
+        <field name="state">published</field>
+        <field name="publish_datetime">2026-07-27 06:00:00</field>
+    </record>
+
+    <record id="demo_announcement_g1a_only" model="school.announcement">
+        <field name="name">Grade 1 A Parent Visit</field>
+        <field name="category">academic</field>
+        <field name="audience_type">class_section</field>
+        <field name="class_ids" eval="[(6, 0, [ref('demo_class_g1a')])]"/>
+        <field name="message" type="html">
+            <p>Guardians of Grade 1 A will visit during the third period. Only that
+               class's teachers see this announcement.</p>
+        </field>
+        <field name="state">published</field>
+        <field name="publish_datetime">2026-07-27 06:00:00</field>
+    </record>
+
+    <record id="demo_announcement_urgent" model="school.announcement">
+        <field name="name">Laboratory Closed for Maintenance</field>
+        <field name="category">emergency</field>
+        <field name="audience_type">subject_group</field>
+        <field name="subject_ids" eval="[(6, 0, [ref('demo_subject_science')])]"/>
+        <field name="priority">2</field>
+        <field name="message" type="html">
+            <p>The Science Laboratory is closed today. Use Room 101 instead.</p>
+        </field>
+        <field name="state">published</field>
+        <field name="publish_datetime">2026-07-27 06:00:00</field>
+    </record>
 </odoo>

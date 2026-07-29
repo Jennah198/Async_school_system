@@ -40,6 +40,7 @@ attendance tracking and mark/result entry referencing the same student record.
         'views/school_program_views.xml',
         'views/school_class_schedule_views.xml',
         'views/school_announcement_views.xml',
+        'views/school_documents_views.xml',
         'views/school_dashboard_views.xml',
         'views/school_menu_views.xml',
         'report/school_student_report.xml',

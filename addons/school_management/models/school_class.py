@@ -27,6 +27,8 @@ class SchoolClass(models.Model):
     min_age = fields.Integer(string='Minimum Age')
     max_age = fields.Integer(string='Maximum Age')
 
+    active = fields.Boolean(string='Active', default=True)
+
     _sql_constraints = [
         ('class_section_year_unique', 'unique(name, section, academic_year)',
          'This class/section already exists for this academic year.'),
