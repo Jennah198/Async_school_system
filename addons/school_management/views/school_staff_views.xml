@@ -152,6 +152,22 @@
         </field>
     </record>
 
+    <record id="view_school_job_title_search" model="ir.ui.view">
+        <field name="name">school.job.title.search</field>
+        <field name="model">school.job.title</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <filter name="inactive" string="Archived"
+                        domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_department" string="Department"
+                            context="{'group_by': 'department'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <record id="action_school_job_title" model="ir.actions.act_window">
         <field name="name">Job Titles</field>
         <field name="res_model">school.job.title</field>
