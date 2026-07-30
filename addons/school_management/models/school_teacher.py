@@ -8,7 +8,11 @@ class SchoolTeacher(models.Model):
     _order = 'name'
 
     teacher_id = fields.Char(string='Teacher ID', required=True, copy=False, readonly=True, default='New')
-    name = fields.Char(string='Full Name', required=True)
+    # Brief section 5: the name is inherited from the staff master record, so renaming
+    # the staff member flows through to assignments and schedules.
+    name = fields.Char(
+        string='Full Name', related='staff_id.name', store=True, readonly=True,
+    )
 
     staff_id = fields.Many2one('school.staff', string='Staff Record', required=True, ondelete='restrict',
                                 domain="[('employment_status', '=', 'active')]",

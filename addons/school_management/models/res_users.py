@@ -19,9 +19,13 @@ class ResUsers(models.Model):
     school_taught_subject_ids = fields.Many2many(
         'school.subject', string='Taught Subjects', compute='_compute_school_scope',
     )
+    school_campus_ids = fields.Many2many(
+        'school.campus', string='Branches / Campuses', compute='_compute_school_scope',
+    )
     school_responsibility_list = fields.Json(
         string='School Responsibilities', compute='_compute_school_scope',
-        help='Responsibility codes this user holds through active teaching assignments.',
+        help='Responsibility codes this user holds, from staff responsibility records '
+             'and from active teaching assignments.',
     )
 
     @api.depends('school_staff_ids')
@@ -32,8 +36,14 @@ class ResUsers(models.Model):
             staff = user.school_staff_ids[:1]
             teacher = self.env['school.teacher'].search([('staff_id', 'in', staff.ids)], limit=1)
             assignments = teacher.assignment_ids
+            responsibilities = staff.responsibility_ids.filtered('active')
             user.school_teacher_id = teacher
             user.school_department = staff.department or ''
             user.school_taught_class_ids = assignments.mapped('class_id')
             user.school_taught_subject_ids = assignments.mapped('subject_id')
-            user.school_responsibility_list = sorted(set(assignments.mapped('responsibility')))
+            user.school_campus_ids = staff.campus_id | responsibilities.mapped('campus_id')
+            # Non-teaching staff hold responsibilities only through staff records, so
+            # both sources must feed the audience match.
+            user.school_responsibility_list = sorted(set(
+                assignments.mapped('responsibility') + responsibilities.mapped('responsibility')
+            ))

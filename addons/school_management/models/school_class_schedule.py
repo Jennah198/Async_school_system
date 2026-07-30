@@ -188,6 +188,22 @@ class SchoolClassSchedule(models.Model):
             ('term', '=', self.term),
         ]
 
+    def _conflicting_ids(self):
+        """Ids of live slots that share a teacher, class, or room with another slot.
+        The create/write constraint blocks new clashes, so this only ever surfaces rows
+        that predate the constraint or were loaded around it.
+        ponytail: O(n) searches over live slots; fine at school scale."""
+        conflicting = set()
+        for rec in self.search([('state', 'not in', FREE_STATES)]):
+            for field, _label in CONFLICT_RESOURCES:
+                resource = rec[field]
+                if resource and self.search_count(
+                    rec._same_slot_domain() + [(field, '=', resource.id)]
+                ):
+                    conflicting.add(rec.id)
+                    break
+        return sorted(conflicting)
+
     def action_publish(self):
         self.write({'state': 'published'})
 

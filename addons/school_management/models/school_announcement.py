@@ -1,7 +1,8 @@
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
-from .school_program import AUDIENCE_VALUE_FIELDS
+from .school_program import AUDIENCE_TYPES, AUDIENCE_VALUE_FIELDS
+from .school_responsibility import DEPARTMENTS, RESPONSIBILITIES
 
 
 class SchoolAnnouncement(models.Model):
@@ -24,35 +25,16 @@ class SchoolAnnouncement(models.Model):
     ], string='Category', required=True, default='general')
 
     # Audience codes match school.program so both models share one targeting rule.
-    audience_type = fields.Selection([
-        ('all_staff', 'All Staff'),
-        ('department', 'Department'),
-        ('responsibility', 'Responsibility'),
-        ('subject_group', 'Subject'),
-        ('class_section', 'Class / Section'),
-        ('teacher_group', 'Teacher Group'),
-        ('selected_staff', 'Selected Staff'),
-    ], string='Audience', required=True, default='all_staff', tracking=True)
+    audience_type = fields.Selection(
+        AUDIENCE_TYPES, string='Audience', required=True, default='all_staff', tracking=True,
+    )
 
-    department = fields.Selection([
-        ('administration', 'Administration'),
-        ('academic', 'Academic'),
-        ('finance', 'Finance'),
-        ('it', 'IT'),
-        ('library', 'Library'),
-        ('facilities', 'Facilities'),
-        ('counseling', 'Counseling'),
-        ('sports', 'Sports'),
-    ], string='Department')
-    responsibility = fields.Selection([
-        ('teacher', 'Teacher'),
-        ('homeroom', 'Homeroom Teacher'),
-        ('department_head', 'Department Head'),
-        ('coordinator', 'Academic Coordinator'),
-    ], string='Responsibility')
+    department = fields.Selection(DEPARTMENTS, string='Department')
+    responsibility = fields.Selection(RESPONSIBILITIES, string='Responsibility')
     teacher_ids = fields.Many2many('school.teacher', string='Teachers')
     subject_ids = fields.Many2many('school.subject', string='Subjects')
     class_ids = fields.Many2many('school.class', string='Classes / Sections')
+    campus_ids = fields.Many2many('school.campus', string='Branches / Campuses')
     staff_ids = fields.Many2many('school.staff', string='Selected Staff')
 
     state = fields.Selection([
@@ -114,7 +96,7 @@ class SchoolAnnouncement(models.Model):
         return ['!', *live]
 
     @api.constrains('audience_type', 'department', 'responsibility',
-                    'teacher_ids', 'subject_ids', 'class_ids', 'staff_ids')
+                    'teacher_ids', 'subject_ids', 'class_ids', 'campus_ids', 'staff_ids')
     def _check_audience_values(self):
         for rec in self:
             field = AUDIENCE_VALUE_FIELDS.get(rec.audience_type)

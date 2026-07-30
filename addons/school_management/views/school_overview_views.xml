@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_school_dashboard_form" model="ir.ui.view">
+        <field name="name">school.dashboard.form</field>
+        <field name="model">school.dashboard</field>
+        <field name="arch" type="xml">
+            <form create="false" edit="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>School Administration Overview</h1>
+                    </div>
+                    <div class="oe_button_box o_full_width" name="button_box">
+                        <button name="action_open_active_staff" type="object"
+                                class="oe_stat_button" icon="fa-users">
+                            <field name="active_staff_count" widget="statinfo" string="Active Staff"/>
+                        </button>
+                        <button name="action_open_active_teachers" type="object"
+                                class="oe_stat_button" icon="fa-graduation-cap">
+                            <field name="active_teacher_count" widget="statinfo" string="Active Teachers"/>
+                        </button>
+                        <button name="action_open_missing_documents" type="object"
+                                class="oe_stat_button" icon="fa-exclamation-triangle">
+                            <field name="missing_document_count" widget="statinfo" string="Missing Documents"/>
+                        </button>
+                        <button name="action_open_schedule_conflicts" type="object"
+                                class="oe_stat_button" icon="fa-warning">
+                            <field name="schedule_conflict_count" widget="statinfo" string="Schedule Conflicts"/>
+                        </button>
+                        <button name="action_open_published_programs" type="object"
+                                class="oe_stat_button" icon="fa-calendar-check-o">
+                            <field name="published_program_count" widget="statinfo" string="Published Programs"/>
+                        </button>
+                        <button name="action_open_live_announcements" type="object"
+                                class="oe_stat_button" icon="fa-bullhorn">
+                            <field name="live_announcement_count" widget="statinfo" string="Live Announcements"/>
+                        </button>
+                        <button name="action_open_draft_staff" type="object"
+                                class="oe_stat_button" icon="fa-pencil">
+                            <field name="draft_staff_count" widget="statinfo" string="Staff in Draft"/>
+                        </button>
+                        <button name="action_open_inactive_staff" type="object"
+                                class="oe_stat_button" icon="fa-archive">
+                            <field name="inactive_record_count" widget="statinfo" string="Archived Records"/>
+                        </button>
+                    </div>
+                    <p class="text-muted">
+                        Every tile opens the records behind it. Counts are school-wide;
+                        the Analysis menu breaks the same data down by class, subject, and teacher.
+                    </p>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_school_overview" model="ir.actions.act_window">
+        <field name="name">Overview</field>
+        <field name="res_model">school.dashboard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_school_dashboard_form"/>
+        <field name="target">inline</field>
+    </record>
+
+    <!-- ============ Teacher form: related records as smart buttons ============ -->
+
+    <record id="view_school_teacher_form_links" model="ir.ui.view">
+        <field name="name">school.teacher.form.links</field>
+        <field name="model">school.teacher</field>
+        <field name="inherit_id" ref="view_school_teacher_form"/>
+        <field name="arch" type="xml">
+            <sheet position="inside">
+                <div name="button_box" class="oe_button_box">
+                    <button name="action_open_schedule" type="object"
+                            class="oe_stat_button" icon="fa-calendar">
+                        <field name="schedule_count" widget="statinfo" string="Class Periods"/>
+                    </button>
+                    <button name="action_open_attendance" type="object"
+                            class="oe_stat_button" icon="fa-check-square-o">
+                        <field name="attendance_count" widget="statinfo" string="Attendance"/>
+                    </button>
+                    <button name="action_open_marks" type="object"
+                            class="oe_stat_button" icon="fa-list-ol">
+                        <field name="mark_count" widget="statinfo" string="Marks"/>
+                    </button>
+                    <button name="action_open_announcements" type="object"
+                            class="oe_stat_button" icon="fa-bullhorn">
+                        <field name="announcement_count" widget="statinfo" string="Announcements"/>
+                    </button>
+                </div>
+            </sheet>
+            <xpath expr="//form" position="inside">
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============ Audience: campus option on programs and announcements ============ -->
+
+    <record id="view_school_program_form_campus" model="ir.ui.view">
+        <field name="name">school.program.form.campus</field>
+        <field name="model">school.program</field>
+        <field name="inherit_id" ref="view_school_program_form"/>
+        <field name="arch" type="xml">
+            <field name="staff_ids" position="before">
+                <field name="campus_ids" widget="many2many_tags"
+                       invisible="audience_type != 'branch_campus'"
+                       required="audience_type == 'branch_campus'"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_school_announcement_form_campus" model="ir.ui.view">
+        <field name="name">school.announcement.form.campus</field>
+        <field name="model">school.announcement</field>
+        <field name="inherit_id" ref="view_school_announcement_form"/>
+        <field name="arch" type="xml">
+            <field name="staff_ids" position="before">
+                <field name="campus_ids" widget="many2many_tags"
+                       invisible="audience_type != 'branch_campus'"
+                       required="audience_type == 'branch_campus'"/>
+            </field>
+        </field>
+    </record>
+</odoo>

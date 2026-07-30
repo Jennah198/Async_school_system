@@ -184,6 +184,27 @@
     <!-- ANALYSIS                                                -->
     <!-- ======================================================= -->
 
+    <menuitem id="menu_school_responsibility"
+              name="Responsibilities"
+              parent="menu_school_administration"
+              action="action_school_staff_responsibility"
+              groups="school_management.group_school_registrar"
+              sequence="15"/>
+
+    <menuitem id="menu_school_campus"
+              name="Branches / Campuses"
+              parent="menu_school_administration"
+              action="action_school_campus"
+              groups="school_management.group_school_admin"
+              sequence="40"/>
+
+    <menuitem id="menu_school_overview"
+              name="Overview"
+              parent="menu_school_root"
+              action="action_school_overview"
+              groups="school_management.group_school_admin"
+              sequence="1"/>
+
     <menuitem id="menu_school_analysis"
               name="Analysis"
               parent="menu_school_root"

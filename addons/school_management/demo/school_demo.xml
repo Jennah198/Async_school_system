@@ -1,7 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Fictional demonstration data. Every name, phone, and document here is made up.
-         Logins are demo_<role> with password demo. -->
+         Logins are demo_<role> with password demo.
+         Staff are created in Draft and activated at the end of the file, because
+         leaving Draft requires an active responsibility to already exist. -->
+
+    <!-- ============ Branches / campuses ============ -->
+
+    <record id="demo_campus_main" model="school.campus">
+        <field name="name">Main Campus</field>
+        <field name="code">MAIN</field>
+        <field name="address">Bole, Addis Ababa</field>
+    </record>
+
+    <record id="demo_campus_east" model="school.campus">
+        <field name="name">East Campus</field>
+        <field name="code">EAST</field>
+        <field name="address">Megenagna, Addis Ababa</field>
+    </record>
 
     <!-- ============ Rooms ============ -->
 
@@ -10,6 +26,13 @@
         <field name="code">R101</field>
         <field name="room_type">classroom</field>
         <field name="capacity">40</field>
+    </record>
+
+    <record id="demo_room_102" model="school.room">
+        <field name="name">Room 102</field>
+        <field name="code">R102</field>
+        <field name="room_type">classroom</field>
+        <field name="capacity">36</field>
     </record>
 
     <record id="demo_room_lab" model="school.room">
@@ -92,6 +115,14 @@
         <field name="login">demo_teacher_science</field>
         <field name="password">demo</field>
         <field name="groups_id"
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_department_head')])]"/>
+    </record>
+
+    <record id="demo_user_teacher_amharic" model="res.users">
+        <field name="name">Demo Amharic Teacher</field>
+        <field name="login">demo_teacher_amharic</field>
+        <field name="password">demo</field>
+        <field name="groups_id"
                 eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_teacher')])]"/>
     </record>
 
@@ -103,7 +134,7 @@
                 eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_staff')])]"/>
     </record>
 
-    <!-- ============ Staff (job titles ship as seed data) ============ -->
+    <!-- ============ Staff, five records (job titles ship as seed data) ============ -->
 
     <record id="demo_staff_maths" model="school.staff">
         <field name="name">Almaz Tesfaye</field>
@@ -112,33 +143,106 @@
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000001</field>
+        <field name="campus_id" ref="demo_campus_main"/>
         <field name="user_id" ref="demo_user_teacher_maths"/>
     </record>
 
     <record id="demo_staff_science" model="school.staff">
         <field name="name">Dawit Alemu</field>
         <field name="department">academic</field>
-        <field name="job_title_id" ref="jt_teacher"/>
+        <field name="job_title_id" ref="jt_department_head"/>
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000002</field>
+        <field name="campus_id" ref="demo_campus_main"/>
         <field name="user_id" ref="demo_user_teacher_science"/>
     </record>
 
-    <record id="demo_staff_librarian" model="school.staff">
-        <field name="name">Selam Bekele</field>
-        <field name="department">library</field>
-        <field name="job_title_id" ref="jt_librarian"/>
+    <record id="demo_staff_amharic" model="school.staff">
+        <field name="name">Hanna Girma</field>
+        <field name="department">academic</field>
+        <field name="job_title_id" ref="jt_teacher"/>
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000003</field>
+        <field name="campus_id" ref="demo_campus_east"/>
+        <field name="user_id" ref="demo_user_teacher_amharic"/>
+    </record>
+
+    <record id="demo_staff_registrar" model="school.staff">
+        <field name="name">Selam Bekele</field>
+        <field name="department">administration</field>
+        <field name="job_title_id" ref="jt_registrar"/>
+        <field name="employment_type">full_time</field>
+        <field name="employment_status">active</field>
+        <field name="phone">+251911000004</field>
+        <field name="campus_id" ref="demo_campus_main"/>
+        <field name="user_id" ref="demo_user_registrar"/>
+    </record>
+
+    <record id="demo_staff_librarian" model="school.staff">
+        <field name="name">Yonas Haile</field>
+        <field name="department">library</field>
+        <field name="job_title_id" ref="jt_librarian"/>
+        <field name="employment_type">part_time</field>
+        <field name="employment_status">active</field>
+        <field name="phone">+251911000005</field>
+        <field name="campus_id" ref="demo_campus_east"/>
         <field name="user_id" ref="demo_user_librarian"/>
     </record>
 
-    <!-- ============ Teachers ============ -->
+    <!-- ============ Responsibilities (brief section 6) ============ -->
+
+    <record id="demo_resp_science_head" model="school.staff.responsibility">
+        <field name="staff_id" ref="demo_staff_science"/>
+        <field name="responsibility">department_head</field>
+        <field name="is_primary" eval="True"/>
+        <field name="department">academic</field>
+        <field name="campus_id" ref="demo_campus_main"/>
+        <field name="start_date">2026-07-01</field>
+    </record>
+
+    <record id="demo_resp_maths_teacher" model="school.staff.responsibility">
+        <field name="staff_id" ref="demo_staff_maths"/>
+        <field name="responsibility">homeroom</field>
+        <field name="is_primary" eval="True"/>
+        <field name="department">academic</field>
+        <field name="campus_id" ref="demo_campus_main"/>
+        <field name="manager_id" ref="demo_staff_science"/>
+        <field name="start_date">2026-07-01</field>
+    </record>
+
+    <record id="demo_resp_amharic_teacher" model="school.staff.responsibility">
+        <field name="staff_id" ref="demo_staff_amharic"/>
+        <field name="responsibility">teacher</field>
+        <field name="is_primary" eval="True"/>
+        <field name="department">academic</field>
+        <field name="campus_id" ref="demo_campus_east"/>
+        <field name="manager_id" ref="demo_staff_science"/>
+        <field name="start_date">2026-07-01</field>
+    </record>
+
+    <record id="demo_resp_registrar" model="school.staff.responsibility">
+        <field name="staff_id" ref="demo_staff_registrar"/>
+        <field name="responsibility">registrar</field>
+        <field name="is_primary" eval="True"/>
+        <field name="department">administration</field>
+        <field name="campus_id" ref="demo_campus_main"/>
+        <field name="start_date">2026-07-01</field>
+    </record>
+
+    <record id="demo_resp_librarian" model="school.staff.responsibility">
+        <field name="staff_id" ref="demo_staff_librarian"/>
+        <field name="responsibility">librarian</field>
+        <field name="is_primary" eval="True"/>
+        <field name="department">library</field>
+        <field name="campus_id" ref="demo_campus_east"/>
+        <field name="start_date">2026-07-01</field>
+    </record>
+
+    <!-- ============ Teachers, three profiles. Name is inherited from staff. ============ -->
 
     <record id="demo_teacher_maths" model="school.teacher">
-        <field name="name">Almaz Tesfaye</field>
         <field name="staff_id" ref="demo_staff_maths"/>
         <field name="qualification">BSc Mathematics</field>
         <field name="specialization">Primary Mathematics</field>
@@ -149,17 +253,26 @@
     </record>
 
     <record id="demo_teacher_science" model="school.teacher">
-        <field name="name">Dawit Alemu</field>
         <field name="staff_id" ref="demo_staff_science"/>
         <field name="qualification">BSc Biology</field>
         <field name="specialization">General Science</field>
-        <field name="years_of_experience">4</field>
+        <field name="years_of_experience">9</field>
         <field name="teaching_status">active</field>
         <field name="max_weekly_workload">20</field>
         <field name="available_days">Mon-Fri</field>
     </record>
 
-    <!-- ============ Assignments ============ -->
+    <record id="demo_teacher_amharic" model="school.teacher">
+        <field name="staff_id" ref="demo_staff_amharic"/>
+        <field name="qualification">BA Amharic Literature</field>
+        <field name="specialization">Language</field>
+        <field name="years_of_experience">3</field>
+        <field name="teaching_status">active</field>
+        <field name="max_weekly_workload">18</field>
+        <field name="available_days">Mon-Thu</field>
+    </record>
+
+    <!-- ============ Subject and class assignments ============ -->
 
     <record id="demo_assignment_maths_g1a" model="school.teacher.assignment">
         <field name="teacher_id" ref="demo_teacher_maths"/>
@@ -170,8 +283,17 @@
         <field name="weekly_periods">5</field>
     </record>
 
-    <record id="demo_assignment_amharic_g1a" model="school.teacher.assignment">
+    <record id="demo_assignment_maths_g2a" model="school.teacher.assignment">
         <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="subject_id" ref="demo_subject_maths"/>
+        <field name="class_id" ref="demo_class_g2a"/>
+        <field name="term">term1</field>
+        <field name="responsibility">teacher</field>
+        <field name="weekly_periods">4</field>
+    </record>
+
+    <record id="demo_assignment_amharic_g1a" model="school.teacher.assignment">
+        <field name="teacher_id" ref="demo_teacher_amharic"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="term">term1</field>
@@ -188,9 +310,9 @@
         <field name="weekly_periods">4</field>
     </record>
 
-    <!-- ============ Class schedule ============ -->
+    <!-- ============ Weekly class schedule: two classes, three teachers ============ -->
 
-    <record id="demo_schedule_maths_mon" model="school.class.schedule">
+    <record id="demo_schedule_maths_g1a_mon" model="school.class.schedule">
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="subject_id" ref="demo_subject_maths"/>
         <field name="teacher_id" ref="demo_teacher_maths"/>
@@ -203,10 +325,10 @@
         <field name="state">published</field>
     </record>
 
-    <record id="demo_schedule_amharic_mon" model="school.class.schedule">
+    <record id="demo_schedule_amharic_g1a_mon" model="school.class.schedule">
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
-        <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="teacher_id" ref="demo_teacher_amharic"/>
         <field name="term">term1</field>
         <field name="day_of_week">0</field>
         <field name="start_time">9.0</field>
@@ -216,7 +338,7 @@
         <field name="state">published</field>
     </record>
 
-    <record id="demo_schedule_science_mon" model="school.class.schedule">
+    <record id="demo_schedule_science_g2a_mon" model="school.class.schedule">
         <field name="class_id" ref="demo_class_g2a"/>
         <field name="subject_id" ref="demo_subject_science"/>
         <field name="teacher_id" ref="demo_teacher_science"/>
@@ -229,7 +351,33 @@
         <field name="state">published</field>
     </record>
 
-    <!-- ============ Program ============ -->
+    <record id="demo_schedule_maths_g2a_tue" model="school.class.schedule">
+        <field name="class_id" ref="demo_class_g2a"/>
+        <field name="subject_id" ref="demo_subject_maths"/>
+        <field name="teacher_id" ref="demo_teacher_maths"/>
+        <field name="term">term1</field>
+        <field name="day_of_week">1</field>
+        <field name="start_time">8.0</field>
+        <field name="end_time">9.0</field>
+        <field name="room_id" ref="demo_room_102"/>
+        <field name="schedule_type">regular</field>
+        <field name="state">published</field>
+    </record>
+
+    <record id="demo_schedule_amharic_g1a_tue" model="school.class.schedule">
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="subject_id" ref="demo_subject_amharic"/>
+        <field name="teacher_id" ref="demo_teacher_amharic"/>
+        <field name="term">term1</field>
+        <field name="day_of_week">1</field>
+        <field name="start_time">9.0</field>
+        <field name="end_time">10.0</field>
+        <field name="room_id" ref="demo_room_101"/>
+        <field name="schedule_type">regular</field>
+        <field name="state">published</field>
+    </record>
+
+    <!-- ============ Programs ============ -->
 
     <record id="demo_program_exam_week" model="school.program">
         <field name="name">Term 1 Examination Week</field>
@@ -242,15 +390,15 @@
         <field name="state">published</field>
     </record>
 
-    <record id="demo_program_academic_meeting" model="school.program">
-        <field name="name">Academic Department Meeting</field>
-        <field name="program_type">meeting</field>
-        <field name="audience_type">department</field>
-        <field name="department">academic</field>
-        <field name="start_datetime">2026-08-10 07:00:00</field>
-        <field name="end_datetime">2026-08-10 09:00:00</field>
-        <field name="location">Staff Room</field>
-        <field name="organizer_id" ref="demo_staff_science"/>
+    <record id="demo_program_registrar_day" model="school.program">
+        <field name="name">Registration Day Briefing</field>
+        <field name="program_type">registration</field>
+        <field name="audience_type">responsibility</field>
+        <field name="responsibility">registrar</field>
+        <field name="start_datetime">2026-08-17 06:30:00</field>
+        <field name="end_datetime">2026-08-17 09:00:00</field>
+        <field name="location">Registrar Office</field>
+        <field name="organizer_id" ref="demo_staff_registrar"/>
         <field name="state">published</field>
     </record>
 
@@ -293,4 +441,38 @@
         <field name="state">published</field>
         <field name="publish_datetime">2026-07-27 06:00:00</field>
     </record>
+
+    <record id="demo_announcement_registrar" model="school.announcement">
+        <field name="name">Registration Window Opens Monday</field>
+        <field name="category">general</field>
+        <field name="audience_type">responsibility</field>
+        <field name="responsibility">registrar</field>
+        <field name="message" type="html">
+            <p>Only staff holding the Registrar responsibility see this notice.</p>
+        </field>
+        <field name="state">published</field>
+        <field name="publish_datetime">2026-07-27 06:00:00</field>
+    </record>
+
+    <record id="demo_announcement_east_campus" model="school.announcement">
+        <field name="name">East Campus Water Outage</field>
+        <field name="category">emergency</field>
+        <field name="audience_type">branch_campus</field>
+        <field name="campus_ids" eval="[(6, 0, [ref('demo_campus_east')])]"/>
+        <field name="priority">2</field>
+        <field name="message" type="html">
+            <p>East Campus has no running water this morning. Main Campus staff are unaffected.</p>
+        </field>
+        <field name="state">published</field>
+        <field name="publish_datetime">2026-07-27 06:00:00</field>
+    </record>
+
+    <!-- ============ Activate staff now that responsibilities exist ============ -->
+
+    <function model="school.staff" name="write">
+        <value model="school.staff" eval="[
+            ref('demo_staff_maths'), ref('demo_staff_science'), ref('demo_staff_amharic'),
+            ref('demo_staff_registrar'), ref('demo_staff_librarian')]"/>
+        <value eval="{'state': 'active'}"/>
+    </function>
 </odoo>

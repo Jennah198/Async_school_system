@@ -5,6 +5,7 @@ from odoo.exceptions import ValidationError
 class SchoolTeacherAssignment(models.Model):
     _name = 'school.teacher.assignment'
     _description = 'Teacher Subject / Class Assignment'
+    _inherit = ['mail.thread']
     _order = 'academic_year desc, term'
 
     name = fields.Char(string='Assignment', compute='_compute_name', store=True)
@@ -31,6 +32,34 @@ class SchoolTeacherAssignment(models.Model):
         ('unique_assignment', 'unique(teacher_id, subject_id, class_id, academic_year, term)',
          'This teacher already has an identical assignment for this subject, class, year, and term.'),
     ]
+
+    @api.constrains('responsibility', 'class_id', 'academic_year', 'term', 'active')
+    def _check_single_homeroom_per_class(self):
+        """Brief section 6: one active homeroom teacher per class/section and period."""
+        for rec in self.filtered(lambda r: r.responsibility == 'homeroom' and r.active):
+            clash = self.search([
+                ('id', '!=', rec.id),
+                ('responsibility', '=', 'homeroom'),
+                ('class_id', '=', rec.class_id.id),
+                ('academic_year', '=', rec.academic_year),
+                ('term', '=', rec.term),
+            ], limit=1)
+            if clash:
+                raise ValidationError(
+                    f'{rec.class_id.display_name} already has {clash.teacher_id.name} as '
+                    f'homeroom teacher for {rec.academic_year} {rec.term}.'
+                )
+
+    @api.constrains('teacher_id')
+    def _check_staff_can_take_work(self):
+        """Brief section 4: suspended or inactive staff take no new assignments."""
+        for rec in self:
+            state = rec.teacher_id.staff_id.state
+            if state in ('suspended', 'inactive', 'archived'):
+                raise ValidationError(
+                    f'{rec.teacher_id.name} is {state} as a staff member and cannot '
+                    'receive new assignments.'
+                )
 
     @api.constrains('teacher_id', 'subject_id', 'start_date')
     def _check_teacher_and_subject_active(self):

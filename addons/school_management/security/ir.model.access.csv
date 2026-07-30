@@ -25,3 +25,8 @@ access_school_mark_teacher,access.school.mark.teacher,model_school_mark,school_m
 access_school_mark_director,access.school.mark.director,model_school_mark,school_management.group_school_academic_director,1,1,1,1
 access_school_announcement_director,access.school.announcement.director,model_school_announcement,school_management.group_school_academic_director,1,1,1,1
 access_school_announcement_staff,access.school.announcement.staff,model_school_announcement,school_management.group_school_staff,1,0,0,0
+access_school_campus_admin,access.school.campus.admin,model_school_campus,school_management.group_school_admin,1,1,1,1
+access_school_campus_readonly,access.school.campus.readonly,model_school_campus,school_management.group_school_readonly,1,0,0,0
+access_school_staff_responsibility_registrar,access.school.staff.responsibility.registrar,model_school_staff_responsibility,school_management.group_school_registrar,1,1,1,1
+access_school_staff_responsibility_staff,access.school.staff.responsibility.staff,model_school_staff_responsibility,school_management.group_school_staff,1,0,0,0
+access_school_dashboard_admin,access.school.dashboard.admin,model_school_dashboard,school_management.group_school_admin,1,1,1,1
