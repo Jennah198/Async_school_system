@@ -1,3 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="module_category_school" model="ir.module.category">
+        <field name="name">School Management</field>
+        <field name="description">Roles for school staff, academic, and administrative users.</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Roles ladder: each group implies the one below it, so a School Administrator
+         automatically holds every narrower role. -->
+
+    <record id="group_school_readonly" model="res.groups">
+        <field name="name">Read-Only User</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="comment">Sees permitted published schedules and announcements. No edit actions.</field>
+    </record>
+
+    <record id="group_school_staff" model="res.groups">
+        <field name="name">Staff</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="implied_ids" eval="[(4, ref('group_school_readonly'))]"/>
+        <field name="comment">Own staff record, own responsibilities, and announcements targeted at them.</field>
+    </record>
+
+    <record id="group_school_teacher" model="res.groups">
+        <field name="name">Teacher</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="implied_ids" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="comment">Own teaching schedule, plus attendance and marks for assigned classes and subjects.</field>
+    </record>
+
+    <record id="group_school_department_head" model="res.groups">
+        <field name="name">Department Head</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="implied_ids" eval="[(4, ref('group_school_teacher'))]"/>
+        <field name="comment">Teacher rights plus visibility of the whole department's academic data.</field>
+    </record>
+
+    <record id="group_school_academic_director" model="res.groups">
+        <field name="name">Academic Director / Coordinator</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="implied_ids" eval="[(4, ref('group_school_department_head'))]"/>
+        <field name="comment">All academic data: subjects, assignments, schedules, programs, attendance, and marks.</field>
+    </record>
+
+    <record id="group_school_registrar" model="res.groups">
+        <field name="name">HR / Registrar</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="implied_ids" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="comment">Student and staff master data, including private documents.</field>
+    </record>
+
+    <record id="group_school_admin" model="res.groups">
+        <field name="name">School Administrator</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="implied_ids"
+                eval="[(4, ref('group_school_academic_director')), (4, ref('group_school_registrar'))]"/>
+        <field name="comment">Full access to every school record and configuration.</field>
+    </record>
+
+    <!-- Odoo's own administrator keeps full school access without extra setup. -->
+    <record id="base.user_admin" model="res.users">
+        <field name="groups_id" eval="[(4, ref('group_school_admin'))]"/>
+    </record>
 </odoo>

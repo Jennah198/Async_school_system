@@ -1,6 +1,8 @@
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
+from .school_responsibility import DEPARTMENTS, RESPONSIBILITIES
+
 # Audience type -> the field that must hold at least one value for that type.
 AUDIENCE_VALUE_FIELDS = {
     'department': 'department',
@@ -8,8 +10,20 @@ AUDIENCE_VALUE_FIELDS = {
     'teacher_group': 'teacher_ids',
     'subject_group': 'subject_ids',
     'class_section': 'class_ids',
+    'branch_campus': 'campus_ids',
     'selected_staff': 'staff_ids',
 }
+
+AUDIENCE_TYPES = [
+    ('all_staff', 'All Staff'),
+    ('department', 'Department'),
+    ('responsibility', 'Responsibility'),
+    ('teacher_group', 'Teacher Group'),
+    ('subject_group', 'Subject'),
+    ('class_section', 'Class / Section'),
+    ('branch_campus', 'Branch / Campus'),
+    ('selected_staff', 'Selected Staff'),
+]
 
 
 class SchoolProgram(models.Model):
@@ -29,35 +43,16 @@ class SchoolProgram(models.Model):
         ('other', 'Other'),
     ], string='Program Type', required=True, default='meeting')
 
-    audience_type = fields.Selection([
-        ('all_staff', 'All Staff'),
-        ('department', 'Department'),
-        ('responsibility', 'Responsibility'),
-        ('teacher_group', 'Teacher Group'),
-        ('subject_group', 'Subject Group'),
-        ('class_section', 'Class / Section'),
-        ('selected_staff', 'Selected Staff'),
-    ], string='Audience', required=True, default='all_staff', tracking=True)
+    audience_type = fields.Selection(
+        AUDIENCE_TYPES, string='Audience', required=True, default='all_staff', tracking=True,
+    )
 
-    department = fields.Selection([
-        ('administration', 'Administration'),
-        ('academic', 'Academic'),
-        ('finance', 'Finance'),
-        ('it', 'IT'),
-        ('library', 'Library'),
-        ('facilities', 'Facilities'),
-        ('counseling', 'Counseling'),
-        ('sports', 'Sports'),
-    ], string='Department')
-    responsibility = fields.Selection([
-        ('teacher', 'Teacher'),
-        ('homeroom', 'Homeroom Teacher'),
-        ('department_head', 'Department Head'),
-        ('coordinator', 'Academic Coordinator'),
-    ], string='Responsibility')
+    department = fields.Selection(DEPARTMENTS, string='Department')
+    responsibility = fields.Selection(RESPONSIBILITIES, string='Responsibility')
     teacher_ids = fields.Many2many('school.teacher', string='Teachers')
     subject_ids = fields.Many2many('school.subject', string='Subjects')
     class_ids = fields.Many2many('school.class', string='Classes / Sections')
+    campus_ids = fields.Many2many('school.campus', string='Branches / Campuses')
     staff_ids = fields.Many2many('school.staff', string='Selected Staff')
 
     start_datetime = fields.Datetime(
@@ -86,7 +81,7 @@ class SchoolProgram(models.Model):
     ]
 
     @api.constrains('audience_type', 'department', 'responsibility',
-                    'teacher_ids', 'subject_ids', 'class_ids', 'staff_ids')
+                    'teacher_ids', 'subject_ids', 'class_ids', 'campus_ids', 'staff_ids')
     def _check_audience_values(self):
         for rec in self:
             field = AUDIENCE_VALUE_FIELDS.get(rec.audience_type)

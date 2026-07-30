@@ -129,7 +129,7 @@ class SchoolClassSchedule(models.Model):
                     f'({rec.academic_year}, {rec.term}).'
                 )
 
-    @api.constrains('state', 'teacher_id', 'subject_id')
+    @api.constrains('state', 'teacher_id', 'subject_id', 'class_id')
     def _check_published_records_are_active(self):
         for rec in self:
             if rec.state != 'published':
@@ -138,6 +138,8 @@ class SchoolClassSchedule(models.Model):
                 raise ValidationError('An inactive teacher cannot be used for a published schedule.')
             if not rec.subject_id.active:
                 raise ValidationError('An inactive subject cannot be used for a published schedule.')
+            if not rec.class_id.active:
+                raise ValidationError('An archived class cannot be used for a published schedule.')
 
     @api.constrains('state', 'reschedule_reason')
     def _check_reschedule_reason(self):
@@ -185,6 +187,22 @@ class SchoolClassSchedule(models.Model):
             ('academic_year', '=', self.academic_year),
             ('term', '=', self.term),
         ]
+
+    def _conflicting_ids(self):
+        """Ids of live slots that share a teacher, class, or room with another slot.
+        The create/write constraint blocks new clashes, so this only ever surfaces rows
+        that predate the constraint or were loaded around it.
+        ponytail: O(n) searches over live slots; fine at school scale."""
+        conflicting = set()
+        for rec in self.search([('state', 'not in', FREE_STATES)]):
+            for field, _label in CONFLICT_RESOURCES:
+                resource = rec[field]
+                if resource and self.search_count(
+                    rec._same_slot_domain() + [(field, '=', resource.id)]
+                ):
+                    conflicting.add(rec.id)
+                    break
+        return sorted(conflicting)
 
     def action_publish(self):
         self.write({'state': 'published'})

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Document pages are added by inheritance so the Staff Registration and
+         Teacher Registration view files stay owned by their own teams. The pages
+         carry the same group as the fields, so nobody below HR/Registrar even
+         renders the tab. -->
+
+    <record id="view_school_staff_form_documents" model="ir.ui.view">
+        <field name="name">school.staff.form.documents</field>
+        <field name="model">school.staff</field>
+        <field name="inherit_id" ref="view_school_staff_form"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="Documents" name="documents"
+                      groups="school_management.group_school_registrar">
+                    <group>
+                        <field name="id_document" filename="id_document_filename"/>
+                        <field name="id_document_filename" invisible="1"/>
+                        <field name="qualification_document"
+                               filename="qualification_document_filename"/>
+                        <field name="qualification_document_filename" invisible="1"/>
+                        <field name="employment_contract"
+                               filename="employment_contract_filename"/>
+                        <field name="employment_contract_filename" invisible="1"/>
+                    </group>
+                    <p class="text-muted">
+                        Visible to HR/Registrar and School Administrator only. Use fictional
+                        files for demonstrations.
+                    </p>
+                </page>
+            </notebook>
+        </field>
+    </record>
+
+    <record id="view_school_teacher_form_documents" model="ir.ui.view">
+        <field name="name">school.teacher.form.documents</field>
+        <field name="model">school.teacher</field>
+        <field name="inherit_id" ref="view_school_teacher_form"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="Documents" name="documents"
+                      groups="school_management.group_school_registrar">
+                    <group>
+                        <field name="qualification_document"
+                               filename="qualification_document_filename"/>
+                        <field name="qualification_document_filename" invisible="1"/>
+                        <field name="employment_document"
+                               filename="employment_document_filename"/>
+                        <field name="employment_document_filename" invisible="1"/>
+                    </group>
+                    <p class="text-muted">
+                        Visible to HR/Registrar and School Administrator only. Use fictional
+                        files for demonstrations.
+                    </p>
+                </page>
+            </notebook>
+        </field>
+    </record>
+</odoo>
