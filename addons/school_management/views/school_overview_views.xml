@@ -4,7 +4,9 @@
         <field name="name">school.dashboard.form</field>
         <field name="model">school.dashboard</field>
         <field name="arch" type="xml">
-            <form create="false" edit="false">
+            <!-- No create="false": the action opens a fresh transient record, and
+                 blocking creation leaves every computed count at zero. -->
+            <form edit="false">
                 <sheet>
                     <div class="oe_title">
                         <h1>School Administration Overview</h1>
@@ -52,12 +54,11 @@
         </field>
     </record>
 
-    <record id="action_school_overview" model="ir.actions.act_window">
+    <record id="action_school_overview_server" model="ir.actions.server">
         <field name="name">Overview</field>
-        <field name="res_model">school.dashboard</field>
-        <field name="view_mode">form</field>
-        <field name="view_id" ref="view_school_dashboard_form"/>
-        <field name="target">inline</field>
+        <field name="model_id" ref="model_school_dashboard"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_open_overview()</field>
     </record>
 
     <!-- ============ Teacher form: related records as smart buttons ============ -->

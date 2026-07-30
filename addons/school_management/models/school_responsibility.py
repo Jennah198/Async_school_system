@@ -131,7 +131,7 @@ class SchoolStaffResponsibilityLink(models.Model):
         compute='_compute_primary_responsibility', store=True,
     )
     responsibility_count = fields.Integer(
-        string='Responsibilities', compute='_compute_related_counts',
+        string='Responsibility Count', compute='_compute_related_counts',
     )
     teacher_count = fields.Integer(string='Teacher Profiles', compute='_compute_related_counts')
     program_count = fields.Integer(string='Programs Organised', compute='_compute_related_counts')

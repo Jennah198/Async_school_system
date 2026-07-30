@@ -27,6 +27,26 @@ class SchoolDashboard(models.TransientModel):
     )
     draft_staff_count = fields.Integer(string='Staff in Draft', compute='_compute_counts')
 
+    def _compute_display_name(self):
+        for rec in self:
+            rec.display_name = 'School Administration Overview'
+
+    @api.model
+    def action_open_overview(self):
+        """Open a saved transient record. An unsaved one never triggers the compute,
+        because these counts depend on other models rather than on any field of their
+        own, so the client would render every tile as zero."""
+        record = self.create({})
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Overview',
+            'res_model': self._name,
+            'res_id': record.id,
+            'view_mode': 'form',
+            'views': [(self.env.ref('school_management.view_school_dashboard_form').id, 'form')],
+            'target': 'inline',
+        }
+
     @api.depends_context('uid')
     def _compute_counts(self):
         staff = self.env['school.staff'].sudo()

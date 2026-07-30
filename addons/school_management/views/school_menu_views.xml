@@ -201,7 +201,7 @@
     <menuitem id="menu_school_overview"
               name="Overview"
               parent="menu_school_root"
-              action="action_school_overview"
+              action="action_school_overview_server"
               groups="school_management.group_school_admin"
               sequence="1"/>
 

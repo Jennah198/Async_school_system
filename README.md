@@ -51,7 +51,8 @@ for all of them.
 | `demo_director` | Academic Director |
 | `demo_teacher_maths` | Teacher — Mathematics and Amharic, Grade 1 A |
 | `demo_teacher_science` | Teacher — General Science, Grade 2 A |
-| `demo_librarian` | Staff (no teaching assignments) |
+| `demo_teacher_amharic` | Teacher — Amharic, Grade 1 A, East Campus |
+| `demo_librarian` | Staff, Librarian responsibility, East Campus, no teaching assignments |
 
 `demo_teacher_maths` and `demo_teacher_science` are the pair to use when showing
 role isolation: each sees only their own classes, marks, and announcements.
@@ -72,7 +73,7 @@ Read-Only User → Staff → Teacher → Department Head → Academic Director �
 | Teacher | Everything above, plus students, attendance, and marks for **assigned classes and subjects only**, own class schedule at any status |
 | Department Head | Teacher rights plus the Analysis dashboards |
 | Academic Director | All academic data: subjects, classes, assignments, schedules, programs, announcements, attendance, marks |
-| HR / Registrar | Student and staff master data including **private documents**, job titles |
+| HR / Registrar | Student and staff master data including **private documents**, job titles, staff responsibilities |
 | School Administrator | Everything, plus rooms |
 
 Attendance and marks are create/write for Teacher but **unlink is Academic Director
@@ -142,15 +143,23 @@ Run before merging anything into `main`. Each row is a previously accepted workf
 | 15 | Role isolation | Log in as `demo_teacher_maths`, then `demo_teacher_science` | Each sees only their own classes, marks, attendance, and announcements |
 | 16 | Announcement audience | Open My Announcements as each demo teacher | Grade 1 A notice only for the maths teacher; laboratory notice only for the science teacher; assembly notice for both |
 | 17 | Owner data isolation | Log in as `demo_librarian` | No students, no marks, no other staff records |
+| 18 | Responsibility targeting | Open My Announcements as `demo_registrar` | Sees the Registrar notice; teachers do not |
+| 19 | Campus targeting | Open My Announcements as `demo_librarian` (East) vs `demo_teacher_maths` (Main) | East Campus water notice only for East staff |
+| 20 | Staff control status | Suspend a staff member, then add a teaching assignment | Blocked with the suspended-staff message |
+| 21 | Master-record rename | Rename a staff record | Teacher name, assignments, and schedules follow |
+| 22 | Draft gate | Activate a staff record with no responsibility | Blocked, listing what is missing |
+| 23 | One homeroom per class | Assign a second homeroom teacher to the same class and term | Blocked |
+| 24 | Admin overview | School → Overview as admin | Real counts; each tile opens its records |
 
 ## Known issues and incomplete work
 
 Stated honestly — these are **not** finished.
 
-- **Branch/campus is not modelled.** The brief lists Branch/Campus as an
-  announcement audience and as a staff responsibility field. No such field exists on
-  `school.staff`, so that audience type is not implemented. Adding it needs the Staff
-  Registration team to define what a campus is.
+- **Section, Academic Year, and Term are not their own records.** Section is a `Char`
+  on `school.class`, academic year a `Char`, term a two-value `Selection`. The brief
+  asks for relational fields to them. Everything keys off the class record instead, so
+  the links are consistent, but there is no Academic Year or Term master table.
+
 - **`staff_id` is not NOT NULL on upgraded databases.** Making it required on a table
   that already held teacher rows fails the migration; Odoo logs
   `unable to set NOT NULL on column 'staff_id'` and leaves the column nullable. Fresh
