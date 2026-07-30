@@ -49,8 +49,8 @@ for all of them.
 |---|---|
 | `demo_registrar` | HR / Registrar |
 | `demo_director` | Academic Director |
-| `demo_teacher_maths` | Teacher — Mathematics and Amharic, Grade 1 A |
-| `demo_teacher_science` | Teacher — General Science, Grade 2 A |
+| `demo_teacher_maths` | Teacher — Mathematics, Grade 1 A and Grade 2 A, homeroom of Grade 1 A |
+| `demo_teacher_science` | Department Head — General Science, Grade 2 A |
 | `demo_teacher_amharic` | Teacher — Amharic, Grade 1 A, East Campus |
 | `demo_librarian` | Staff, Librarian responsibility, East Campus, no teaching assignments |
 
@@ -104,7 +104,7 @@ past their publish time, and not past their expiry are visible to their audience
 ```bash
 docker compose exec odoo odoo -c /etc/odoo/odoo.conf -d <db> -u school_management \
   --test-enable --test-tags /school_management --no-http --stop-after-init
-# school_management: 25 tests, 0 failed, 0 error(s) of 21 tests
+# school_management: 40 tests, 0 failed, 0 error(s) of 34 tests
 ```
 
 `addons/school_management/tests/test_class_schedule.py` — teacher, class, and room
@@ -112,6 +112,13 @@ double-booking blocked; back-to-back slots allowed; same weekday in another term
 allowed; a cancelled slot frees the room; a teacher with no assignment rejected;
 weekday-or-date required; inactive teacher cannot be published; rescheduling
 requires a reason; program audience requires values.
+
+`addons/school_management/tests/test_responsibility.py` — renaming a staff record
+renames the teacher and reaches the assignment label; staff cannot leave Draft without
+a phone or an active responsibility; suspended staff take no new assignments;
+deactivating staff disables the linked login; one primary responsibility per staff;
+no self-reporting; one homeroom teacher per class and term; a Registrar sees
+responsibility-targeted announcements; campus targeting respects the staff campus.
 
 `addons/school_management/tests/test_security.py` — a teacher sees attendance,
 marks, and students only for assigned classes and subjects; announcements targeted
