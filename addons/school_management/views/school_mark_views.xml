@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_school_mark_tree" model="ir.ui.view">
+        <field name="name">school.mark.tree</field>
+        <field name="model">school.mark</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" decoration-danger="grade == 'F'" decoration-success="grade == 'A'">
+                <field name="student_id"/>
+                <field name="class_id" readonly="1" optional="show"/>
+                <field name="subject_id"/>
+                <field name="term"/>
+                <field name="exam_type"/>
+                <field name="score"/>
+                <field name="max_score"/>
+                <field name="percentage" widget="percentage" readonly="1" optional="show"/>
+                <field name="grade" readonly="1"/>
+                <field name="academic_year" readonly="1" optional="hide"/>
+                <field name="recorded_by_id" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_school_mark_form" model="ir.ui.view">
+        <field name="name">school.mark.form</field>
+        <field name="model">school.mark</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group string="Student">
+                            <field name="student_id"/>
+                            <field name="class_id" readonly="1"/>
+                            <field name="academic_year" readonly="1"/>
+                        </group>
+                        <group string="Assessment">
+                            <field name="subject_id"/>
+                            <field name="term"/>
+                            <field name="exam_type"/>
+                        </group>
+                        <group string="Result">
+                            <field name="score"/>
+                            <field name="max_score"/>
+                            <field name="percentage" readonly="1"/>
+                            <field name="grade" readonly="1"/>
+                        </group>
+                        <group string="Control">
+                            <field name="recorded_by_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="Remarks">
+                        <field name="note" nolabel="1" placeholder="Feedback for the student or guardian."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_school_mark_search" model="ir.ui.view">
+        <field name="name">school.mark.search</field>
+        <field name="model">school.mark</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="student_id"/>
+                <field name="subject_id"/>
+                <field name="class_id"/>
+                <field name="academic_year"/>
+                <filter string="Term 1" name="term1" domain="[('term', '=', 'term1')]"/>
+                <filter string="Term 2" name="term2" domain="[('term', '=', 'term2')]"/>
+                <separator/>
+                <filter string="Failing" name="failing" domain="[('percentage', '&lt;', 50)]"/>
+                <separator/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Class" name="group_class" context="{'group_by': 'class_id'}"/>
+                    <filter string="Subject" name="group_subject" context="{'group_by': 'subject_id'}"/>
+                    <filter string="Student" name="group_student" context="{'group_by': 'student_id'}"/>
+                    <filter string="Term" name="group_term" context="{'group_by': 'term'}"/>
+                    <filter string="Assessment" name="group_exam" context="{'group_by': 'exam_type'}"/>
+                    <filter string="Grade" name="group_grade" context="{'group_by': 'grade'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_school_mark" model="ir.actions.act_window">
+        <field name="name">Mark List</field>
+        <field name="res_model">school.mark</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Enter marks for your assigned subjects and classes.
+            </p>
+        </field>
+    </record>
+</odoo>
