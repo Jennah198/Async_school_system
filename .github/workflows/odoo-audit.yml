@@ -1,0 +1,22 @@
+name: Odoo Audit Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  audit-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Test pipeline
+        run: |
+          echo "Odoo Audit Pipeline started successfully"
+          echo "Repository checked out successfully"
