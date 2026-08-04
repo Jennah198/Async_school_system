@@ -64,7 +64,7 @@ class SchoolAttendance(models.Model):
     ]
 =======
             ("late", "Late")
-        ],
+        },
         string="Status",
         default="present",
         required=True
