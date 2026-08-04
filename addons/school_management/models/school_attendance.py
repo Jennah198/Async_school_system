@@ -1,10 +1,17 @@
+<<<<<<< Updated upstream
 from odoo import fields, models  # type: ignore
+=======
+from odoo import models, fields
+>>>>>>> Stashed changes
 
 
 class SchoolAttendance(models.Model):
     _name = "school.attendance"
     _description = "Student Attendance"
+<<<<<<< Updated upstream
     _order = "date desc"
+=======
+>>>>>>> Stashed changes
 
     student_id = fields.Many2one(
         "school.student",
@@ -12,6 +19,7 @@ class SchoolAttendance(models.Model):
         required=True
     )
 
+<<<<<<< Updated upstream
     class_id = fields.Many2one(
         "school.class",
         string="Class",
@@ -23,12 +31,19 @@ class SchoolAttendance(models.Model):
         string="Date",
         required=True,
         default=fields.Date.context_today
+=======
+    date = fields.Date(
+        string="Date",
+        default=fields.Date.today,
+        required=True
+>>>>>>> Stashed changes
     )
 
     status = fields.Selection(
         [
             ("present", "Present"),
             ("absent", "Absent"),
+<<<<<<< Updated upstream
             ("late", "Late"),
         ],
         string="Status",
@@ -47,3 +62,15 @@ class SchoolAttendance(models.Model):
             "Attendance already exists for this student on this date."
         )
     ]
+=======
+            ("late", "Late")
+        ],
+        string="Status",
+        default="present",
+        required=True
+    )
+
+    note = fields.Text(
+        string="Notes"
+    )
+>>>>>>> Stashed changes
