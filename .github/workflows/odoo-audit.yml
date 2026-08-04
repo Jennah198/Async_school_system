@@ -16,7 +16,26 @@ jobs:
         uses: actions/checkout@v4
 
 
-      - name: Test pipeline
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+
+      - name: Run Odoo audit
         run: |
           echo "Odoo Audit Pipeline started successfully"
-          echo "Repository checked out successfully"
+          python scripts/audit_odoo.py
+
+
+      - name: Display audit report
+        run: |
+          echo "Generated Audit Report:"
+          cat reports/audit_report.md
+
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: odoo-audit-report
+          path: reports/audit_report.md
