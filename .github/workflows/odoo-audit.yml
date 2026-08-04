@@ -22,20 +22,11 @@ jobs:
           python-version: "3.11"
 
 
-      - name: Run Odoo audit
+      - name: Run Odoo Audit
         run: |
-          echo "Odoo Audit Pipeline started successfully"
           python scripts/audit_odoo.py
 
 
-      - name: Display audit report
+      - name: Display Audit Report
         run: |
-          echo "Generated Audit Report:"
           cat reports/audit_report.md
-
-
-      - name: Upload audit report
-        uses: actions/upload-artifact@v4
-        with:
-          name: odoo-audit-report
-          path: reports/audit_report.md
