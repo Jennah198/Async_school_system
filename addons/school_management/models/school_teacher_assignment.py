@@ -33,6 +33,24 @@ class SchoolTeacherAssignment(models.Model):
          'This teacher already has an identical assignment for this subject, class, year, and term.'),
     ]
 
+    @api.constrains('subject_id', 'class_id', 'academic_year', 'term', 'active')
+    def _check_single_teacher_per_subject_class_term(self):
+        """Brief section 6: one active teacher per subject/class/section for a given academic period."""
+        for rec in self.filtered(lambda r: r.active):
+            clash = self.search([
+                ('id', '!=', rec.id),
+                ('subject_id', '=', rec.subject_id.id),
+                ('class_id', '=', rec.class_id.id),
+                ('academic_year', '=', rec.academic_year),
+                ('term', '=', rec.term),
+                ('active', '=', True),
+            ], limit=1)
+            if clash:
+                raise ValidationError(
+                    f'{rec.class_id.display_name} already has {clash.teacher_id.name} teaching '
+                    f'{rec.subject_id.name} for {rec.academic_year} {rec.term}.'
+                )
+
     @api.constrains('responsibility', 'class_id', 'academic_year', 'term', 'active')
     def _check_single_homeroom_per_class(self):
         """Brief section 6: one active homeroom teacher per class/section and period."""
