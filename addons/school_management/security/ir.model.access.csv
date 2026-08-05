@@ -9,6 +9,7 @@ access_school_job_title_registrar,access.school.job.title.registrar,model_school
 access_school_job_title_readonly,access.school.job.title.readonly,model_school_job_title,school_management.group_school_readonly,1,0,0,0
 access_school_teacher_registrar,access.school.teacher.registrar,model_school_teacher,school_management.group_school_registrar,1,1,1,1
 access_school_teacher_readonly,access.school.teacher.readonly,model_school_teacher,school_management.group_school_readonly,1,0,0,0
+access_school_teacher_teacher,access.school.teacher.teacher,model_school_teacher,school_management.group_school_teacher,1,1,0,0
 access_school_subject_director,access.school.subject.director,model_school_subject,school_management.group_school_academic_director,1,1,1,1
 access_school_subject_readonly,access.school.subject.readonly,model_school_subject,school_management.group_school_readonly,1,0,0,0
 access_school_teacher_assignment_director,access.school.teacher.assignment.director,model_school_teacher_assignment,school_management.group_school_academic_director,1,1,1,1

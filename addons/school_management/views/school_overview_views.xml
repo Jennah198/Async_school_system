@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <!-- ======================================================= -->
+    <!-- 1. SCHOOL ADMINISTRATION OVERVIEW DASHBOARD FORM        -->
+    <!-- ======================================================= -->
     <record id="view_school_dashboard_form" model="ir.ui.view">
         <field name="name">school.dashboard.form</field>
         <field name="model">school.dashboard</field>
@@ -54,6 +58,7 @@
         </field>
     </record>
 
+    <!-- Server Action: Overview -->
     <record id="action_school_overview_server" model="ir.actions.server">
         <field name="name">Overview</field>
         <field name="model_id" ref="model_school_dashboard"/>
@@ -61,8 +66,9 @@
         <field name="code">action = model.action_open_overview()</field>
     </record>
 
-    <!-- ============ Teacher form: related records as smart buttons ============ -->
-
+    <!-- ======================================================= -->
+    <!-- 2. TEACHER FORM: SMART BUTTONS EXTENSION               -->
+    <!-- ======================================================= -->
     <record id="view_school_teacher_form_links" model="ir.ui.view">
         <field name="name">school.teacher.form.links</field>
         <field name="model">school.teacher</field>
@@ -97,8 +103,9 @@
         </field>
     </record>
 
-    <!-- ============ Audience: campus option on programs and announcements ============ -->
-
+    <!-- ======================================================= -->
+    <!-- 3. CAMPUS EXTENSIONS: PROGRAMS & ANNOUNCEMENTS           -->
+    <!-- ======================================================= -->
     <record id="view_school_program_form_campus" model="ir.ui.view">
         <field name="name">school.program.form.campus</field>
         <field name="model">school.program</field>
@@ -124,4 +131,5 @@
             </field>
         </field>
     </record>
+
 </odoo>

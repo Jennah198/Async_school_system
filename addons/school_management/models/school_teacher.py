@@ -1,5 +1,5 @@
-from odoo import api, fields, models
-from odoo.exceptions import ValidationError
+from odoo import models, fields, api
+from odoo.exceptions import UserError, ValidationError
 
 
 class SchoolTeacher(models.Model):
@@ -7,16 +7,29 @@ class SchoolTeacher(models.Model):
     _description = 'Teacher Profile'
     _order = 'name'
 
-    teacher_id = fields.Char(string='Teacher ID', required=True, copy=False, readonly=True, default='New')
-    # Brief section 5: the name is inherited from the staff master record, so renaming
-    # the staff member flows through to assignments and schedules.
+    teacher_id = fields.Char(
+        string='Teacher ID', 
+        required=True, 
+        copy=False, 
+        readonly=True, 
+        default='New'
+    )
+    
     name = fields.Char(
-        string='Full Name', related='staff_id.name', store=True, readonly=True,
+        string='Full Name', 
+        compute='_compute_name',
+        store=True, 
+        readonly=True,
     )
 
-    staff_id = fields.Many2one('school.staff', string='Staff Record', required=True, ondelete='restrict',
-                                domain="[('employment_status', '=', 'active')]",
-                                help='Link to the official staff master record.')
+    staff_id = fields.Many2one(
+        'school.staff', 
+        string='Staff Record', 
+        required=True, 
+        ondelete='restrict',
+        domain="[('employment_status', '=', 'active')]",
+        help='Link to the official staff master record.'
+    )
 
     qualification = fields.Char(string='Highest Qualification')
     specialization = fields.Char(string='Specialization')
@@ -29,20 +42,184 @@ class SchoolTeacher(models.Model):
     ], string='Teaching Status', default='active', required=True)
 
     max_weekly_workload = fields.Integer(string='Maximum Weekly Periods')
-    available_days = fields.Char(string='Available Days', help='e.g. Mon-Fri, or specific days')
+    available_days = fields.Char(
+        string='Available Days', 
+        help='e.g. Mon-Fri, or specific days'
+    )
 
-    assignment_ids = fields.One2many('school.teacher.assignment', 'teacher_id', string='Assignments')
+    assignment_ids = fields.One2many(
+        'school.teacher.assignment', 
+        'teacher_id', 
+        string='Assignments'
+    )
+    user_id = fields.Many2one(
+        'res.users', 
+        string='Teacher Login', 
+        copy=False, 
+        readonly=True
+    )
 
     active = fields.Boolean(string='Active', default=True)
+
+    # =========================================================================
+    # TEACHER DASHBOARD KPI COMPUTED FIELDS
+    # =========================================================================
+    assigned_class_count = fields.Integer(
+        string='Classes Count', 
+        compute='_compute_dashboard_kpis'
+    )
+    assigned_subject_count = fields.Integer(
+        string='Subjects Count', 
+        compute='_compute_dashboard_kpis'
+    )
+    total_student_count = fields.Integer(
+        string='Total Students', 
+        compute='_compute_dashboard_kpis'
+    )
+    current_weekly_periods = fields.Integer(
+        string='Current Weekly Periods', 
+        compute='_compute_dashboard_kpis'
+    )
 
     _sql_constraints = [
         ('teacher_id_unique', 'unique(teacher_id)', 'Teacher ID must be unique.'),
         ('staff_id_unique', 'unique(staff_id)', 'This staff member already has a teacher profile.'),
     ]
 
+    # =========================================================================
+    # COMPUTE METHODS
+    # =========================================================================
+    @api.depends('staff_id.name')
+    def _compute_name(self):
+        for rec in self.sudo():
+            rec.name = rec.staff_id.name if rec.staff_id else ''
+
+    @api.depends('assignment_ids', 'assignment_ids.active', 'assignment_ids.class_id', 'assignment_ids.subject_id', 'assignment_ids.weekly_periods')
+    def _compute_dashboard_kpis(self):
+        for rec in self:
+            active_assignments = rec.assignment_ids.filtered(lambda a: a.active)
+            classes = active_assignments.mapped('class_id')
+            subjects = active_assignments.mapped('subject_id')
+            
+            rec.assigned_class_count = len(classes)
+            rec.assigned_subject_count = len(subjects)
+            rec.current_weekly_periods = sum(active_assignments.mapped('weekly_periods'))
+            
+            if classes:
+                students = self.env['school.student'].search([
+                    ('class_id', 'in', classes.ids),
+                    ('active', '=', True)
+                ])
+                rec.total_student_count = len(students)
+            else:
+                rec.total_student_count = 0
+
+    # =========================================================================
+    # DASHBOARD ACTION & STAT BUTTONS
+    # =========================================================================
+    @api.model
+    def action_open_my_dashboard(self):
+        user = self.env.user
+        teacher = self.env['school.teacher'].sudo().search([('user_id', '=', user.id)], limit=1)
+        
+        if not teacher:
+            raise UserError("No teacher record is associated with your current user account.")
+
+        dashboard_view = self.env.ref('school_management.view_school_teacher_dashboard_form')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'My Dashboard',
+            'res_model': 'school.teacher',
+            'res_id': teacher.id,
+            'view_mode': 'form',
+            'views': [(dashboard_view.id, 'form')],
+            'target': 'current',
+            'flags': {'mode': 'readonly'},
+            'context': {
+                'create': False, 
+                'edit': False, 
+                'delete': False,
+                'form_view_initial_mode': 'view',
+            },
+        }
+
+    def action_view_my_students(self):
+        self.ensure_one()
+        class_ids = self.assignment_ids.filtered(lambda a: a.active).mapped('class_id').ids
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'My Students',
+            'res_model': 'school.student',
+            'view_mode': 'tree,form,kanban',
+            'domain': [('class_id', 'in', class_ids)],
+        }
+
+    def action_view_my_schedule(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'My Class Schedule',
+            'res_model': 'school.class.schedule',
+            'view_mode': 'calendar,tree,form',
+            'domain': [('teacher_id', '=', self.id)],
+        }
+
+    def action_view_my_attendance(self):
+        self.ensure_one()
+        class_ids = self.assignment_ids.filtered(lambda a: a.active).mapped('class_id').ids
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Class Attendance',
+            'res_model': 'school.attendance',
+            'view_mode': 'tree,form',
+            'domain': [('class_id', 'in', class_ids)],
+        }
+
+    def action_view_my_marks(self):
+        self.ensure_one()
+        class_ids = self.assignment_ids.filtered(lambda a: a.active).mapped('class_id').ids
+        subject_ids = self.assignment_ids.filtered(lambda a: a.active).mapped('subject_id').ids
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Mark List Analysis',
+            'res_model': 'school.mark',
+            'view_mode': 'tree,form,graph,pivot',
+            'domain': [('class_id', 'in', class_ids), ('subject_id', 'in', subject_ids)],
+        }
+
+    # =========================================================================
+    # ORM OVERRIDES & USER CREATION
+    # =========================================================================
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get('teacher_id', 'New') == 'New':
                 vals['teacher_id'] = self.env['ir.sequence'].next_by_code('school.teacher') or 'New'
-        return super().create(vals_list)
+        teachers = super().create(vals_list)
+        for teacher in teachers:
+            teacher._create_teacher_user()
+        return teachers
+
+    def _create_teacher_user(self):
+        self.ensure_one()
+        if self.user_id:
+            return
+        if not self.staff_id.email:
+            raise ValidationError(
+                'The linked staff record needs an email address before a login can be created for %s.'
+                % self.name
+            )
+        Users = self.env['res.users'].sudo()
+        teacher_group = self.env.ref('school_management.group_school_teacher', raise_if_not_found=False)
+        internal_group = self.env.ref('base.group_user')
+        groups = [(4, internal_group.id)]
+        if teacher_group:
+            groups.append((4, teacher_group.id))
+        user = Users.create({
+            'name': self.name,
+            'login': self.staff_id.email,
+            'email': self.staff_id.email,
+            'groups_id': groups,
+        })
+        user.action_reset_password()
+        self.user_id = user.id

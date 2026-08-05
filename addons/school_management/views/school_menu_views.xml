@@ -5,7 +5,6 @@
     <!-- 1. ACTIONS                                              -->
     <!-- ======================================================= -->
 
-    <!-- Action: Students -->
     <record id="action_school_student" model="ir.actions.act_window">
         <field name="name">Students</field>
         <field name="res_model">school.student</field>
@@ -15,6 +14,12 @@
                 Register your first student!
             </p>
         </field>
+    </record>
+
+    <record id="action_school_class" model="ir.actions.act_window">
+        <field name="name">Classes</field>
+        <field name="res_model">school.class</field>
+        <field name="view_mode">tree,form</field>
     </record>
 
 
@@ -61,12 +66,6 @@
               groups="school_management.group_school_registrar"
               sequence="20"/>
 
-    <record id="action_school_class" model="ir.actions.act_window">
-        <field name="name">Classes</field>
-        <field name="res_model">school.class</field>
-        <field name="view_mode">tree,form</field>
-    </record>
-
     <menuitem id="menu_school_class"
               name="Classes"
               parent="menu_school_academic"
@@ -77,6 +76,7 @@
               name="Teachers"
               parent="menu_school_academic"
               action="action_school_teacher"
+              groups="school_management.group_school_registrar,school_management.group_school_academic_director,school_management.group_school_admin"
               sequence="30"/>
 
     <menuitem id="menu_school_subject"
@@ -162,6 +162,13 @@
               groups="school_management.group_school_teacher"
               sequence="5"/>
 
+    <menuitem id="menu_school_teacher_dashboard"
+              name="Dashboard"
+              parent="menu_school_my_work"
+              action="action_server_open_my_dashboard"
+              groups="school_management.group_school_teacher"
+              sequence="5"/>
+
     <menuitem id="menu_school_my_timetable"
               name="My Timetable"
               parent="menu_school_my_work"
@@ -234,4 +241,5 @@
               parent="menu_school_analysis"
               action="action_school_dashboard_schedule_load"
               sequence="40"/>
+
 </odoo>
