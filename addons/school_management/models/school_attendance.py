@@ -1,4 +1,4 @@
-from odoo import fields, models  # type: ignore
+hasattrfrom odoo import fields, models  # type: ignore
 
 
 class SchoolAttendance(models.Model):

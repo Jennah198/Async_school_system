@@ -7,26 +7,21 @@ on:
 
 jobs:
   audit-test:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-
+          python-version: "3.12"
 
       - name: Run Odoo Audit
         run: |
           python scripts/audit_odoo.py
 
-
-      - name: Display Audit Report
+      - name: Show Audit Report
         run: |
           cat reports/audit_report.md
