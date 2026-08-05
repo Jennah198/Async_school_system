@@ -9,8 +9,14 @@
             <tree>
                 <field name="teacher_id"/>
                 <field name="name"/>
+                <field name="department"/>
+                <field name="primary_responsibility"/>
                 <field name="qualification"/>
-                <field name="teaching_status"/>
+                <field name="specialization"/>
+                <field name="teaching_status"
+                       decoration-success="teaching_status == 'active'"
+                       decoration-danger="teaching_status == 'inactive'"
+                       widget="badge"/>
             </tree>
         </field>
     </record>
@@ -28,6 +34,8 @@
                             <field name="teacher_id" readonly="1"/>
                             <field name="name"/>
                             <field name="staff_id"/>
+                            <field name="department" readonly="1"/>
+                            <field name="primary_responsibility" readonly="1"/>
                             <field name="teaching_status"/>
                         </group>
                         <group>
@@ -35,6 +43,7 @@
                             <field name="specialization"/>
                             <field name="years_of_experience"/>
                             <field name="hire_date"/>
+                            <field name="active" widget="boolean_toggle"/>
                         </group>
                     </group>
                     <group string="Availability">
@@ -61,6 +70,37 @@
         </field>
     </record>
 
+    <record id="view_school_teacher_search" model="ir.ui.view">
+        <field name="name">school.teacher.search</field>
+        <field name="model">school.teacher</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="teacher_id"/>
+                <field name="staff_id"/>
+                <field name="qualification"/>
+                <field name="specialization"/>
+                <field name="department"/>
+                <separator/>
+                <filter name="filter_active" string="Active Teachers"
+                        domain="[('teaching_status', '=', 'active')]"/>
+                <filter name="filter_inactive" string="Inactive Teachers"
+                        domain="[('teaching_status', '=', 'inactive')]"/>
+                <separator/>
+                <filter name="filter_archived" string="Archived"
+                        domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_department" string="Department"
+                            context="{'group_by': 'department'}"/>
+                    <filter name="group_teaching_status" string="Teaching Status"
+                            context="{'group_by': 'teaching_status'}"/>
+                    <filter name="group_primary_responsibility" string="Primary Responsibility"
+                            context="{'group_by': 'primary_responsibility'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <!-- Main Teachers Window Action (Explicitly mapped to tree and primary form views) -->
     <record id="action_school_teacher" model="ir.actions.act_window">
         <field name="name">Teachers</field>
@@ -71,6 +111,12 @@
             (0, 0, {'view_mode': 'tree', 'view_id': ref('view_school_teacher_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('view_school_teacher_form')})
         ]"/>
+        <field name="search_view_id" ref="view_school_teacher_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Register a teacher profile linked to an active staff record!
+            </p>
+        </field>
     </record>
 
     <!-- Server Action for Teacher Dashboard -->

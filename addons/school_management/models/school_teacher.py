@@ -22,13 +22,15 @@ class SchoolTeacher(models.Model):
         readonly=True,
     )
 
-    staff_id = fields.Many2one(
-        'school.staff', 
-        string='Staff Record', 
-        required=True, 
-        ondelete='restrict',
-        domain="[('employment_status', '=', 'active')]",
-        help='Link to the official staff master record.'
+    staff_id = fields.Many2one('school.staff', string='Staff Record', required=True, ondelete='restrict',
+                                domain="[('active', '=', True), ('state', '=', 'active'), '|', ('department', '=', 'academic'), ('primary_responsibility', 'in', ['teacher', 'homeroom', 'department_head', 'coordinator'])]",
+                                help='Link to the official staff master record.')
+
+    department = fields.Selection(
+        related='staff_id.department', string='Department', store=True, readonly=True,
+    )
+    primary_responsibility = fields.Selection(
+        related='staff_id.primary_responsibility', string='Primary Responsibility', store=True, readonly=True,
     )
 
     qualification = fields.Char(string='Highest Qualification')
@@ -186,6 +188,15 @@ class SchoolTeacher(models.Model):
             'view_mode': 'tree,form,graph,pivot',
             'domain': [('class_id', 'in', class_ids), ('subject_id', 'in', subject_ids)],
         }
+
+    @api.constrains('staff_id')
+    def _check_staff_active(self):
+        for rec in self:
+            if rec.staff_id:
+                if not rec.staff_id.active or rec.staff_id.state != 'active':
+                    raise ValidationError('A teacher profile must be linked to an active staff record.')
+                if rec.staff_id.department != 'academic' and rec.staff_id.primary_responsibility not in ('teacher', 'homeroom', 'department_head', 'coordinator'):
+                    raise ValidationError('Selected staff member must be a teacher or academic staff member.')
 
     # =========================================================================
     # ORM OVERRIDES & USER CREATION
