@@ -175,6 +175,13 @@
               groups="school_management.group_school_teacher"
               sequence="30"/>
 
+    <menuitem id="menu_school_teacher_dashboard"
+              name="Dashboard"
+              parent="menu_school_teacher_root"
+              action="action_school_teacher_dashboard"
+              groups="school_management.group_school_teacher"
+              sequence="5"/>
+
     <menuitem id="menu_school_my_timetable"
               name="My Timetable"
               parent="menu_school_teacher_root"
@@ -195,6 +202,7 @@
               action="action_school_my_mark_tasks"
               groups="school_management.group_school_teacher"
               sequence="30"/>
+              sequence="5"/>
 
     <menuitem id="menu_school_weekly_timetable"
               name="Weekly Timetable"

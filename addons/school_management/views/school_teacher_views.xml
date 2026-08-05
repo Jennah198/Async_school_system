@@ -1,4 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <!-- Teacher Tree View -->
     <record id="view_school_teacher_tree" model="ir.ui.view">
         <field name="name">school.teacher.tree</field>
         <field name="model">school.teacher</field>
@@ -18,9 +21,11 @@
         </field>
     </record>
 
+    <!-- Primary Editable Teacher Form (Priority 1 ensures it's the default registration form) -->
     <record id="view_school_teacher_form" model="ir.ui.view">
         <field name="name">school.teacher.form</field>
         <field name="model">school.teacher</field>
+        <field name="priority">1</field>
         <field name="arch" type="xml">
             <form>
                 <sheet>
@@ -96,10 +101,16 @@
         </field>
     </record>
 
+    <!-- Main Teachers Window Action (Explicitly mapped to tree and primary form views) -->
     <record id="action_school_teacher" model="ir.actions.act_window">
         <field name="name">Teachers</field>
         <field name="res_model">school.teacher</field>
         <field name="view_mode">tree,form</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_school_teacher_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_school_teacher_form')})
+        ]"/>
         <field name="search_view_id" ref="view_school_teacher_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -107,4 +118,15 @@
             </p>
         </field>
     </record>
+
+    <!-- Server Action for Teacher Dashboard -->
+    <record id="action_server_open_my_dashboard" model="ir.actions.server">
+        <field name="name">My Dashboard</field>
+        <field name="model_id" ref="model_school_teacher"/>
+        <field name="state">code</field>
+        <field name="code">
+action = model.action_open_my_dashboard()
+        </field>
+    </record>
+
 </odoo>
