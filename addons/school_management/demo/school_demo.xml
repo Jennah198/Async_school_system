@@ -95,11 +95,11 @@
     </record>
 
     <record id="demo_user_director" model="res.users">
-        <field name="name">Demo Academic Director</field>
+        <field name="name">Demo Director</field>
         <field name="login">demo_director</field>
         <field name="password">demo</field>
         <field name="groups_id"
-                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_academic_director')])]"/>
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_director')])]"/>
     </record>
 
     <record id="demo_user_teacher_maths" model="res.users">
@@ -115,7 +115,7 @@
         <field name="login">demo_teacher_science</field>
         <field name="password">demo</field>
         <field name="groups_id"
-                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_department_head')])]"/>
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_teacher')])]"/>
     </record>
 
     <record id="demo_user_teacher_amharic" model="res.users">
@@ -131,7 +131,7 @@
         <field name="login">demo_librarian</field>
         <field name="password">demo</field>
         <field name="groups_id"
-                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_staff')])]"/>
+                eval="[(6, 0, [ref('base.group_user'), ref('school_management.group_school_frontoffice')])]"/>
     </record>
 
     <!-- ============ Staff, five records (job titles ship as seed data) ============ -->

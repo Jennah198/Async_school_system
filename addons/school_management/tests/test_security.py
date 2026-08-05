@@ -18,7 +18,8 @@ class TestSchoolSecurity(TransactionCase):
         self.history = self.env['school.subject'].create({'name': 'SEC History'})
 
         self.teacher_user = self._user('sec_teacher_a', 'group_school_teacher')
-        self.plain_staff_user = self._user('sec_staff_only', 'group_school_staff')
+        # Front office is the closest peer role that has limited/read-only access
+        self.plain_staff_user = self._user('sec_staff_only', 'group_school_frontoffice')
 
         self.teacher_a = self._teacher('SEC Teacher A', self.teacher_user)
         self.teacher_b = self._teacher('SEC Teacher B', self._user('sec_teacher_b', 'group_school_teacher'))
