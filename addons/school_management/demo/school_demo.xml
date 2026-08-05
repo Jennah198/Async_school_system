@@ -137,56 +137,66 @@
     <!-- ============ Staff, five records (job titles ship as seed data) ============ -->
 
     <record id="demo_staff_maths" model="school.staff">
-        <field name="name">Almaz Tesfaye</field>
+        <field name="first_name">Almaz</field>
+        <field name="last_name">Tesfaye</field>
         <field name="department">academic</field>
         <field name="job_title_id" ref="jt_teacher"/>
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000001</field>
+        <field name="email">almaz.tesfaye@school.example</field>
         <field name="campus_id" ref="demo_campus_main"/>
         <field name="user_id" ref="demo_user_teacher_maths"/>
     </record>
 
     <record id="demo_staff_science" model="school.staff">
-        <field name="name">Dawit Alemu</field>
+        <field name="first_name">Dawit</field>
+        <field name="last_name">Alemu</field>
         <field name="department">academic</field>
         <field name="job_title_id" ref="jt_department_head"/>
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000002</field>
+        <field name="email">dawit.alemu@school.example</field>
         <field name="campus_id" ref="demo_campus_main"/>
         <field name="user_id" ref="demo_user_teacher_science"/>
     </record>
 
     <record id="demo_staff_amharic" model="school.staff">
-        <field name="name">Hanna Girma</field>
+        <field name="first_name">Hanna</field>
+        <field name="last_name">Girma</field>
         <field name="department">academic</field>
         <field name="job_title_id" ref="jt_teacher"/>
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000003</field>
+        <field name="email">hanna.girma@school.example</field>
         <field name="campus_id" ref="demo_campus_east"/>
         <field name="user_id" ref="demo_user_teacher_amharic"/>
     </record>
 
     <record id="demo_staff_registrar" model="school.staff">
-        <field name="name">Selam Bekele</field>
+        <field name="first_name">Selam</field>
+        <field name="last_name">Bekele</field>
         <field name="department">administration</field>
         <field name="job_title_id" ref="jt_registrar"/>
         <field name="employment_type">full_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000004</field>
+        <field name="email">selam.bekele@school.example</field>
         <field name="campus_id" ref="demo_campus_main"/>
         <field name="user_id" ref="demo_user_registrar"/>
     </record>
 
     <record id="demo_staff_librarian" model="school.staff">
-        <field name="name">Yonas Haile</field>
+        <field name="first_name">Yonas</field>
+        <field name="last_name">Haile</field>
         <field name="department">library</field>
         <field name="job_title_id" ref="jt_librarian"/>
         <field name="employment_type">part_time</field>
         <field name="employment_status">active</field>
         <field name="phone">+251911000005</field>
+        <field name="email">yonas.haile@school.example</field>
         <field name="campus_id" ref="demo_campus_east"/>
         <field name="user_id" ref="demo_user_librarian"/>
     </record>
@@ -239,6 +249,15 @@
         <field name="campus_id" ref="demo_campus_east"/>
         <field name="start_date">2026-07-01</field>
     </record>
+
+    <!-- ============ Activate staff now that responsibilities exist ============ -->
+
+    <function model="school.staff" name="write">
+        <value model="school.staff" eval="[
+            ref('demo_staff_maths'), ref('demo_staff_science'), ref('demo_staff_amharic'),
+            ref('demo_staff_registrar'), ref('demo_staff_librarian')]"/>
+        <value eval="{'state': 'active'}"/>
+    </function>
 
     <!-- ============ Teachers, three profiles. Name is inherited from staff. ============ -->
 
@@ -638,12 +657,4 @@
         <field name="max_score">100</field>
     </record>
 
-    <!-- ============ Activate staff now that responsibilities exist ============ -->
-
-    <function model="school.staff" name="write">
-        <value model="school.staff" eval="[
-            ref('demo_staff_maths'), ref('demo_staff_science'), ref('demo_staff_amharic'),
-            ref('demo_staff_registrar'), ref('demo_staff_librarian')]"/>
-        <value eval="{'state': 'active'}"/>
-    </function>
 </odoo>
