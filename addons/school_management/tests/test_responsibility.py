@@ -148,7 +148,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         self._responsibility(
             registrar_staff, 'registrar', is_primary=True, department='administration',
         )
-        user = self._user_for(registrar_staff, 'resp_registrar', 'group_school_staff')
+        user = self._user_for(registrar_staff, 'resp_registrar', 'group_school_registrar')
 
         targeted = self._announcement(
             'RESP For Registrars', audience_type='responsibility', responsibility='registrar',
@@ -163,7 +163,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     def test_campus_targeted_announcement_respects_the_staff_campus(self):
         east_staff = self._staff('RESP East Staff', self.campus_east)
         self._responsibility(east_staff, 'librarian', is_primary=True, campus_id=self.campus_east.id)
-        user = self._user_for(east_staff, 'resp_east', 'group_school_staff')
+        user = self._user_for(east_staff, 'resp_east', 'group_school_frontoffice')
 
         mine = self._announcement(
             'RESP East Notice', audience_type='branch_campus',

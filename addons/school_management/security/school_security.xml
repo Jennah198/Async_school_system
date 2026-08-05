@@ -1,65 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!--
+        School Management — Security Groups
+        ====================================
+        Six flat peer groups, one per operational role.
+        No implicit hierarchy between peers.
+        group_school_admin uses implied_ids to inherit all five others,
+        so the technical administrator always has full access.
+    -->
+
     <record id="module_category_school" model="ir.module.category">
         <field name="name">School Management</field>
-        <field name="description">Roles for school staff, academic, and administrative users.</field>
+        <field name="description">Role-based access for Ethiopian school staff.</field>
         <field name="sequence">20</field>
     </record>
 
-    <!-- Roles ladder: each group implies the one below it, so a School Administrator
-         automatically holds every narrower role. -->
+    <!-- ── 1. System Administrator ─────────────────────────────────────────── -->
+    <!-- Full access: user/access mgmt, Telegram bot config, system backups.   -->
+    <!-- Defined first so implied_ids below can reference the other groups.     -->
 
-    <record id="group_school_readonly" model="res.groups">
-        <field name="name">Read-Only User</field>
+    <!-- ── 2. Director / Principal ─────────────────────────────────────────── -->
+    <!-- Approve enrollment & final results, school-wide dashboards,            -->
+    <!-- promotion decisions. Read-only on daily operations.                   -->
+    <record id="group_school_director" model="res.groups">
+        <field name="name">Director / Principal</field>
         <field name="category_id" ref="module_category_school"/>
-        <field name="comment">Sees permitted published schedules and announcements. No edit actions.</field>
+        <field name="comment">Approve enrollment, approve results, view dashboards, make promotion decisions.</field>
     </record>
 
-    <record id="group_school_staff" model="res.groups">
-        <field name="name">Staff</field>
+    <!-- ── 3. Registrar / Academic Officer ─────────────────────────────────── -->
+    <!-- Student records, class assignment, academic year, exam scheduling,     -->
+    <!-- transcripts, re-registration. No fee or payment access.               -->
+    <record id="group_school_registrar" model="res.groups">
+        <field name="name">Registrar / Academic Officer</field>
         <field name="category_id" ref="module_category_school"/>
-        <field name="implied_ids" eval="[(4, ref('group_school_readonly'))]"/>
-        <field name="comment">Own staff record, own responsibilities, and announcements targeted at them.</field>
+        <field name="comment">Student records, class assignment, exam scheduling, transcripts, re-registration.</field>
     </record>
 
+    <!-- ── 4. Teacher ──────────────────────────────────────────────────────── -->
+    <!-- Attendance and marks for own assigned classes only (record-rule        -->
+    <!-- restricted). No financial or administrative access.                   -->
     <record id="group_school_teacher" model="res.groups">
         <field name="name">Teacher</field>
         <field name="category_id" ref="module_category_school"/>
-        <field name="implied_ids" eval="[(4, ref('group_school_staff'))]"/>
-        <field name="comment">Own teaching schedule, plus attendance and marks for assigned classes and subjects.</field>
+        <field name="comment">Attendance and grade entry for own assigned classes only.</field>
     </record>
 
-    <record id="group_school_department_head" model="res.groups">
-        <field name="name">Department Head</field>
+    <!-- ── 5. Finance Officer / Cashier ────────────────────────────────────── -->
+    <!-- Invoices, payments (cash/Telebirr/bank/CBE Birr), fee confirmation     -->
+    <!-- that unlocks enrollment. No access to grades or attendance.           -->
+    <record id="group_school_finance" model="res.groups">
+        <field name="name">Finance Officer</field>
         <field name="category_id" ref="module_category_school"/>
-        <field name="implied_ids" eval="[(4, ref('group_school_teacher'))]"/>
-        <field name="comment">Teacher rights plus visibility of the whole department's academic data.</field>
+        <field name="comment">Fee invoices, payment recording, financial reports. No academic data access.</field>
     </record>
 
-    <record id="group_school_academic_director" model="res.groups">
-        <field name="name">Academic Director / Coordinator</field>
+    <!-- ── 6. Front Office / Communication Officer ─────────────────────────── -->
+    <!-- Telegram community broadcasts, parent inquiry logging, issue routing.  -->
+    <!-- No editing rights on grades, attendance, or fee records.              -->
+    <record id="group_school_frontoffice" model="res.groups">
+        <field name="name">Front Office / Communication</field>
         <field name="category_id" ref="module_category_school"/>
-        <field name="implied_ids" eval="[(4, ref('group_school_department_head'))]"/>
-        <field name="comment">All academic data: subjects, assignments, schedules, programs, attendance, and marks.</field>
+        <field name="comment">Telegram broadcasts, parent inquiries, routing. No grade/fee editing.</field>
     </record>
 
-    <record id="group_school_registrar" model="res.groups">
-        <field name="name">HR / Registrar</field>
-        <field name="category_id" ref="module_category_school"/>
-        <field name="implied_ids" eval="[(4, ref('group_school_staff'))]"/>
-        <field name="comment">Student and staff master data, including private documents.</field>
-    </record>
-
+    <!-- ── 1. System Administrator (defined last — implies all peers) ──────── -->
     <record id="group_school_admin" model="res.groups">
         <field name="name">School Administrator</field>
         <field name="category_id" ref="module_category_school"/>
-        <field name="implied_ids"
-                eval="[(4, ref('group_school_academic_director')), (4, ref('group_school_registrar'))]"/>
-        <field name="comment">Full access to every school record and configuration.</field>
+        <field name="implied_ids" eval="[
+            (4, ref('group_school_director')),
+            (4, ref('group_school_registrar')),
+            (4, ref('group_school_teacher')),
+            (4, ref('group_school_finance')),
+            (4, ref('group_school_frontoffice')),
+        ]"/>
+        <field name="comment">Full access: user management, Telegram bot config, system backups, all records.</field>
     </record>
 
-    <!-- Odoo's own administrator keeps full school access without extra setup. -->
+    <!-- Odoo's built-in admin user always holds the School Administrator role. -->
     <record id="base.user_admin" model="res.users">
         <field name="groups_id" eval="[(4, ref('group_school_admin'))]"/>
     </record>
+
 </odoo>
