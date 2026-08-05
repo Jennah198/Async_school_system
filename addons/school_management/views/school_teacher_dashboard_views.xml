@@ -1,41 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
     <!-- Teacher Dashboard Form (Priority 99 prevents Odoo from using this as a standard form) -->
     <record id="view_school_teacher_dashboard_form" model="ir.ui.view">
         <field name="name">school.teacher.dashboard.form</field>
         <field name="model">school.teacher</field>
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <form string="Teacher Dashboard">
+            <form string="Teacher Dashboard" edit="false" create="false" delete="false">
                 <sheet>
-                    <!-- Stat / KPI Buttons -->
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_my_schedule" 
-                                type="object" 
-                                class="oe_stat_button" 
+                        <button name="action_view_my_schedule"
+                                type="object"
+                                class="oe_stat_button"
                                 icon="fa-calendar">
                             <field name="current_weekly_periods" widget="statinfo" string="Schedules"/>
                         </button>
-                        <button name="action_view_my_attendance" 
-                                type="object" 
-                                class="oe_stat_button" 
+                        <button name="action_view_my_attendance"
+                                type="object"
+                                class="oe_stat_button"
                                 icon="fa-check-square-o">
                             <field name="assigned_class_count" widget="statinfo" string="Attendance"/>
                         </button>
-                        <button name="action_view_my_marks" 
-                                type="object" 
-                                class="oe_stat_button" 
+                        <button name="action_view_my_marks"
+                                type="object"
+                                class="oe_stat_button"
                                 icon="fa-line-chart">
                             <field name="assigned_subject_count" widget="statinfo" string="Mark List"/>
                         </button>
                     </div>
-
                     <div class="oe_title">
                         <h1><field name="name" readonly="1"/></h1>
                         <h3>Teacher ID: <field name="teacher_id" readonly="1"/></h3>
                     </div>
-
                     <group>
                         <group string="Teacher Profile">
                             <field name="qualification" readonly="1"/>
@@ -43,11 +39,10 @@
                         </group>
                         <group string="Workload Overview">
                             <field name="max_weekly_workload" readonly="1"/>
-                            <field name="teaching_status" widget="badge" 
+                            <field name="teaching_status" widget="badge"
                                    decoration-success="teaching_status == 'active'"/>
                         </group>
                     </group>
-
                     <notebook>
                         <page string="My Assigned Classes &amp; Subjects">
                             <field name="assignment_ids" readonly="1">
@@ -65,14 +60,20 @@
         </field>
     </record>
 
-    <!-- Server Action to Trigger Python Routing -->
+    <!-- Kept for direct list/search access if ever needed -->
+    <record id="action_school_teacher_dashboard_list" model="ir.actions.act_window">
+        <field name="name">Dashboard</field>
+        <field name="res_model">school.teacher</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_school_teacher_dashboard_form"/>
+        <field name="domain">[("user_id", "=", uid)]</field>
+    </record>
+
+    <!-- Server action: routes directly to the logged-in teacher's own record -->
     <record id="action_school_teacher_dashboard" model="ir.actions.server">
         <field name="name">My Dashboard</field>
         <field name="model_id" ref="model_school_teacher"/>
         <field name="state">code</field>
-        <field name="code">
-            action = model.action_open_my_dashboard()
-        </field>
+        <field name="code">action = model.action_open_my_dashboard()</field>
     </record>
-
 </odoo>

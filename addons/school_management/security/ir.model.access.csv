@@ -15,7 +15,7 @@ access_school_subject_teacher,school.subject teacher,model_school_subject,school
 access_school_teacher_admin,school.teacher admin,model_school_teacher,school_management.group_school_admin,1,1,1,1
 access_school_teacher_registrar,school.teacher registrar,model_school_teacher,school_management.group_school_registrar,1,1,1,1
 access_school_teacher_director,school.teacher director,model_school_teacher,school_management.group_school_director,1,0,0,0
-access_school_teacher_teacher,school.teacher teacher,model_school_teacher,school_management.group_school_teacher,1,0,0,0
+access_school_teacher_teacher,school.teacher teacher,model_school_teacher,school_management.group_school_teacher,1,1,0,0
 access_school_staff_admin,school.staff admin,model_school_staff,school_management.group_school_admin,1,1,1,1
 access_school_staff_registrar,school.staff registrar,model_school_staff,school_management.group_school_registrar,1,1,1,1
 access_school_staff_director,school.staff director,model_school_staff,school_management.group_school_director,1,0,0,0
