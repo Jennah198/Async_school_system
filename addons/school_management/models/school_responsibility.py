@@ -65,7 +65,7 @@ class SchoolStaffResponsibility(models.Model):
     department = fields.Selection(DEPARTMENTS, string='Department')
     campus_id = fields.Many2one('school.campus', string='Branch / Campus', ondelete='restrict')
     manager_id = fields.Many2one(
-        'school.staff', string='Reporting Manager', ondelete='restrict',
+        'school.staff', string='Reporting Manager', ondelete='set null',
     )
 
     start_date = fields.Date(
@@ -122,7 +122,7 @@ class SchoolStaffResponsibilityLink(models.Model):
     _inherit = ['school.staff', 'mail.thread']
 
     campus_id = fields.Many2one('school.campus', string='Branch / Campus', ondelete='restrict')
-    manager_id = fields.Many2one('school.staff', string='Reporting Manager', ondelete='restrict')
+    manager_id = fields.Many2one('school.staff', string='Reporting Manager', ondelete='set null')
     responsibility_ids = fields.One2many(
         'school.staff.responsibility', 'staff_id', string='Responsibilities',
     )
@@ -163,7 +163,7 @@ class SchoolStaffResponsibilityLink(models.Model):
                 '|', ('staff_ids', 'in', rec.ids), ('audience_type', '=', 'all_staff'),
             ])
 
-    @api.constrains('name', 'phone', 'department', 'job_title_id',
+    @api.constrains('first_name', 'last_name', 'phone', 'department', 'job_title_id',
                     'employment_status', 'state', 'responsibility_ids')
     def _check_required_registration_fields(self):
         """Brief section 4 requires these. Enforced as a constraint rather than
@@ -173,8 +173,10 @@ class SchoolStaffResponsibilityLink(models.Model):
             if rec.state == 'draft':
                 continue
             missing = []
-            if not rec.name:
-                missing.append('Full Name')
+            if not rec.first_name:
+                missing.append('First Name')
+            if not rec.last_name:
+                missing.append('Last Name')
             if not rec.phone:
                 missing.append('Primary Phone')
             if not rec.department:
@@ -199,9 +201,15 @@ class SchoolStaffResponsibilityLink(models.Model):
 
     def action_activate(self):
         self.write({'state': 'active'})
+        teachers = self.env['school.teacher'].search([('staff_id', 'in', self.ids)])
+        if teachers:
+            teachers.write({'teaching_status': 'active'})
 
     def action_suspend(self):
         self.write({'state': 'suspended'})
+        teachers = self.env['school.teacher'].search([('staff_id', 'in', self.ids)])
+        if teachers:
+            teachers.write({'teaching_status': 'inactive'})
 
     def action_deactivate(self):
         """Brief section 4: deactivating a staff member with a linked Odoo user must
@@ -215,9 +223,15 @@ class SchoolStaffResponsibilityLink(models.Model):
                     body=f'Linked Odoo user {login} was deactivated with this staff record.'
                 )
         self.write({'state': 'inactive'})
+        teachers = self.env['school.teacher'].search([('staff_id', 'in', self.ids)])
+        if teachers:
+            teachers.write({'teaching_status': 'inactive'})
 
     def action_reset_draft(self):
         self.write({'state': 'draft'})
+        teachers = self.env['school.teacher'].search([('staff_id', 'in', self.ids)])
+        if teachers:
+            teachers.write({'teaching_status': 'inactive'})
 
     def action_open_responsibilities(self):
         self.ensure_one()

@@ -27,8 +27,12 @@ class TestResponsibilityAndStaffControl(TransactionCase):
 
     def _staff(self, name, campus, department='academic'):
         title = self.admin_job_title if department == 'administration' else self.job_title
+        parts = name.split(' ', 1)
+        first_name = parts[0]
+        last_name = parts[1] if len(parts) > 1 else 'Staff'
         return self.env['school.staff'].create({
-            'name': name, 'department': department, 'job_title_id': title.id,
+            'first_name': first_name, 'last_name': last_name,
+            'department': department, 'job_title_id': title.id,
             'employment_status': 'active', 'phone': '+251911000000', 'campus_id': campus.id,
         })
 
@@ -52,12 +56,12 @@ class TestResponsibilityAndStaffControl(TransactionCase):
 
     def test_renaming_staff_renames_the_teacher(self):
         self.assertEqual(self.teacher.name, 'RESP Teacher One')
-        self.staff.name = 'RESP Teacher Renamed'
+        self.staff.write({'first_name': 'RESP', 'last_name': 'Teacher Renamed'})
         self.assertEqual(self.teacher.name, 'RESP Teacher Renamed')
 
     def test_rename_reaches_the_assignment_label(self):
         assignment = self._assignment()
-        self.staff.name = 'RESP Renamed Again'
+        self.staff.write({'first_name': 'RESP', 'last_name': 'Renamed Again'})
         self.assertIn('RESP Renamed Again', assignment.name)
 
     # ---------- section 4: control status gates ----------
@@ -176,3 +180,30 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         visible = self.env['school.announcement'].with_user(user).search([])
         self.assertIn(mine, visible)
         self.assertNotIn(theirs, visible)
+
+    # ---------- teacher profile linkage & status sync ----------
+
+    def test_teacher_profile_requires_active_staff(self):
+        draft_staff = self._staff('RESP Draft Staff', self.campus_main)
+        with self.assertRaises(ValidationError):
+            self.env['school.teacher'].create({'staff_id': draft_staff.id})
+
+    def test_deactivating_staff_inactivates_teacher_profile(self):
+        self._responsibility(self.staff, 'teacher', is_primary=True)
+        self.staff.action_activate()
+        self.assertEqual(self.teacher.teaching_status, 'active')
+
+        self.staff.action_suspend()
+        self.assertEqual(self.teacher.teaching_status, 'inactive')
+
+        self.staff.action_activate()
+        self.assertEqual(self.teacher.teaching_status, 'active')
+
+        self.staff.action_deactivate()
+        self.assertEqual(self.teacher.teaching_status, 'inactive')
+
+    def test_duplicate_teacher_profile_rejected(self):
+        self._responsibility(self.staff, 'teacher', is_primary=True)
+        self.staff.action_activate()
+        with self.assertRaises(Exception):
+            self.env['school.teacher'].create({'staff_id': self.staff.id})

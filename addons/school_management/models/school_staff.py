@@ -36,13 +36,23 @@ class SchoolStaff(models.Model):
         string='Staff ID', required=True, copy=False,
         readonly=True, default='New',
     )
-    name = fields.Char(string='Full Name', required=True)
+    first_name = fields.Char(string='First Name', required=True)
+    last_name = fields.Char(string='Last Name', required=True)
+    name = fields.Char(
+        string='Full Name', compute='_compute_name', store=True, readonly=True,
+    )
     photo = fields.Image(string='Photo', max_width=256, max_height=256)
     gender = fields.Selection([
         ('male', 'Male'),
         ('female', 'Female'),
         ('other', 'Other'),
     ], string='Gender')
+
+    @api.depends('first_name', 'last_name')
+    def _compute_name(self):
+        for rec in self:
+            parts = [p for p in [rec.first_name, rec.last_name] if p]
+            rec.name = ' '.join(parts) if parts else ''
     date_of_birth = fields.Date(string='Date of Birth', groups='base.group_system')
 
     phone = fields.Char(string='Phone')

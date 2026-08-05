@@ -15,8 +15,15 @@ class SchoolTeacher(models.Model):
     )
 
     staff_id = fields.Many2one('school.staff', string='Staff Record', required=True, ondelete='restrict',
-                                domain="[('employment_status', '=', 'active')]",
+                                domain="[('active', '=', True), ('state', '=', 'active'), '|', ('department', '=', 'academic'), ('primary_responsibility', 'in', ['teacher', 'homeroom', 'department_head', 'coordinator'])]",
                                 help='Link to the official staff master record.')
+
+    department = fields.Selection(
+        related='staff_id.department', string='Department', store=True, readonly=True,
+    )
+    primary_responsibility = fields.Selection(
+        related='staff_id.primary_responsibility', string='Primary Responsibility', store=True, readonly=True,
+    )
 
     qualification = fields.Char(string='Highest Qualification')
     specialization = fields.Char(string='Specialization')
@@ -39,6 +46,15 @@ class SchoolTeacher(models.Model):
         ('teacher_id_unique', 'unique(teacher_id)', 'Teacher ID must be unique.'),
         ('staff_id_unique', 'unique(staff_id)', 'This staff member already has a teacher profile.'),
     ]
+
+    @api.constrains('staff_id')
+    def _check_staff_active(self):
+        for rec in self:
+            if rec.staff_id:
+                if not rec.staff_id.active or rec.staff_id.state != 'active':
+                    raise ValidationError('A teacher profile must be linked to an active staff record.')
+                if rec.staff_id.department != 'academic' and rec.staff_id.primary_responsibility not in ('teacher', 'homeroom', 'department_head', 'coordinator'):
+                    raise ValidationError('Selected staff member must be a teacher or academic staff member.')
 
     @api.model_create_multi
     def create(self, vals_list):
