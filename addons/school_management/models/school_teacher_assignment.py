@@ -28,11 +28,6 @@ class SchoolTeacherAssignment(models.Model):
     ], string='Responsibility', default='teacher', required=True)
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('unique_assignment', 'unique(teacher_id, subject_id, class_id, academic_year, term)',
-         'This teacher already has an identical assignment for this subject, class, year, and term.'),
-    ]
-
     @api.constrains('subject_id', 'class_id', 'academic_year', 'term', 'active')
     def _check_single_teacher_per_subject_class_term(self):
         """Brief section 6: one active teacher per subject/class/section for a given academic period."""
