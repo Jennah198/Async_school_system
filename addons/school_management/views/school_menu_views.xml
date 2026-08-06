@@ -130,6 +130,13 @@
               groups="school_management.group_school_registrar"
               sequence="40"/>
 
+    <menuitem id="menu_school_teacher_assignment"
+              name="Teacher Assignments"
+              parent="menu_school_registrar"
+              action="action_school_assignment"
+              groups="school_management.group_school_registrar"
+              sequence="45"/>
+
     <menuitem id="menu_school_program"
               name="Programs"
               parent="menu_school_registrar"

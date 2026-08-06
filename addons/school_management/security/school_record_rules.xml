@@ -173,6 +173,34 @@
     </record>
 
     <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  TEACHER ASSIGNMENT                                                   -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- Registrar: manage all assignments -->
+    <record id="rule_assignment_all_registrar" model="ir.rule">
+        <field name="name">Teacher assignment: all records — Registrar</field>
+        <field name="model_id" ref="model_school_teacher_assignment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- Teacher: only own assignments -->
+    <record id="rule_assignment_own_teacher" model="ir.rule">
+        <field name="name">Teacher assignment: own records — Teacher</field>
+        <field name="model_id" ref="model_school_teacher_assignment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('teacher_id', '=', user.school_teacher_id.id)]</field>
+    </record>
+
+    <!-- Director: all assignments, read-only -->
+    <record id="rule_assignment_all_director" model="ir.rule">
+        <field name="name">Teacher assignment: all records — Director</field>
+        <field name="model_id" ref="model_school_teacher_assignment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
     <!--  ANNOUNCEMENTS                                                        -->
     <!-- ══════════════════════════════════════════════════════════════════════ -->
 
