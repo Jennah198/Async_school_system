@@ -55,4 +55,4 @@ access_school_staff_responsibility_admin,school.staff.responsibility admin,model
 access_school_staff_responsibility_registrar,school.staff.responsibility registrar,model_school_staff_responsibility,school_management.group_school_registrar,1,1,1,1
 access_school_dashboard_admin,school.dashboard admin,model_school_dashboard,school_management.group_school_admin,1,1,1,1
 access_school_dashboard_director,school.dashboard director,model_school_dashboard,school_management.group_school_director,1,0,0,0
-
+access_school_class_schedule_finance,school.class.schedule finance,model_school_class_schedule,school_management.group_school_finance,1,0,0,0

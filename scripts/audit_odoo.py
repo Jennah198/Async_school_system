@@ -1,3 +1,5 @@
+import os
+
 from check_acl import check_acl
 from check_xml import check_xml
 from check_manifest import check_manifest
@@ -19,6 +21,8 @@ def run_audit():
 
 
 def generate_report(results):
+
+    os.makedirs("reports", exist_ok=True)
 
     with open(
         "reports/audit_report.md",

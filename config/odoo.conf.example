@@ -6,6 +6,10 @@ data_dir = /var/lib/odoo
 ; Set this to a value of your own. Never commit the real one.
 admin_passwd = CHANGE_ME
 
+; The web database manager is off: scripts/reset-db.sh is the only supported
+; way to build the database, so every developer lands on the same one.
+list_db = False
+
 db_host = db
 db_port = 5432
 db_user = odoo
