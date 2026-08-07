@@ -8,9 +8,13 @@ and marks.
 
 1. Clone this repo
 2. `cp .env.example .env`
-3. `docker compose up -d`
-4. Visit http://localhost:8070, create a database
-5. Install the **School Management** module from Apps
+3. `cp config/odoo.conf.example config/odoo.conf`, then set `admin_passwd` to a
+   value of your own — it guards database create, drop, and duplicate
+4. `docker compose up -d`
+5. Visit http://localhost:8070, create a database
+6. Install the **School Management** module from Apps
+
+Both `.env` and `config/odoo.conf` are gitignored. Never commit them.
 
 Port 8070 on the host maps to Odoo's 8069 in the container (see `docker-compose.yml`).
 
