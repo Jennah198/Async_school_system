@@ -24,14 +24,15 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="teacher_id"/>
                             <field name="subject_id"/>
                             <field name="class_id"/>
-                            <field name="responsibility"/>
-                        </group>
-                        <group>
                             <field name="academic_year"/>
                             <field name="term"/>
+                        </group>
+                        <group>
+                            <field name="teacher_id"
+                                   context="{'assignment_academic_year': academic_year, 'assignment_term': term}"/>
+                            <field name="responsibility"/>
                             <field name="weekly_periods"/>
                             <field name="start_date"/>
                             <field name="end_date"/>

@@ -96,6 +96,36 @@ class SchoolTeacher(models.Model):
         for rec in self.sudo():
             rec.name = rec.staff_id.name if rec.staff_id else ''
 
+    @api.depends_context('assignment_academic_year', 'assignment_term')
+    def _compute_display_name(self):
+        """Brief section 6: flag an occupied teacher, with why, right in the picker.
+        Only kicks in when the calling view passes assignment_academic_year/assignment_term
+        in context (see teacher_id's context on the Teacher Assignment form).
+
+        depends_context is required, not decoration: without it display_name caches
+        one value per record and the '— Occupied' suffix computed for the picker
+        leaks into every other view in the same transaction."""
+        super()._compute_display_name()
+        academic_year = self.env.context.get('assignment_academic_year')
+        term = self.env.context.get('assignment_term')
+        if not (academic_year and term):
+            return
+        Assignment = self.env['school.teacher.assignment'].sudo()
+        for rec in self:
+            others = Assignment.search([
+                ('teacher_id', '=', rec.id),
+                ('academic_year', '=', academic_year),
+                ('term', '=', term),
+                ('active', '=', True),
+            ])
+            if not others:
+                continue
+            reasons = ['already teaching %s' % ', '.join(others.mapped('subject_id.name'))]
+            total_periods = sum(others.mapped('weekly_periods'))
+            if rec.max_weekly_workload and total_periods >= rec.max_weekly_workload:
+                reasons.append('at max workload %d/%d periods' % (total_periods, rec.max_weekly_workload))
+            rec.display_name = '%s — Occupied (%s)' % (rec.display_name, '; '.join(reasons))
+
     @api.depends('assignment_ids', 'assignment_ids.active', 'assignment_ids.class_id', 'assignment_ids.subject_id', 'assignment_ids.weekly_periods')
     def _compute_dashboard_kpis(self):
         for rec in self:
