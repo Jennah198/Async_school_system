@@ -6,17 +6,44 @@ and marks.
 
 ## Setup
 
-1. Clone this repo
-2. `cp .env.example .env`
-3. `cp config/odoo.conf.example config/odoo.conf`, then set `admin_passwd` to a
-   value of your own — it guards database create, drop, and duplicate
-4. `docker compose up -d`
-5. Visit http://localhost:8070, create a database
-6. Install the **School Management** module from Apps
+```bash
+git clone https://github.com/async-arch/Async_school_system.git
+cd Async_school_system
+cp .env.example .env
+cp config/odoo.conf.example config/odoo.conf   # then set admin_passwd
+./scripts/reset-db.sh
+```
+
+Then open http://localhost:8070 and log in as `admin` / `admin`.
+
+`reset-db.sh` drops and rebuilds the database named by `ODOO_DB` in `.env`, installs
+the module, and loads demo data unless `ODOO_LOAD_DEMO=0`. **Everyone who runs it gets
+the same database** — which is the point. The web database manager is switched off
+(`list_db = False`), because creating a database by hand is what made every
+developer's copy differ, above all the "load demonstration data" checkbox.
 
 Both `.env` and `config/odoo.conf` are gitignored. Never commit them.
 
 Port 8070 on the host maps to Odoo's 8069 in the container (see `docker-compose.yml`).
+
+### Keeping in sync
+
+Anything the whole team must see lives in `data/` (real) or `demo/` (fictional) XML.
+Records you create through the UI exist only in your database and for nobody else.
+
+```bash
+git pull
+docker compose exec odoo odoo -c /etc/odoo/odoo.conf -d "$ODOO_DB" \
+  -u school_management --no-http --stop-after-init
+docker compose restart odoo
+```
+
+Then hard-refresh the browser (`Ctrl+Shift+R`) — Odoo caches menus in a compiled asset
+bundle, so a stale bundle is the usual reason a teammate's new menu does not appear.
+If anything still looks wrong, `./scripts/reset-db.sh` returns you to a known state.
+
+Note that the seed files under `data/` are `noupdate="1"`, so `-u` will **not** revise
+rows that already exist in your database. Seed changes need a full rebuild.
 
 ### Install or upgrade from the command line
 
