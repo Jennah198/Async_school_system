@@ -3,7 +3,7 @@ import base64
 from odoo.exceptions import AccessError
 from odoo.tests.common import TransactionCase
 
-YEAR = 'SEC/2026-2027'
+YEAR = '2027/2028'
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 
@@ -47,11 +47,25 @@ class TestSchoolSecurity(TransactionCase):
         })
 
     def _teacher(self, name, user):
-        staff = self.env['school.staff'].create({
-            'name': name, 'department': 'academic',
-            'employment_status': 'active', 'user_id': user.id,
+        first_name, _, last_name = name.partition(' ')
+        job_title = self.env['school.job.title'].search([
+            ('name', '=', 'SEC Classroom Teacher'), ('department', '=', 'academic'),
+        ], limit=1) or self.env['school.job.title'].create({
+            'name': 'SEC Classroom Teacher', 'department': 'academic',
         })
-        return self.env['school.teacher'].create({'name': name, 'staff_id': staff.id})
+        staff = self.env['school.staff'].create({
+            'first_name': first_name, 'last_name': last_name or 'Staff', 'department': 'academic',
+            'job_title_id': job_title.id, 'employment_status': 'active',
+            'phone': '+251911000000', 'user_id': user.id,
+        })
+        self.env['school.staff.responsibility'].create({
+            'staff_id': staff.id, 'responsibility': 'teacher',
+            'is_primary': True, 'start_date': '2026-07-01', 'department': 'academic',
+        })
+        staff.action_activate()
+        # Passing user_id keeps _create_teacher_user from provisioning a second login,
+        # which would detach the teacher from the user these tests act as.
+        return self.env['school.teacher'].create({'staff_id': staff.id, 'user_id': user.id})
 
     def _assign(self, teacher, subject, school_class):
         return self.env['school.teacher.assignment'].create({

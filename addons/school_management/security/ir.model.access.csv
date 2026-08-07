@@ -19,6 +19,7 @@ access_school_teacher_teacher,school.teacher teacher,model_school_teacher,school
 access_school_staff_admin,school.staff admin,model_school_staff,school_management.group_school_admin,1,1,1,1
 access_school_staff_registrar,school.staff registrar,model_school_staff,school_management.group_school_registrar,1,1,1,1
 access_school_staff_director,school.staff director,model_school_staff,school_management.group_school_director,1,0,0,0
+access_school_staff_frontoffice,school.staff frontoffice,model_school_staff,school_management.group_school_frontoffice,1,0,0,0
 access_school_job_title_admin,school.job.title admin,model_school_job_title,school_management.group_school_admin,1,1,1,1
 access_school_job_title_registrar,school.job.title registrar,model_school_job_title,school_management.group_school_registrar,1,1,1,1
 access_school_teacher_assignment_admin,school.teacher.assignment admin,model_school_teacher_assignment,school_management.group_school_admin,1,1,1,1

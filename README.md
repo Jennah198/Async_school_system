@@ -8,9 +8,13 @@ and marks.
 
 1. Clone this repo
 2. `cp .env.example .env`
-3. `docker compose up -d`
-4. Visit http://localhost:8070, create a database
-5. Install the **School Management** module from Apps
+3. `cp config/odoo.conf.example config/odoo.conf`, then set `admin_passwd` to a
+   value of your own — it guards database create, drop, and duplicate
+4. `docker compose up -d`
+5. Visit http://localhost:8070, create a database
+6. Install the **School Management** module from Apps
+
+Both `.env` and `config/odoo.conf` are gitignored. Never commit them.
 
 Port 8070 on the host maps to Odoo's 8069 in the container (see `docker-compose.yml`).
 
@@ -45,44 +49,53 @@ Restart the server container after changing Python files so the registry reloads
 Installed only when the database is created **with** demo data. Password is `demo`
 for all of them.
 
-| Login | Role |
-|---|---|
-| `demo_registrar` | HR / Registrar |
-| `demo_director` | Academic Director |
-| `demo_teacher_maths` | Teacher — Mathematics, Grade 1 A and Grade 2 A, homeroom of Grade 1 A |
-| `demo_teacher_science` | Department Head — General Science, Grade 2 A |
-| `demo_teacher_amharic` | Teacher — Amharic, Grade 1 A, East Campus |
-| `demo_librarian` | Staff, Librarian responsibility, East Campus, no teaching assignments |
+| Login | Group | Scope |
+|---|---|---|
+| `demo_registrar` | Registrar / Academic Officer | All student and staff master data |
+| `demo_director` | Director / Principal | Read-only across all academic data, plus Analysis |
+| `demo_teacher_maths` | Teacher | Mathematics, Grade 1 A and Grade 2 A, homeroom of Grade 1 A |
+| `demo_teacher_science` | Teacher | General Science, Grade 2 A, department-head responsibility |
+| `demo_teacher_amharic` | Teacher | Amharic, Grade 1 A, East Campus |
+| `demo_librarian` | Front Office / Communication | Librarian responsibility, East Campus, no teaching assignments |
+
+Department Head is a **responsibility** on the staff and assignment records, not a
+security group — `demo_teacher_science` sits in the same Teacher group as the others
+and is targetable by responsibility-addressed announcements.
 
 `demo_teacher_maths` and `demo_teacher_science` are the pair to use when showing
 role isolation: each sees only their own classes, marks, and announcements.
 
 ## Roles and permission matrix
 
-Groups form an implication ladder, so School Administrator holds every narrower role.
+Six **flat peer groups**, defined in `security/school_security.xml`. There is no
+implication ladder between them — only School Administrator carries `implied_ids`,
+which pull in the other five.
 
 ```
-Read-Only User → Staff → Teacher → Department Head → Academic Director ┐
-                     └→ HR / Registrar ─────────────────────────────────┴→ School Administrator
+School Administrator ──implies──> Director · Registrar · Teacher · Finance · Front Office
 ```
 
-| Role | Access |
+| Group | Access |
 |---|---|
-| Read-Only User | Published class schedules, classes, subjects, teachers, rooms, job titles. No edit actions. |
-| Staff | Own staff record, programs and announcements targeted at them, programs they organise, announcements they author |
-| Teacher | Everything above, plus students, attendance, and marks for **assigned classes and subjects only**, own class schedule at any status |
-| Department Head | Teacher rights plus the Analysis dashboards |
-| Academic Director | All academic data: subjects, classes, assignments, schedules, programs, announcements, attendance, marks |
-| HR / Registrar | Student and staff master data including **private documents**, job titles, staff responsibilities |
-| School Administrator | Everything, plus rooms |
+| School Administrator | Everything, plus rooms and campuses |
+| Registrar / Academic Officer | Full create/edit/delete on students, staff, teachers, classes, subjects, assignments, schedules, attendance, marks, programs, announcements, job titles, staff responsibilities. Includes **private documents**. Read-only on rooms and campuses. |
+| Director / Principal | **Read-only** on every academic model, unscoped, plus the Analysis dashboards. No create, write, or delete anywhere. |
+| Teacher | Read classes, subjects, programs, schedules, assignments. Students, attendance, and marks scoped to **assigned classes** (marks also by subject). Attendance and marks are create/write but **not delete**. Own teacher profile is writable; own schedule slots and assignments only. |
+| Front Office / Communication | Announcements read/create/write, scoped to ones they authored or that target them. All students for contact lookup. **Own staff record only.** |
+| Finance Officer | Group and menus exist, but **no ACL rows** — see Known issues. |
 
-Attendance and marks are create/write for Teacher but **unlink is Academic Director
-only**, so a teacher cannot delete history.
+Attendance and marks are create/write for Teacher with delete withheld, so a teacher
+cannot remove history. Delete is held by Registrar and School Administrator; Director
+cannot delete either.
+
+Announcement visibility is enforced by record rule, not just by the menu: teachers see
+only live announcements whose audience matches them, and Registrar and Front Office see
+what they authored plus what targets them. Director and Administrator see all.
 
 ### Private documents
 
 Staff and teacher document binaries carry a field-level group of
-`group_school_registrar`. Anyone below that role cannot read them through the form
+`group_school_registrar`. Anyone without that group cannot read them through the form
 view *or* the ORM — `read(['id_document'])` raises `AccessError`. The Documents tab
 does not render at all for other roles.
 
@@ -104,8 +117,12 @@ past their publish time, and not past their expiry are visible to their audience
 ```bash
 docker compose exec odoo odoo -c /etc/odoo/odoo.conf -d <db> -u school_management \
   --test-enable --test-tags /school_management --no-http --stop-after-init
-# school_management: 40 tests, 0 failed, 0 error(s) of 34 tests
+# school_management: 43 tests
+# 0 failed, 0 error(s) of 37 tests
 ```
+
+CI runs exactly this on every pull request, with demo data loaded, so a change that
+breaks demo XML or a record rule fails the build rather than reaching `main`.
 
 `addons/school_management/tests/test_class_schedule.py` — teacher, class, and room
 double-booking blocked; back-to-back slots allowed; same weekday in another term
@@ -161,6 +178,12 @@ Run before merging anything into `main`. Each row is a previously accepted workf
 ## Known issues and incomplete work
 
 Stated honestly — these are **not** finished.
+
+- **Finance Officer is a group with no permissions.** `group_school_finance` is defined
+  in `security/school_security.xml` and carries two menu items, but there is not a
+  single row for it in `security/ir.model.access.csv`. A user in that group alone sees
+  the Finance menu and hits an `AccessError` on opening it. Either the ACL rows or the
+  menus need to go.
 
 - **Section, Academic Year, and Term are not their own records.** Section is a `Char`
   on `school.class`, academic year a `Char`, term a two-value `Selection`. The brief

@@ -1,8 +1,8 @@
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-# Values are namespaced so the fixture never collides with seeded or demo records.
-YEAR = 'TEST/2026-2027'
+# A year distinct from seeded/demo records (2026/2027) so the fixture never collides.
+YEAR = '2028/2029'
 
 
 class TestClassSchedule(TransactionCase):
@@ -26,12 +26,28 @@ class TestClassSchedule(TransactionCase):
 
     def _teacher(self, name):
         """A teacher needs its own staff master record: staff_id is required and unique."""
-        staff = self.env['school.staff'].create({
-            'name': name,
-            'department': 'academic',
-            'employment_status': 'active',
+        first_name, _, last_name = name.partition(' ')
+        job_title = self.env['school.job.title'].search([
+            ('name', '=', 'TEST Classroom Teacher'), ('department', '=', 'academic'),
+        ], limit=1) or self.env['school.job.title'].create({
+            'name': 'TEST Classroom Teacher', 'department': 'academic',
         })
-        return self.env['school.teacher'].create({'name': name, 'staff_id': staff.id})
+        staff = self.env['school.staff'].create({
+            'first_name': first_name,
+            'last_name': last_name or 'Staff',
+            'department': 'academic',
+            'job_title_id': job_title.id,
+            'employment_status': 'active',
+            'phone': '+251911000000',
+            # school.teacher.create auto-provisions a login from this address.
+            'email': '%s@test.invalid' % name.lower().replace(' ', '.'),
+        })
+        self.env['school.staff.responsibility'].create({
+            'staff_id': staff.id, 'responsibility': 'teacher',
+            'is_primary': True, 'start_date': '2026-07-01', 'department': 'academic',
+        })
+        staff.action_activate()
+        return self.env['school.teacher'].create({'staff_id': staff.id})
 
     def _slot(self, **overrides):
         vals = {

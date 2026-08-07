@@ -102,7 +102,7 @@ class SchoolTeacherAssignment(models.Model):
                     'This assignment brings %s to %s weekly periods, exceeding their maximum of %s.'
                     % (rec.teacher_id.name, total, rec.teacher_id.max_weekly_workload)
                 )
-    @api.depends('teacher_id', 'subject_id', 'class_id', 'term')
+    @api.depends('teacher_id.name', 'subject_id.name', 'class_id.name', 'term')
     def _compute_name(self):
         for rec in self:
             rec.name = '%s - %s (%s, %s)' % (

@@ -1,9 +1,12 @@
 [options]
 addons_path = /mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
 data_dir = /var/lib/odoo
-admin_passwd = admin
+
+; Odoo master password — guards database create/drop/duplicate.
+; Set this to a value of your own. Never commit the real one.
+admin_passwd = CHANGE_ME
+
 db_host = db
 db_port = 5432
 db_user = odoo
 db_password = odoo
-

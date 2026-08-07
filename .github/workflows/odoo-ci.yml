@@ -12,8 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy env template
-        run: cp .env.example .env
+      - name: Copy env and odoo config templates
+        run: |
+          cp .env.example .env
+          cp config/odoo.conf.example config/odoo.conf
 
       - name: Start containers
         run: docker compose up -d
@@ -28,10 +30,12 @@ jobs:
           echo "Odoo did not become ready in time"
           exit 1
 
-      - name: Install and test school_management module
+      - name: Install module with demo data and run tests
         run: |
-          docker compose exec -T odoo odoo -i school_management \
-            -d ci_test_db --stop-after-init --without-demo=False
+          docker compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d ci_test_db \
+            -i school_management \
+            --test-enable --test-tags /school_management \
+            --no-http --stop-after-init
 
       - name: Show logs on failure
         if: failure()

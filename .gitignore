@@ -1,7 +1,9 @@
 *.pyc
 __pycache__/
 .env
+config/odoo.conf
 .kiro
+.claude/
 *.log
 filestore/
 odoo-db-data/

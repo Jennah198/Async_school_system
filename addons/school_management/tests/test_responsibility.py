@@ -1,7 +1,7 @@
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-YEAR = 'RESP/2026-2027'
+YEAR = '2029/2030'
 
 
 class TestResponsibilityAndStaffControl(TransactionCase):
@@ -23,7 +23,19 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         self.maths = self.env['school.subject'].create({'name': 'RESP Mathematics'})
 
         self.staff = self._staff('RESP Teacher One', self.campus_main)
-        self.teacher = self.env['school.teacher'].create({'staff_id': self.staff.id})
+        self._teacher_profile = None
+
+    def teacher_profile(self):
+        """school.teacher._check_staff_active rejects draft staff, but the control-status
+        tests need self.staff to stay in draft. So the profile is built on first use and
+        activates the staff record at that point."""
+        if not self._teacher_profile:
+            if not self.staff.primary_responsibility:
+                self._responsibility(self.staff, 'teacher', is_primary=True)
+            if self.staff.state != 'active':
+                self.staff.action_activate()
+            self._teacher_profile = self.env['school.teacher'].create({'staff_id': self.staff.id})
+        return self._teacher_profile
 
     def _staff(self, name, campus, department='academic'):
         title = self.admin_job_title if department == 'administration' else self.job_title
@@ -34,6 +46,8 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'first_name': first_name, 'last_name': last_name,
             'department': department, 'job_title_id': title.id,
             'employment_status': 'active', 'phone': '+251911000000', 'campus_id': campus.id,
+            # school.teacher.create auto-provisions a login from this address.
+            'email': '%s@test.invalid' % name.lower().replace(' ', '.'),
         })
 
     def _responsibility(self, staff, code, **overrides):
@@ -46,7 +60,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
 
     def _assignment(self, **overrides):
         vals = {
-            'teacher_id': self.teacher.id, 'subject_id': self.maths.id,
+            'teacher_id': self.teacher_profile().id, 'subject_id': self.maths.id,
             'class_id': self.class_a.id, 'term': 'term1',
         }
         vals.update(overrides)
@@ -55,9 +69,10 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     # ---------- section 13: master-record rename propagates ----------
 
     def test_renaming_staff_renames_the_teacher(self):
-        self.assertEqual(self.teacher.name, 'RESP Teacher One')
+        teacher = self.teacher_profile()
+        self.assertEqual(teacher.name, 'RESP Teacher One')
         self.staff.write({'first_name': 'RESP', 'last_name': 'Teacher Renamed'})
-        self.assertEqual(self.teacher.name, 'RESP Teacher Renamed')
+        self.assertEqual(teacher.name, 'RESP Teacher Renamed')
 
     def test_rename_reaches_the_assignment_label(self):
         assignment = self._assignment()
@@ -84,6 +99,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     def test_suspended_staff_cannot_take_a_new_assignment(self):
         self._responsibility(self.staff, 'teacher', is_primary=True)
         self.staff.action_activate()
+        self.teacher_profile()
         self.staff.action_suspend()
         with self.assertRaises(ValidationError):
             self._assignment()
@@ -191,19 +207,21 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     def test_deactivating_staff_inactivates_teacher_profile(self):
         self._responsibility(self.staff, 'teacher', is_primary=True)
         self.staff.action_activate()
-        self.assertEqual(self.teacher.teaching_status, 'active')
+        teacher = self.teacher_profile()
+        self.assertEqual(teacher.teaching_status, 'active')
 
         self.staff.action_suspend()
-        self.assertEqual(self.teacher.teaching_status, 'inactive')
+        self.assertEqual(teacher.teaching_status, 'inactive')
 
         self.staff.action_activate()
-        self.assertEqual(self.teacher.teaching_status, 'active')
+        self.assertEqual(teacher.teaching_status, 'active')
 
         self.staff.action_deactivate()
-        self.assertEqual(self.teacher.teaching_status, 'inactive')
+        self.assertEqual(teacher.teaching_status, 'inactive')
 
     def test_duplicate_teacher_profile_rejected(self):
         self._responsibility(self.staff, 'teacher', is_primary=True)
         self.staff.action_activate()
+        self.teacher_profile()
         with self.assertRaises(Exception):
             self.env['school.teacher'].create({'staff_id': self.staff.id})
