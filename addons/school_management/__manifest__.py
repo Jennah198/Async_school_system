@@ -15,7 +15,9 @@ attendance tracking and mark/result entry referencing the same student record.
     'website': "https://www.asynctechsolutions.com",
 
     'category': 'Education',
-    'version': '0.1',
+    # Odoo convention: <odoo series>.<major>.<minor>.<patch>. The series prefix is what
+    # tells a reader, and the Odoo app store, which Odoo this targets.
+    'version': '17.0.1.0.0',
     'license': 'LGPL-3',
 
     'depends': ['base', 'mail'],
@@ -54,10 +56,7 @@ attendance tracking and mark/result entry referencing the same student record.
         'demo/school_demo.xml',
     ],
 
-    # ======================================================= #
-   
-    # ======================================================= #
-    'application': True,  
+    'application': True,
     'installable': True,
     'auto_install': False,
 }
