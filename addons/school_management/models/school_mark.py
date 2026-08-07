@@ -8,7 +8,7 @@ GRADE_BANDS = [(90, 'A'), (80, 'B'), (70, 'C'), (60, 'D'), (50, 'E')]
 class SchoolMark(models.Model):
     _name = 'school.mark'
     _description = 'Student Mark / Result'
-    _order = 'academic_year_id, term, student_id'
+    _order = 'academic_year_id, term_id, student_id'
 
     student_id = fields.Many2one(
         'school.student', string='Student', required=True, ondelete='restrict',
@@ -26,10 +26,10 @@ class SchoolMark(models.Model):
     subject_id = fields.Many2one(
         'school.subject', string='Subject', required=True, ondelete='restrict',
     )
-    term = fields.Selection([
-        ('term1', 'Term 1'),
-        ('term2', 'Term 2'),
-    ], string='Term', required=True)
+    term_id = fields.Many2one(
+        'school.term', string='Term', required=True,
+        ondelete='restrict', index=True,
+    )
     exam_type = fields.Selection([
         ('quiz', 'Quiz'),
         ('assignment', 'Assignment'),
@@ -50,7 +50,7 @@ class SchoolMark(models.Model):
     active = fields.Boolean(string='Active', default=True)
 
     _sql_constraints = [
-        ('mark_unique', 'unique(student_id, subject_id, term, exam_type)',
+        ('mark_unique', 'unique(student_id, subject_id, term_id, exam_type)',
          'This student already has a mark for this subject, term, and assessment.'),
         ('max_score_positive', 'CHECK(max_score > 0)', 'Out Of must be greater than zero.'),
         ('score_not_negative', 'CHECK(score >= 0)', 'Score cannot be negative.'),
@@ -68,7 +68,7 @@ class SchoolMark(models.Model):
             if rec.score > rec.max_score:
                 raise ValidationError('Score cannot be greater than Out Of.')
 
-    @api.constrains('student_id', 'subject_id', 'term')
+    @api.constrains('student_id', 'subject_id', 'term_id')
     def _check_subject_taught_to_class(self):
         """A mark only makes sense where someone is assigned to teach that subject
         to that class in that term."""
@@ -76,10 +76,10 @@ class SchoolMark(models.Model):
             taught = self.env['school.teacher.assignment'].search_count([
                 ('subject_id', '=', rec.subject_id.id),
                 ('class_id', '=', rec.class_id.id),
-                ('term', '=', rec.term),
+                ('term_id', '=', rec.term_id.id),
             ])
             if not taught:
                 raise ValidationError(
                     f'{rec.subject_id.name} is not assigned to any teacher for '
-                    f'{rec.class_id.display_name} in {rec.term}.'
+                    f'{rec.class_id.display_name} in {rec.term_id.name}.'
                 )

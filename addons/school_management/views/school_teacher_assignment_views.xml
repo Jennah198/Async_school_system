@@ -9,7 +9,7 @@
                 <field name="subject_id"/>
                 <field name="class_id"/>
                 <field name="academic_year_id"/>
-                <field name="term"/>
+                <field name="term_id"/>
                 <field name="responsibility"/>
                 <field name="active"/>
             </tree>
@@ -27,11 +27,11 @@
                             <field name="subject_id"/>
                             <field name="class_id"/>
                             <field name="academic_year_id"/>
-                            <field name="term"/>
+                            <field name="term_id"/>
                         </group>
                         <group>
                             <field name="teacher_id"
-                                   context="{'assignment_academic_year': academic_year_id, 'assignment_term': term}"/>
+                                   context="{'assignment_academic_year': academic_year_id, 'assignment_term': term_id}"/>
                             <field name="responsibility"/>
                             <field name="weekly_periods"/>
                             <field name="start_date"/>
@@ -58,7 +58,7 @@
                 <field name="class_id"/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
                 <group expand="0" string="Group By">
-                    <filter string="Term" name="group_term" context="{'group_by': 'term'}"/>
+                    <filter string="Term" name="group_term" context="{'group_by': 'term_id'}"/>
                     <filter string="Responsibility" name="group_responsibility" context="{'group_by': 'responsibility'}"/>
                 </group>
             </search>

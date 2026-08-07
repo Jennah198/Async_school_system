@@ -2,6 +2,7 @@
 
 #from . import models
 from . import school_academic_year
+from . import school_term
 from . import school_class
 from . import school_student
 from . import school_staff

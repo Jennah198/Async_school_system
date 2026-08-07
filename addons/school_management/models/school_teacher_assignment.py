@@ -6,7 +6,7 @@ class SchoolTeacherAssignment(models.Model):
     _name = 'school.teacher.assignment'
     _description = 'Teacher Subject / Class Assignment'
     _inherit = ['mail.thread']
-    _order = 'academic_year_id, term'
+    _order = 'academic_year_id, term_id'
 
     name = fields.Char(string='Assignment', compute='_compute_name', store=True)
     weekly_periods = fields.Integer(string='Periods per Week', default=1, required=True)
@@ -18,10 +18,10 @@ class SchoolTeacherAssignment(models.Model):
     academic_year_id = fields.Many2one(
         'school.academic.year', related='class_id.academic_year_id',
         store=True, readonly=True, string='Academic Year')
-    term = fields.Selection([
-        ('term1', 'Term 1'),
-        ('term2', 'Term 2'),
-    ], string='Term', required=True)
+    term_id = fields.Many2one(
+        'school.term', string='Term', required=True,
+        ondelete='restrict', index=True,
+    )
     responsibility = fields.Selection([
         ('teacher', 'Teacher'),
         ('homeroom', 'Homeroom Teacher'),
@@ -30,7 +30,7 @@ class SchoolTeacherAssignment(models.Model):
     ], string='Responsibility', default='teacher', required=True)
     active = fields.Boolean(string='Active', default=True)
 
-    @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term', 'active')
+    @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term_id', 'active')
     def _check_single_teacher_per_subject_class_term(self):
         """Brief section 6: one active teacher per subject/class/section for a given academic period."""
         for rec in self.filtered(lambda r: r.active):
@@ -39,16 +39,16 @@ class SchoolTeacherAssignment(models.Model):
                 ('subject_id', '=', rec.subject_id.id),
                 ('class_id', '=', rec.class_id.id),
                 ('academic_year_id', '=', rec.academic_year_id.id),
-                ('term', '=', rec.term),
+                ('term_id', '=', rec.term_id.id),
                 ('active', '=', True),
             ], limit=1)
             if clash:
                 raise ValidationError(
                     f'{rec.class_id.display_name} already has {clash.teacher_id.name} teaching '
-                    f'{rec.subject_id.name} for {rec.academic_year_id.name} {rec.term}.'
+                    f'{rec.subject_id.name} for {rec.academic_year_id.name} {rec.term_id.name}.'
                 )
 
-    @api.constrains('responsibility', 'class_id', 'academic_year_id', 'term', 'active')
+    @api.constrains('responsibility', 'class_id', 'academic_year_id', 'term_id', 'active')
     def _check_single_homeroom_per_class(self):
         """Brief section 6: one active homeroom teacher per class/section and period."""
         for rec in self.filtered(lambda r: r.responsibility == 'homeroom' and r.active):
@@ -57,12 +57,12 @@ class SchoolTeacherAssignment(models.Model):
                 ('responsibility', '=', 'homeroom'),
                 ('class_id', '=', rec.class_id.id),
                 ('academic_year_id', '=', rec.academic_year_id.id),
-                ('term', '=', rec.term),
+                ('term_id', '=', rec.term_id.id),
             ], limit=1)
             if clash:
                 raise ValidationError(
                     f'{rec.class_id.display_name} already has {clash.teacher_id.name} as '
-                    f'homeroom teacher for {rec.academic_year_id.name} {rec.term}.'
+                    f'homeroom teacher for {rec.academic_year_id.name} {rec.term_id.name}.'
                 )
 
     @api.constrains('teacher_id')
@@ -117,12 +117,12 @@ class SchoolTeacherAssignment(models.Model):
                 )
         return records
 
-    @api.depends('teacher_id.name', 'subject_id.name', 'class_id.name', 'term')
+    @api.depends('teacher_id.name', 'subject_id.name', 'class_id.name', 'term_id.name')
     def _compute_name(self):
         for rec in self:
             rec.name = '%s - %s (%s, %s)' % (
                 rec.teacher_id.name or '?',
                 rec.subject_id.name or '?',
                 rec.class_id.name or '?',
-                dict(rec._fields['term'].selection).get(rec.term, '')
+                rec.term_id.name or ''
             )

@@ -28,21 +28,23 @@ class SchoolClassSchedule(models.Model):
     _inherit = ['mail.thread']
     # academic_year_id resolves through school.academic.year._order ('name desc'),
     # so it already sorts newest-first; adding desc here would invert it.
-    _order = 'academic_year_id, term, day_of_week, start_time'
+    _order = 'academic_year_id, term_id, day_of_week, start_time'
 
     class_id = fields.Many2one(
         'school.class', string='Grade / Class',
         required=True, ondelete='restrict', tracking=True,
     )
-    section = fields.Char(related='class_id.section', string='Section', readonly=True)
+    section_id = fields.Many2one(
+        'school.section', related='class_id.section_id', string='Section', readonly=True,
+    )
     academic_year_id = fields.Many2one(
         'school.academic.year', related='class_id.academic_year_id',
         string='Academic Year', store=True, readonly=True,
     )
-    term = fields.Selection([
-        ('term1', 'Term 1'),
-        ('term2', 'Term 2'),
-    ], string='Term', required=True, tracking=True)
+    term_id = fields.Many2one(
+        'school.term', string='Term', required=True,
+        ondelete='restrict', index=True, tracking=True,
+    )
 
     subject_id = fields.Many2one(
         'school.subject', string='Subject',
@@ -114,7 +116,7 @@ class SchoolClassSchedule(models.Model):
                     'Set a day of week for a recurring class, or an exact date for a one-off session.'
                 )
 
-    @api.constrains('teacher_id', 'subject_id', 'class_id', 'term', 'academic_year_id')
+    @api.constrains('teacher_id', 'subject_id', 'class_id', 'term_id', 'academic_year_id')
     def _check_teacher_assignment(self):
         for rec in self:
             has_assignment = self.env['school.teacher.assignment'].search_count([
@@ -122,13 +124,13 @@ class SchoolClassSchedule(models.Model):
                 ('subject_id', '=', rec.subject_id.id),
                 ('class_id', '=', rec.class_id.id),
                 ('academic_year_id', '=', rec.academic_year_id.id),
-                ('term', '=', rec.term),
+                ('term_id', '=', rec.term_id.id),
             ])
             if not has_assignment:
                 raise ValidationError(
                     f'{rec.teacher_id.name} has no active assignment for '
                     f'{rec.subject_id.name} in {rec.class_id.display_name} '
-                    f'({rec.academic_year_id.name}, {rec.term}).'
+                    f'({rec.academic_year_id.name}, {rec.term_id.name}).'
                 )
 
     @api.constrains('state', 'teacher_id', 'subject_id', 'class_id')
@@ -152,7 +154,7 @@ class SchoolClassSchedule(models.Model):
                 )
 
     @api.constrains('teacher_id', 'class_id', 'room_id', 'day_of_week', 'date',
-                    'start_time', 'end_time', 'state', 'term', 'academic_year_id')
+                    'start_time', 'end_time', 'state', 'term_id', 'academic_year_id')
     def _check_no_double_booking(self):
         for rec in self:
             if rec.state in FREE_STATES:
@@ -187,7 +189,7 @@ class SchoolClassSchedule(models.Model):
             ('date', '=', False),
             ('day_of_week', '=', self.day_of_week),
             ('academic_year_id', '=', self.academic_year_id.id),
-            ('term', '=', self.term),
+            ('term_id', '=', self.term_id.id),
         ]
 
     def _conflicting_ids(self):
