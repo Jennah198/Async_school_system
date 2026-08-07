@@ -105,7 +105,7 @@ School Administrator ──implies──> Director · Registrar · Teacher · Fi
 | Group | Access |
 |---|---|
 | School Administrator | Everything, plus rooms and campuses |
-| Registrar / Academic Officer | Full create/edit/delete on students, staff, teachers, classes, subjects, assignments, schedules, attendance, marks, programs, announcements, job titles, staff responsibilities. Includes **private documents**. Read-only on rooms and campuses. |
+| Registrar / Academic Officer | Full create/edit/delete on students, staff, teachers, academic years, classes, subjects, assignments, schedules, attendance, marks, programs, announcements, job titles, staff responsibilities. Includes **private documents**. Read-only on rooms and campuses. |
 | Director / Principal | **Read-only** on every academic model, unscoped, plus the Analysis dashboards. No create, write, or delete anywhere. |
 | Teacher | Read classes, subjects, programs, schedules, assignments. Students, attendance, and marks scoped to **assigned classes** (marks also by subject). Attendance and marks are create/write but **not delete**. Own teacher profile is writable; own schedule slots and assignments only. |
 | Front Office / Communication | Announcements read/create/write, scoped to ones they authored or that target them. All students for contact lookup. **Own staff record only.** |
@@ -212,10 +212,14 @@ Stated honestly — these are **not** finished.
   the Finance menu and hits an `AccessError` on opening it. Either the ACL rows or the
   menus need to go.
 
-- **Section, Academic Year, and Term are not their own records.** Section is a `Char`
-  on `school.class`, academic year a `Char`, term a two-value `Selection`. The brief
-  asks for relational fields to them. Everything keys off the class record instead, so
-  the links are consistent, but there is no Academic Year or Term master table.
+- **Section and Term are not their own records.** Section is a `Char` on
+  `school.class` and term a two-value `Selection`. The brief asks for relational
+  fields to them. Everything keys off the class record instead, so the links stay
+  consistent, but there is no Section or Term master table.
+
+  Academic Year **is** a master table — `school.academic.year`, managed under
+  Registrar → Academic Years. `school.class` points at it with `academic_year_id`,
+  and schedules, marks, and assignments carry the stored related copy.
 
 - **`staff_id` is not NOT NULL on upgraded databases.** Making it required on a table
   that already held teacher rows fails the migration; Odoo logs

@@ -10,6 +10,12 @@ DUMMY_FILE = base64.b64encode(b'fictional test document')
 class TestSchoolSecurity(TransactionCase):
     """Proves the role isolation the brief calls non-negotiable in section 13."""
 
+    def _year(self):
+        """Academic year is a master record now. Reuse it across a test so the
+        class/section/year unique constraint behaves as it does in production."""
+        Year = self.env['school.academic.year']
+        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
+
     def setUp(self):
         super().setUp()
         self.class_a = self._class('SEC Grade 1', 'A')
@@ -33,7 +39,7 @@ class TestSchoolSecurity(TransactionCase):
 
     def _class(self, name, section):
         return self.env['school.class'].create({
-            'name': name, 'section': section, 'academic_year': YEAR,
+            'name': name, 'section': section, 'academic_year_id': self._year().id,
             'is_entry_level': True,
         })
 

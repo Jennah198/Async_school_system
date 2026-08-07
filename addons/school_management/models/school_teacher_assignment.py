@@ -6,7 +6,7 @@ class SchoolTeacherAssignment(models.Model):
     _name = 'school.teacher.assignment'
     _description = 'Teacher Subject / Class Assignment'
     _inherit = ['mail.thread']
-    _order = 'academic_year desc, term'
+    _order = 'academic_year_id, term'
 
     name = fields.Char(string='Assignment', compute='_compute_name', store=True)
     weekly_periods = fields.Integer(string='Periods per Week', default=1, required=True)
@@ -15,7 +15,9 @@ class SchoolTeacherAssignment(models.Model):
     teacher_id = fields.Many2one('school.teacher', string='Teacher', required=True, ondelete='cascade')
     subject_id = fields.Many2one('school.subject', string='Subject', required=True)
     class_id = fields.Many2one('school.class', string='Grade / Class', required=True)
-    academic_year = fields.Selection(related='class_id.academic_year', store=True, readonly=True, string='Academic Year')
+    academic_year_id = fields.Many2one(
+        'school.academic.year', related='class_id.academic_year_id',
+        store=True, readonly=True, string='Academic Year')
     term = fields.Selection([
         ('term1', 'Term 1'),
         ('term2', 'Term 2'),
@@ -28,7 +30,7 @@ class SchoolTeacherAssignment(models.Model):
     ], string='Responsibility', default='teacher', required=True)
     active = fields.Boolean(string='Active', default=True)
 
-    @api.constrains('subject_id', 'class_id', 'academic_year', 'term', 'active')
+    @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term', 'active')
     def _check_single_teacher_per_subject_class_term(self):
         """Brief section 6: one active teacher per subject/class/section for a given academic period."""
         for rec in self.filtered(lambda r: r.active):
@@ -36,17 +38,17 @@ class SchoolTeacherAssignment(models.Model):
                 ('id', '!=', rec.id),
                 ('subject_id', '=', rec.subject_id.id),
                 ('class_id', '=', rec.class_id.id),
-                ('academic_year', '=', rec.academic_year),
+                ('academic_year_id', '=', rec.academic_year_id.id),
                 ('term', '=', rec.term),
                 ('active', '=', True),
             ], limit=1)
             if clash:
                 raise ValidationError(
                     f'{rec.class_id.display_name} already has {clash.teacher_id.name} teaching '
-                    f'{rec.subject_id.name} for {rec.academic_year} {rec.term}.'
+                    f'{rec.subject_id.name} for {rec.academic_year_id.name} {rec.term}.'
                 )
 
-    @api.constrains('responsibility', 'class_id', 'academic_year', 'term', 'active')
+    @api.constrains('responsibility', 'class_id', 'academic_year_id', 'term', 'active')
     def _check_single_homeroom_per_class(self):
         """Brief section 6: one active homeroom teacher per class/section and period."""
         for rec in self.filtered(lambda r: r.responsibility == 'homeroom' and r.active):
@@ -54,13 +56,13 @@ class SchoolTeacherAssignment(models.Model):
                 ('id', '!=', rec.id),
                 ('responsibility', '=', 'homeroom'),
                 ('class_id', '=', rec.class_id.id),
-                ('academic_year', '=', rec.academic_year),
+                ('academic_year_id', '=', rec.academic_year_id.id),
                 ('term', '=', rec.term),
             ], limit=1)
             if clash:
                 raise ValidationError(
                     f'{rec.class_id.display_name} already has {clash.teacher_id.name} as '
-                    f'homeroom teacher for {rec.academic_year} {rec.term}.'
+                    f'homeroom teacher for {rec.academic_year_id.name} {rec.term}.'
                 )
 
     @api.constrains('teacher_id')
@@ -110,7 +112,7 @@ class SchoolTeacherAssignment(models.Model):
             if partner:
                 rec.message_subscribe(partner_ids=partner.ids)
                 rec.message_post(
-                    body=f'You have been assigned: {rec.name} for {rec.academic_year}.',
+                    body=f'You have been assigned: {rec.name} for {rec.academic_year_id.name}.',
                     partner_ids=partner.ids,
                 )
         return records

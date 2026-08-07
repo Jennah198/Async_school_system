@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_school_academic_year_tree" model="ir.ui.view">
+        <field name="name">school.academic.year.tree</field>
+        <field name="model">school.academic.year</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="class_count"/>
+                <field name="is_current"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_school_academic_year_form" model="ir.ui.view">
+        <field name="name">school.academic.year.form</field>
+        <field name="model">school.academic.year</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_classes" type="object"
+                                class="oe_stat_button" icon="fa-graduation-cap">
+                            <field name="class_count" widget="statinfo" string="Classes"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="2026/2027"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                        </group>
+                        <group>
+                            <field name="is_current"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_school_academic_year_search" model="ir.ui.view">
+        <field name="name">school.academic.year.search</field>
+        <field name="model">school.academic.year</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <filter name="current" string="Current" domain="[('is_current', '=', True)]"/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_school_academic_year" model="ir.actions.act_window">
+        <field name="name">Academic Years</field>
+        <field name="res_model">school.academic.year</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an academic year</p>
+            <p>Classes, schedules, marks, and assignments all hang off these records.</p>
+        </field>
+    </record>
+
+</odoo>

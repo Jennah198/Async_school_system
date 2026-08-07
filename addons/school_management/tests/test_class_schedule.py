@@ -7,12 +7,18 @@ YEAR = '2028/2029'
 
 class TestClassSchedule(TransactionCase):
 
+    def _year(self):
+        """Academic year is a master record now. Reuse it across a test so the
+        class/section/year unique constraint behaves as it does in production."""
+        Year = self.env['school.academic.year']
+        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
+
     def setUp(self):
         super().setUp()
         self.school_class = self.env['school.class'].create({
             'name': 'TEST Grade 5',
             'section': 'TEST-A',
-            'academic_year': YEAR,
+            'academic_year_id': self._year().id,
         })
         self.subject = self.env['school.subject'].create({'name': 'TEST Mathematics'})
         self.teacher = self._teacher('TEST Teacher One')

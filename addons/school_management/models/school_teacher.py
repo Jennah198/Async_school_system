@@ -106,15 +106,15 @@ class SchoolTeacher(models.Model):
         one value per record and the '— Occupied' suffix computed for the picker
         leaks into every other view in the same transaction."""
         super()._compute_display_name()
-        academic_year = self.env.context.get('assignment_academic_year')
+        academic_year_id = self.env.context.get('assignment_academic_year')
         term = self.env.context.get('assignment_term')
-        if not (academic_year and term):
+        if not (academic_year_id and term):
             return
         Assignment = self.env['school.teacher.assignment'].sudo()
         for rec in self:
             others = Assignment.search([
                 ('teacher_id', '=', rec.id),
-                ('academic_year', '=', academic_year),
+                ('academic_year_id', '=', academic_year_id),
                 ('term', '=', term),
                 ('active', '=', True),
             ])

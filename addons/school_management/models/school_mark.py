@@ -8,7 +8,7 @@ GRADE_BANDS = [(90, 'A'), (80, 'B'), (70, 'C'), (60, 'D'), (50, 'E')]
 class SchoolMark(models.Model):
     _name = 'school.mark'
     _description = 'Student Mark / Result'
-    _order = 'academic_year desc, term, student_id'
+    _order = 'academic_year_id, term, student_id'
 
     student_id = fields.Many2one(
         'school.student', string='Student', required=True, ondelete='restrict',
@@ -19,8 +19,9 @@ class SchoolMark(models.Model):
         'school.class', related='student_id.class_id', string='Grade / Class',
         store=True, readonly=True,
     )
-    academic_year = fields.Selection(
-        related='class_id.academic_year', string='Academic Year', store=True, readonly=True,
+    academic_year_id = fields.Many2one(
+        'school.academic.year', related='class_id.academic_year_id',
+        string='Academic Year', store=True, readonly=True,
     )
     subject_id = fields.Many2one(
         'school.subject', string='Subject', required=True, ondelete='restrict',
