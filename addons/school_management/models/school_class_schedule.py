@@ -33,7 +33,7 @@ class SchoolClassSchedule(models.Model):
         required=True, ondelete='restrict', tracking=True,
     )
     section = fields.Char(related='class_id.section', string='Section', readonly=True)
-    academic_year = fields.Char(
+    academic_year = fields.Selection(
         related='class_id.academic_year', string='Academic Year',
         store=True, readonly=True,
     )

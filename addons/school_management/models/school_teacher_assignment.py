@@ -15,7 +15,7 @@ class SchoolTeacherAssignment(models.Model):
     teacher_id = fields.Many2one('school.teacher', string='Teacher', required=True, ondelete='cascade')
     subject_id = fields.Many2one('school.subject', string='Subject', required=True)
     class_id = fields.Many2one('school.class', string='Grade / Class', required=True)
-    academic_year = fields.Char(related='class_id.academic_year', store=True, readonly=True, string='Academic Year')
+    academic_year = fields.Selection(related='class_id.academic_year', store=True, readonly=True, string='Academic Year')
     term = fields.Selection([
         ('term1', 'Term 1'),
         ('term2', 'Term 2'),
@@ -102,6 +102,19 @@ class SchoolTeacherAssignment(models.Model):
                     'This assignment brings %s to %s weekly periods, exceeding their maximum of %s.'
                     % (rec.teacher_id.name, total, rec.teacher_id.max_weekly_workload)
                 )
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for rec in records:
+            partner = rec.teacher_id.user_id.partner_id
+            if partner:
+                rec.message_subscribe(partner_ids=partner.ids)
+                rec.message_post(
+                    body=f'You have been assigned: {rec.name} for {rec.academic_year}.',
+                    partner_ids=partner.ids,
+                )
+        return records
+
     @api.depends('teacher_id.name', 'subject_id.name', 'class_id.name', 'term')
     def _compute_name(self):
         for rec in self:

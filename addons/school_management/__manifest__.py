@@ -17,7 +17,7 @@ attendance tracking and mark/result entry referencing the same student record.
     'category': 'Education',
     # Odoo convention: <odoo series>.<major>.<minor>.<patch>. The series prefix is what
     # tells a reader, and the Odoo app store, which Odoo this targets.
-    'version': '17.0.1.0.0',
+    'version': '17.0.1.1.0',
     'license': 'LGPL-3',
 
     'depends': ['base', 'mail'],
