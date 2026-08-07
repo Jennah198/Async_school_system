@@ -109,7 +109,7 @@ School Administrator ──implies──> Director · Registrar · Teacher · Fi
 | Director / Principal | **Read-only** on every academic model, unscoped, plus the Analysis dashboards. No create, write, or delete anywhere. |
 | Teacher | Read classes, subjects, programs, schedules, assignments. Students, attendance, and marks scoped to **assigned classes** (marks also by subject). Attendance and marks are create/write but **not delete**. Own teacher profile is writable; own schedule slots and assignments only. |
 | Front Office / Communication | Announcements read/create/write, scoped to ones they authored or that target them. All students for contact lookup. **Own staff record only.** |
-| Finance Officer | Group and menus exist, but **no ACL rows** — see Known issues. |
+| Finance Officer | Read-only on class schedules, academic years, terms, and sections — enough for its Schedule Coverage menu. No financial models exist yet, so the role is a placeholder. |
 
 Attendance and marks are create/write for Teacher with delete withheld, so a teacher
 cannot remove history. Delete is held by Registrar and School Administrator; Director
@@ -206,11 +206,10 @@ Run before merging anything into `main`. Each row is a previously accepted workf
 
 Stated honestly — these are **not** finished.
 
-- **Finance Officer is a group with no permissions.** `group_school_finance` is defined
-  in `security/school_security.xml` and carries two menu items, but there is not a
-  single row for it in `security/ir.model.access.csv`. A user in that group alone sees
-  the Finance menu and hits an `AccessError` on opening it. Either the ACL rows or the
-  menus need to go.
+- **Finance Officer reads, but there is nothing financial to read.** The group now has
+  read access to the models behind its one menu, so it no longer raises `AccessError`.
+  What it does not have is a domain: there are no fee, invoice, or payment models, so
+  Schedule Coverage is all it can show. The role is a placeholder until those exist.
 
 - **Terms are not scoped to an academic year.** `school.term` is a flat list, so
   `Term 1` is one shared record rather than one per year, and a term carries no
@@ -242,8 +241,15 @@ addons/school_management/
 ├── models/          # one file per domain concept, incl. academic year, term, section
 ├── views/           # one file per model, plus menus and dashboards
 ├── security/        # role groups, record rules, and ACLs
-├── data/            # sequences and seed job titles
+├── data/            # sequences, seed job titles, academic years, terms, sections
 ├── demo/            # fictional demonstration data
+├── migrations/      # one folder per version that moved existing data
 ├── report/          # student report
 └── tests/           # conflict and access-control tests
 ```
+
+`migrations/` holds a script per version bump that had to move data already in a
+database. They matter because Postgres stores a `Char` and a `Selection` alike, so a
+field-type change succeeds silently and leaves invalid values behind. Each script also
+applies the `NOT NULL` that Odoo skips on a table that already holds rows, so an
+upgraded database ends up identical to a fresh one rather than quietly weaker.
