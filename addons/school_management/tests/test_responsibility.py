@@ -13,6 +13,12 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         Year = self.env['school.academic.year']
         return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
 
+    def _term(self, ref='term_1'):
+        return self.env.ref('school_management.%s' % ref)
+
+    def _section(self, ref='section_a'):
+        return self.env.ref('school_management.%s' % ref)
+
     def setUp(self):
         super().setUp()
         self.campus_main = self.env['school.campus'].create({'name': 'RESP Main'})
@@ -24,7 +30,8 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'name': 'RESP Registrar', 'department': 'administration',
         })
         self.class_a = self.env['school.class'].create({
-            'name': 'RESP Grade 1', 'section': 'A', 'academic_year_id': self._year().id,
+            'name': 'RESP Grade 1', 'section_id': self._section().id,
+            'academic_year_id': self._year().id,
             'is_entry_level': True,
         })
         self.maths = self.env['school.subject'].create({'name': 'RESP Mathematics'})
@@ -68,7 +75,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     def _assignment(self, **overrides):
         vals = {
             'teacher_id': self.teacher_profile().id, 'subject_id': self.maths.id,
-            'class_id': self.class_a.id, 'term': 'term1',
+            'class_id': self.class_a.id, 'term_id': self._term().id,
         }
         vals.update(overrides)
         return self.env['school.teacher.assignment'].create(vals)

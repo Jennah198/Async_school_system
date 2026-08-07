@@ -16,10 +16,16 @@ class TestSchoolSecurity(TransactionCase):
         Year = self.env['school.academic.year']
         return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
 
+    def _term(self, ref='term_1'):
+        return self.env.ref('school_management.%s' % ref)
+
+    def _section(self, ref='section_a'):
+        return self.env.ref('school_management.%s' % ref)
+
     def setUp(self):
         super().setUp()
-        self.class_a = self._class('SEC Grade 1', 'A')
-        self.class_b = self._class('SEC Grade 2', 'B')
+        self.class_a = self._class('SEC Grade 1', 'section_a')
+        self.class_b = self._class('SEC Grade 2', 'section_b')
         self.math = self.env['school.subject'].create({'name': 'SEC Mathematics'})
         self.history = self.env['school.subject'].create({'name': 'SEC History'})
 
@@ -37,9 +43,10 @@ class TestSchoolSecurity(TransactionCase):
 
     # ---------- fixtures ----------
 
-    def _class(self, name, section):
+    def _class(self, name, section_ref):
         return self.env['school.class'].create({
-            'name': name, 'section': section, 'academic_year_id': self._year().id,
+            'name': name, 'section_id': self._section(section_ref).id,
+            'academic_year_id': self._year().id,
             'is_entry_level': True,
         })
 
@@ -76,7 +83,7 @@ class TestSchoolSecurity(TransactionCase):
     def _assign(self, teacher, subject, school_class):
         return self.env['school.teacher.assignment'].create({
             'teacher_id': teacher.id, 'subject_id': subject.id,
-            'class_id': school_class.id, 'term': 'term1',
+            'class_id': school_class.id, 'term_id': self._term().id,
         })
 
     def _student(self, name, school_class):
@@ -92,7 +99,7 @@ class TestSchoolSecurity(TransactionCase):
     def _mark(self, student, subject):
         return self.env['school.mark'].create({
             'student_id': student.id, 'subject_id': subject.id,
-            'term': 'term1', 'exam_type': 'test', 'score': 70.0,
+            'term_id': self._term().id, 'exam_type': 'test', 'score': 70.0,
         })
 
     def _attendance(self, student):
@@ -189,12 +196,12 @@ class TestSchoolSecurity(TransactionCase):
     def test_teacher_sees_own_draft_schedule_but_not_another_teachers(self):
         mine = self.env['school.class.schedule'].create({
             'class_id': self.class_a.id, 'subject_id': self.math.id,
-            'teacher_id': self.teacher_a.id, 'term': 'term1',
+            'teacher_id': self.teacher_a.id, 'term_id': self._term().id,
             'day_of_week': '0', 'start_time': 8.0, 'end_time': 9.0,
         })
         theirs = self.env['school.class.schedule'].create({
             'class_id': self.class_b.id, 'subject_id': self.history.id,
-            'teacher_id': self.teacher_b.id, 'term': 'term1',
+            'teacher_id': self.teacher_b.id, 'term_id': self._term().id,
             'day_of_week': '0', 'start_time': 8.0, 'end_time': 9.0,
         })
         visible = self.env['school.class.schedule'].with_user(self.teacher_user).search([])

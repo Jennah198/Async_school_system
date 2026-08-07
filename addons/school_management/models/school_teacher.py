@@ -107,15 +107,15 @@ class SchoolTeacher(models.Model):
         leaks into every other view in the same transaction."""
         super()._compute_display_name()
         academic_year_id = self.env.context.get('assignment_academic_year')
-        term = self.env.context.get('assignment_term')
-        if not (academic_year_id and term):
+        term_id = self.env.context.get('assignment_term')
+        if not (academic_year_id and term_id):
             return
         Assignment = self.env['school.teacher.assignment'].sudo()
         for rec in self:
             others = Assignment.search([
                 ('teacher_id', '=', rec.id),
                 ('academic_year_id', '=', academic_year_id),
-                ('term', '=', term),
+                ('term_id', '=', term_id),
                 ('active', '=', True),
             ])
             if not others:

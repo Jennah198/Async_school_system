@@ -116,6 +116,20 @@
               groups="school_management.group_school_registrar"
               sequence="15"/>
 
+    <menuitem id="menu_school_term"
+              name="Terms"
+              parent="menu_school_registrar"
+              action="action_school_term"
+              groups="school_management.group_school_registrar"
+              sequence="16"/>
+
+    <menuitem id="menu_school_section"
+              name="Sections"
+              parent="menu_school_registrar"
+              action="action_school_section"
+              groups="school_management.group_school_registrar"
+              sequence="17"/>
+
     <menuitem id="menu_school_class"
               name="Classes"
               parent="menu_school_registrar"

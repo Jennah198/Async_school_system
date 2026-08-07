@@ -15,7 +15,7 @@
                 <field name="room_id"/>
                 <field name="schedule_type" optional="hide"/>
                 <field name="academic_year_id" optional="hide"/>
-                <field name="term" optional="hide"/>
+                <field name="term_id" optional="hide"/>
                 <field name="state" widget="badge"
                        decoration-success="state == 'published'"
                        decoration-danger="state == 'cancelled'"
@@ -45,9 +45,9 @@
                     <group>
                         <group string="Academic Period">
                             <field name="class_id"/>
-                            <field name="section" invisible="not section"/>
+                            <field name="section_id" invisible="not section_id"/>
                             <field name="academic_year_id"/>
-                            <field name="term"/>
+                            <field name="term_id"/>
                         </group>
                         <group string="Class">
                             <field name="subject_id"/>
@@ -125,7 +125,7 @@
                     <filter string="Class / Section" name="group_class" context="{'group_by': 'class_id'}"/>
                     <filter string="Subject" name="group_subject" context="{'group_by': 'subject_id'}"/>
                     <filter string="Room" name="group_room" context="{'group_by': 'room_id'}"/>
-                    <filter string="Term" name="group_term" context="{'group_by': 'term'}"/>
+                    <filter string="Term" name="group_term" context="{'group_by': 'term_id'}"/>
                     <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
                 </group>
             </search>

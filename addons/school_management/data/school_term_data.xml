@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Terms and sections are master records now, not a Selection and a Char.
+        Seeded once (noupdate) so a school can rename or add to them without an
+        upgrade putting its edits back. Sequence drives the order everywhere,
+        because the models that point here order on the link, not the label.
+    -->
+    <data noupdate="1">
+        <record id="term_1" model="school.term">
+            <field name="name">Term 1</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="term_2" model="school.term">
+            <field name="name">Term 2</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="section_a" model="school.section">
+            <field name="name">A</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="section_b" model="school.section">
+            <field name="name">B</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="section_c" model="school.section">
+            <field name="name">C</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="section_d" model="school.section">
+            <field name="name">D</field>
+            <field name="sequence">40</field>
+        </record>
+    </data>
+</odoo>

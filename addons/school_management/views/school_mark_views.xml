@@ -8,7 +8,7 @@
                 <field name="student_id"/>
                 <field name="class_id" readonly="1" optional="show"/>
                 <field name="subject_id"/>
-                <field name="term"/>
+                <field name="term_id"/>
                 <field name="exam_type"/>
                 <field name="score"/>
                 <field name="max_score"/>
@@ -34,7 +34,7 @@
                         </group>
                         <group string="Assessment">
                             <field name="subject_id"/>
-                            <field name="term"/>
+                            <field name="term_id"/>
                             <field name="exam_type"/>
                         </group>
                         <group string="Result">
@@ -65,8 +65,6 @@
                 <field name="subject_id"/>
                 <field name="class_id"/>
                 <field name="academic_year_id"/>
-                <filter string="Term 1" name="term1" domain="[('term', '=', 'term1')]"/>
-                <filter string="Term 2" name="term2" domain="[('term', '=', 'term2')]"/>
                 <separator/>
                 <filter string="Failing" name="failing" domain="[('percentage', '&lt;', 50)]"/>
                 <separator/>
@@ -75,7 +73,7 @@
                     <filter string="Class" name="group_class" context="{'group_by': 'class_id'}"/>
                     <filter string="Subject" name="group_subject" context="{'group_by': 'subject_id'}"/>
                     <filter string="Student" name="group_student" context="{'group_by': 'student_id'}"/>
-                    <filter string="Term" name="group_term" context="{'group_by': 'term'}"/>
+                    <filter string="Term" name="group_term" context="{'group_by': 'term_id'}"/>
                     <filter string="Assessment" name="group_exam" context="{'group_by': 'exam_type'}"/>
                     <filter string="Grade" name="group_grade" context="{'group_by': 'grade'}"/>
                 </group>

@@ -66,7 +66,7 @@
 
     <record id="demo_class_g1a" model="school.class">
         <field name="name">Grade 1</field>
-        <field name="section">A</field>
+        <field name="section_id" ref="section_a"/>
         <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="education_level">primary</field>
         <field name="is_entry_level" eval="True"/>
@@ -76,7 +76,7 @@
 
     <record id="demo_class_g2a" model="school.class">
         <field name="name">Grade 2</field>
-        <field name="section">A</field>
+        <field name="section_id" ref="section_a"/>
         <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="education_level">primary</field>
         <field name="is_entry_level" eval="True"/>
@@ -297,7 +297,7 @@
         <field name="teacher_id" ref="demo_teacher_maths"/>
         <field name="subject_id" ref="demo_subject_maths"/>
         <field name="class_id" ref="demo_class_g1a"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="responsibility">homeroom</field>
         <field name="weekly_periods">5</field>
     </record>
@@ -306,7 +306,7 @@
         <field name="teacher_id" ref="demo_teacher_maths"/>
         <field name="subject_id" ref="demo_subject_maths"/>
         <field name="class_id" ref="demo_class_g2a"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="responsibility">teacher</field>
         <field name="weekly_periods">4</field>
     </record>
@@ -315,7 +315,7 @@
         <field name="teacher_id" ref="demo_teacher_amharic"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
         <field name="class_id" ref="demo_class_g1a"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="responsibility">teacher</field>
         <field name="weekly_periods">4</field>
     </record>
@@ -324,7 +324,7 @@
         <field name="teacher_id" ref="demo_teacher_science"/>
         <field name="subject_id" ref="demo_subject_science"/>
         <field name="class_id" ref="demo_class_g2a"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="responsibility">department_head</field>
         <field name="weekly_periods">4</field>
     </record>
@@ -335,7 +335,7 @@
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="subject_id" ref="demo_subject_maths"/>
         <field name="teacher_id" ref="demo_teacher_maths"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="day_of_week">0</field>
         <field name="start_time">8.0</field>
         <field name="end_time">9.0</field>
@@ -348,7 +348,7 @@
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
         <field name="teacher_id" ref="demo_teacher_amharic"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="day_of_week">0</field>
         <field name="start_time">9.0</field>
         <field name="end_time">10.0</field>
@@ -361,7 +361,7 @@
         <field name="class_id" ref="demo_class_g2a"/>
         <field name="subject_id" ref="demo_subject_science"/>
         <field name="teacher_id" ref="demo_teacher_science"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="day_of_week">0</field>
         <field name="start_time">8.0</field>
         <field name="end_time">9.0</field>
@@ -374,7 +374,7 @@
         <field name="class_id" ref="demo_class_g2a"/>
         <field name="subject_id" ref="demo_subject_maths"/>
         <field name="teacher_id" ref="demo_teacher_maths"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="day_of_week">1</field>
         <field name="start_time">8.0</field>
         <field name="end_time">9.0</field>
@@ -387,7 +387,7 @@
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
         <field name="teacher_id" ref="demo_teacher_amharic"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="day_of_week">1</field>
         <field name="start_time">9.0</field>
         <field name="end_time">10.0</field>
@@ -588,7 +588,7 @@
     <record id="demo_mark_0" model="school.mark">
         <field name="student_id" ref="demo_student_g1a_1"/>
         <field name="subject_id" ref="demo_subject_maths"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">test</field>
         <field name="score">82</field>
         <field name="max_score">100</field>
@@ -597,7 +597,7 @@
     <record id="demo_mark_1" model="school.mark">
         <field name="student_id" ref="demo_student_g1a_2"/>
         <field name="subject_id" ref="demo_subject_maths"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">test</field>
         <field name="score">64</field>
         <field name="max_score">100</field>
@@ -606,7 +606,7 @@
     <record id="demo_mark_2" model="school.mark">
         <field name="student_id" ref="demo_student_g1a_1"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">test</field>
         <field name="score">91</field>
         <field name="max_score">100</field>
@@ -615,7 +615,7 @@
     <record id="demo_mark_3" model="school.mark">
         <field name="student_id" ref="demo_student_g1a_2"/>
         <field name="subject_id" ref="demo_subject_amharic"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">test</field>
         <field name="score">47</field>
         <field name="max_score">100</field>
@@ -624,7 +624,7 @@
     <record id="demo_mark_4" model="school.mark">
         <field name="student_id" ref="demo_student_g2a_1"/>
         <field name="subject_id" ref="demo_subject_science"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">test</field>
         <field name="score">75</field>
         <field name="max_score">100</field>
@@ -633,7 +633,7 @@
     <record id="demo_mark_5" model="school.mark">
         <field name="student_id" ref="demo_student_g2a_2"/>
         <field name="subject_id" ref="demo_subject_science"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">test</field>
         <field name="score">58</field>
         <field name="max_score">100</field>
@@ -642,7 +642,7 @@
     <record id="demo_mark_6" model="school.mark">
         <field name="student_id" ref="demo_student_g2a_1"/>
         <field name="subject_id" ref="demo_subject_maths"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">midterm</field>
         <field name="score">88</field>
         <field name="max_score">100</field>
@@ -651,7 +651,7 @@
     <record id="demo_mark_7" model="school.mark">
         <field name="student_id" ref="demo_student_g2a_2"/>
         <field name="subject_id" ref="demo_subject_maths"/>
-        <field name="term">term1</field>
+        <field name="term_id" ref="term_1"/>
         <field name="exam_type">midterm</field>
         <field name="score">39</field>
         <field name="max_score">100</field>

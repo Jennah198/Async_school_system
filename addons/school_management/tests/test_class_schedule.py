@@ -13,11 +13,17 @@ class TestClassSchedule(TransactionCase):
         Year = self.env['school.academic.year']
         return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
 
+    def _term(self, ref='term_1'):
+        return self.env.ref('school_management.%s' % ref)
+
+    def _section(self, ref='section_a'):
+        return self.env.ref('school_management.%s' % ref)
+
     def setUp(self):
         super().setUp()
         self.school_class = self.env['school.class'].create({
             'name': 'TEST Grade 5',
-            'section': 'TEST-A',
+            'section_id': self._section('section_b').id,
             'academic_year_id': self._year().id,
         })
         self.subject = self.env['school.subject'].create({'name': 'TEST Mathematics'})
@@ -27,7 +33,7 @@ class TestClassSchedule(TransactionCase):
             'teacher_id': self.teacher.id,
             'subject_id': self.subject.id,
             'class_id': self.school_class.id,
-            'term': 'term1',
+            'term_id': self._term().id,
         })
 
     def _teacher(self, name):
@@ -60,7 +66,7 @@ class TestClassSchedule(TransactionCase):
             'class_id': self.school_class.id,
             'subject_id': self.subject.id,
             'teacher_id': self.teacher.id,
-            'term': 'term1',
+            'term_id': self._term().id,
             'day_of_week': '0',
             'start_time': 8.0,
             'end_time': 9.0,
@@ -84,9 +90,9 @@ class TestClassSchedule(TransactionCase):
             'teacher_id': self.teacher.id,
             'subject_id': self.subject.id,
             'class_id': self.school_class.id,
-            'term': 'term2',
+            'term_id': self._term('term_2').id,
         })
-        self.assertTrue(self._slot(term='term2'))
+        self.assertTrue(self._slot(term_id=self._term('term_2').id))
 
     def test_cancelled_slot_frees_the_room(self):
         self._slot().action_cancel()

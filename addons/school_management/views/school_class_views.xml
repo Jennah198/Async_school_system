@@ -5,7 +5,7 @@
         <field name="arch" type="xml">
             <tree>
                 <field name="name"/>
-                <field name="section"/>
+                <field name="section_id"/>
                 <field name="academic_year_id"/>
                 <field name="education_level"/>
                 <field name="min_age"/>
@@ -24,7 +24,7 @@
                     <group>
                         <group>
                             <field name="name"/>
-                            <field name="section"/>
+                            <field name="section_id"/>
                             <field name="academic_year_id"/>
                             <field name="education_level"/>
                         </group>

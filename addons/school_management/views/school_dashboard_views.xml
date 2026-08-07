@@ -10,7 +10,7 @@
         <field name="arch" type="xml">
             <graph type="bar" sample="1">
                 <field name="subject_id"/>
-                <field name="term"/>
+                <field name="term_id"/>
                 <field name="percentage" type="measure"/>
             </graph>
         </field>
@@ -23,7 +23,7 @@
             <pivot sample="1">
                 <field name="class_id" type="row"/>
                 <field name="subject_id" type="row"/>
-                <field name="term" type="col"/>
+                <field name="term_id" type="col"/>
                 <field name="percentage" type="measure"/>
             </pivot>
         </field>

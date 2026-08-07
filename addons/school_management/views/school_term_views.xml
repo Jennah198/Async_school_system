@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_school_term_tree" model="ir.ui.view">
+        <field name="name">school.term.tree</field>
+        <field name="model">school.term</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_school_term" model="ir.actions.act_window">
+        <field name="name">Terms</field>
+        <field name="res_model">school.term</field>
+        <field name="view_mode">tree</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a term</p>
+            <p>Schedules, marks, and assignments all point at these records.</p>
+        </field>
+    </record>
+
+    <record id="view_school_section_tree" model="ir.ui.view">
+        <field name="name">school.section.tree</field>
+        <field name="model">school.section</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_school_section" model="ir.actions.act_window">
+        <field name="name">Sections</field>
+        <field name="res_model">school.section</field>
+        <field name="view_mode">tree</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add a section</p>
+            <p>A class is identified by its grade, its section, and its academic year.</p>
+        </field>
+    </record>
+
+</odoo>

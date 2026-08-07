@@ -56,7 +56,7 @@
                                 <tree editable="bottom">
                                     <field name="subject_id"/>
                                     <field name="class_id"/>
-                                    <field name="term"/>
+                                    <field name="term_id"/>
                                     <field name="responsibility"/>
                                     <field name="weekly_periods"/>
                                     <field name="start_date"/>
