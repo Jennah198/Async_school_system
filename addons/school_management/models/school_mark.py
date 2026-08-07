@@ -19,7 +19,7 @@ class SchoolMark(models.Model):
         'school.class', related='student_id.class_id', string='Grade / Class',
         store=True, readonly=True,
     )
-    academic_year = fields.Char(
+    academic_year = fields.Selection(
         related='class_id.academic_year', string='Academic Year', store=True, readonly=True,
     )
     subject_id = fields.Many2one(

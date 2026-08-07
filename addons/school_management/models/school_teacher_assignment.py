@@ -15,7 +15,7 @@ class SchoolTeacherAssignment(models.Model):
     teacher_id = fields.Many2one('school.teacher', string='Teacher', required=True, ondelete='cascade')
     subject_id = fields.Many2one('school.subject', string='Subject', required=True)
     class_id = fields.Many2one('school.class', string='Grade / Class', required=True)
-    academic_year = fields.Char(related='class_id.academic_year', store=True, readonly=True, string='Academic Year')
+    academic_year = fields.Selection(related='class_id.academic_year', store=True, readonly=True, string='Academic Year')
     term = fields.Selection([
         ('term1', 'Term 1'),
         ('term2', 'Term 2'),
