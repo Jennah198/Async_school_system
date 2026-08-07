@@ -25,6 +25,17 @@
         <field name="perm_unlink" eval="True"/>
     </record>
 
+    <record id="rule_staff_own_frontoffice" model="ir.rule">
+        <field name="name">Staff: own record only — Front Office</field>
+        <field name="model_id" ref="model_school_staff"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_frontoffice'))]"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
     <record id="rule_staff_all_director" model="ir.rule">
         <field name="name">Staff: all records — Director</field>
         <field name="model_id" ref="model_school_staff"/>
@@ -205,24 +216,24 @@
     <!-- ══════════════════════════════════════════════════════════════════════ -->
 
     <record id="rule_announcement_all_registrar" model="ir.rule">
-        <field name="name">Announcements: all records — Registrar</field>
+        <field name="name">Announcements: own as author or targeted at me — Registrar</field>
         <field name="model_id" ref="model_school_announcement"/>
         <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
-        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="domain_force">['|', ('author_id', '=', user.id), '&amp;', ('is_live', '=', True), ('is_for_me', '=', True)]</field>
     </record>
 
     <record id="rule_announcement_own_frontoffice" model="ir.rule">
-        <field name="name">Announcements: own as author — Front Office</field>
+        <field name="name">Announcements: own as author or targeted at me — Front Office</field>
         <field name="model_id" ref="model_school_announcement"/>
         <field name="groups" eval="[(4, ref('school_management.group_school_frontoffice'))]"/>
-        <field name="domain_force">[('author_id', '=', user.id)]</field>
+        <field name="domain_force">['|', ('author_id', '=', user.id), '&amp;', ('is_live', '=', True), ('is_for_me', '=', True)]</field>
     </record>
 
     <record id="rule_announcement_published_teacher" model="ir.rule">
-        <field name="name">Announcements: published only — Teacher</field>
+        <field name="name">Announcements: published and targeted at me — Teacher</field>
         <field name="model_id" ref="model_school_announcement"/>
         <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
-        <field name="domain_force">[('is_live', '=', True)]</field>
+        <field name="domain_force">['&amp;', ('is_live', '=', True), ('is_for_me', '=', True)]</field>
     </record>
 
     <record id="rule_announcement_all_director" model="ir.rule">

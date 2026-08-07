@@ -66,6 +66,10 @@ class SchoolAnnouncement(models.Model):
         string='Live', compute='_compute_is_live', search='_search_is_live',
         help='Published, past its publish time, and not yet expired.',
     )
+    is_for_me = fields.Boolean(
+        string='For Me', compute='_compute_is_for_me', search='_search_is_for_me',
+        help='The current user falls inside this announcement audience.',
+    )
     active = fields.Boolean(string='Active', default=True)
 
     _sql_constraints = [
@@ -83,6 +87,43 @@ class SchoolAnnouncement(models.Model):
                 and (not rec.publish_datetime or rec.publish_datetime <= now)
                 and (not rec.expiry_datetime or rec.expiry_datetime > now)
             )
+
+    def _audience_branches(self, user):
+        """One domain branch per audience type, each pairing the type with the match it
+        needs. res.users flattens the user's scope so these stay plain leaf comparisons."""
+        return [
+            [('audience_type', '=', 'all_staff')],
+            ['&', ('audience_type', '=', 'department'),
+                  ('department', '=', user.school_department or False)],
+            ['&', ('audience_type', '=', 'responsibility'),
+                  ('responsibility', 'in', user.school_responsibility_list or [])],
+            ['&', ('audience_type', '=', 'teacher_group'),
+                  ('teacher_ids', 'in', user.school_teacher_id.ids)],
+            ['&', ('audience_type', '=', 'subject_group'),
+                  ('subject_ids', 'in', user.school_taught_subject_ids.ids)],
+            ['&', ('audience_type', '=', 'class_section'),
+                  ('class_ids', 'in', user.school_taught_class_ids.ids)],
+            ['&', ('audience_type', '=', 'branch_campus'),
+                  ('campus_ids', 'in', user.school_campus_ids.ids)],
+            ['&', ('audience_type', '=', 'selected_staff'),
+                  ('staff_ids', 'in', user.school_staff_ids.ids)],
+        ]
+
+    @api.depends_context('uid')
+    def _compute_is_for_me(self):
+        user = self.env.user
+        for rec in self:
+            rec.is_for_me = bool(rec.filtered_domain(
+                ['|'] * 7 + [leaf for branch in rec._audience_branches(user) for leaf in branch]
+            ))
+
+    def _search_is_for_me(self, operator, value):
+        mine = ['|'] * 7 + [
+            leaf for branch in self._audience_branches(self.env.user) for leaf in branch
+        ]
+        if (operator == '=') == bool(value):
+            return mine
+        return ['!', *mine]
 
     def _search_is_live(self, operator, value):
         now = fields.Datetime.now()
