@@ -67,7 +67,7 @@
     <record id="demo_class_g1a" model="school.class">
         <field name="name">Grade 1</field>
         <field name="section">A</field>
-        <field name="academic_year">2026/2027</field>
+        <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="education_level">primary</field>
         <field name="is_entry_level" eval="True"/>
         <field name="min_age">6</field>
@@ -77,7 +77,7 @@
     <record id="demo_class_g2a" model="school.class">
         <field name="name">Grade 2</field>
         <field name="section">A</field>
-        <field name="academic_year">2026/2027</field>
+        <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="education_level">primary</field>
         <field name="is_entry_level" eval="True"/>
         <field name="min_age">7</field>

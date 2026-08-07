@@ -7,6 +7,12 @@ YEAR = '2029/2030'
 class TestResponsibilityAndStaffControl(TransactionCase):
     """Brief sections 4, 5, 6 and the section 13 lines that depend on them."""
 
+    def _year(self):
+        """Academic year is a master record now. Reuse it across a test so the
+        class/section/year unique constraint behaves as it does in production."""
+        Year = self.env['school.academic.year']
+        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
+
     def setUp(self):
         super().setUp()
         self.campus_main = self.env['school.campus'].create({'name': 'RESP Main'})
@@ -18,7 +24,8 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'name': 'RESP Registrar', 'department': 'administration',
         })
         self.class_a = self.env['school.class'].create({
-            'name': 'RESP Grade 1', 'section': 'A', 'academic_year': YEAR, 'is_entry_level': True,
+            'name': 'RESP Grade 1', 'section': 'A', 'academic_year_id': self._year().id,
+            'is_entry_level': True,
         })
         self.maths = self.env['school.subject'].create({'name': 'RESP Mathematics'})
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Academic years are master records now, not free text. Seeded once
+        (noupdate) so a school can rename or retire them without an upgrade
+        putting its edits back. Add later years from Administration → Academic
+        Years; nothing here needs changing to do that.
+    -->
+    <data noupdate="1">
+        <record id="academic_year_2025_2026" model="school.academic.year">
+            <field name="name">2025/2026</field>
+            <field name="date_start">2025-09-01</field>
+            <field name="date_end">2026-06-30</field>
+        </record>
+        <record id="academic_year_2026_2027" model="school.academic.year">
+            <field name="name">2026/2027</field>
+            <field name="date_start">2026-09-01</field>
+            <field name="date_end">2027-06-30</field>
+            <field name="is_current" eval="True"/>
+        </record>
+        <record id="academic_year_2027_2028" model="school.academic.year">
+            <field name="name">2027/2028</field>
+            <field name="date_start">2027-09-01</field>
+            <field name="date_end">2028-06-30</field>
+        </record>
+        <record id="academic_year_2028_2029" model="school.academic.year">
+            <field name="name">2028/2029</field>
+            <field name="date_start">2028-09-01</field>
+            <field name="date_end">2029-06-30</field>
+        </record>
+        <record id="academic_year_2029_2030" model="school.academic.year">
+            <field name="name">2029/2030</field>
+            <field name="date_start">2029-09-01</field>
+            <field name="date_end">2030-06-30</field>
+        </record>
+    </data>
+</odoo>

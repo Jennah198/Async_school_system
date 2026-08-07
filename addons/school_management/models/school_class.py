@@ -1,15 +1,17 @@
-from odoo import api, fields, models # type: ignore
+from odoo import fields, models # type: ignore
 
 
 class SchoolClass(models.Model):
     _name = 'school.class'
     _description = 'School Grade / Class'
-    _order = 'name, section, academic_year'
+    _order = 'name, section, academic_year_id'
 
     name = fields.Char(string='Grade / Class', required=True)
     section = fields.Char(string='Section')
-    academic_year = fields.Selection(
-        selection='_get_academic_year_selection', string='Academic Year', required=True,
+    academic_year_id = fields.Many2one(
+        'school.academic.year', string='Academic Year', required=True,
+        ondelete='restrict', index=True,
+        default=lambda self: self.env['school.academic.year']._default_year(),
     )
     student_ids = fields.One2many('school.student', 'class_id', string='Students')
 
@@ -32,29 +34,8 @@ class SchoolClass(models.Model):
     active = fields.Boolean(string='Active', default=True)
 
     _sql_constraints = [
-        ('class_section_year_unique', 'unique(name, section, academic_year)',
+        ('class_section_year_unique', 'unique(name, section, academic_year_id)',
          'This class/section already exists for this academic year.'),
         ('age_range_valid', 'CHECK(min_age <= max_age OR min_age = 0 OR max_age = 0)',
          'Minimum age cannot be greater than maximum age.'),
     ]
-
-    @api.model
-    def _get_academic_year_selection(self):
-        """Current year plus the next four, unioned with every year already stored.
-
-        The union is what keeps history readable. A window alone drops a year the
-        moment it lapses, and a Selection renders blank for any value missing from
-        its list — so on 1 January every existing class, mark, and schedule would
-        show an empty required field and force whoever edits it to re-pick a year.
-        """
-        start = fields.Date.context_today(self).year
-        years = {'%d/%d' % (y, y + 1) for y in range(start, start + 5)}
-        # Raw SQL: this runs during field setup, where the ORM is not yet usable.
-        self.env.cr.execute("SELECT to_regclass('school_class')")
-        if self.env.cr.fetchone()[0]:
-            self.env.cr.execute(
-                'SELECT DISTINCT academic_year FROM school_class '
-                'WHERE academic_year IS NOT NULL'
-            )
-            years.update(row[0] for row in self.env.cr.fetchall())
-        return [(year, year) for year in sorted(years)]
