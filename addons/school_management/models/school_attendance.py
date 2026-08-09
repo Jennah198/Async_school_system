@@ -1,23 +1,11 @@
-from odoo import fields, models  # type: ignore
+from odoo import fields, models, api
 
 
 class SchoolAttendance(models.Model):
     _name = "school.attendance"
-    _description = "Student Attendance"
+    _description = "Daily Attendance Sheet"
     _order = "date desc"
 
-    student_id = fields.Many2one(
-        "school.student",
-        string="Student",
-        required=True
-    )
-
-    class_id = fields.Many2one(
-        "school.class",
-        string="Class",
-        related="student_id.class_id",
-        store=True
-    )
 
     date = fields.Date(
         string="Date",
@@ -25,25 +13,49 @@ class SchoolAttendance(models.Model):
         default=fields.Date.context_today
     )
 
-    status = fields.Selection(
-        [
-            ("present", "Present"),
-            ("absent", "Absent"),
-            ("late", "Late"),
-        ],
-        string="Status",
-        required=True,
-        default="present"
+
+    class_id = fields.Many2one(
+        "school.class",
+        string="Class",
+        required=True
     )
 
-    note = fields.Text(
-        string="Remarks"
+
+    subject_id = fields.Many2one(
+        "school.subject",
+        string="Subject",
+        required=True
     )
 
-    _sql_constraints = [
-        (
-            "student_date_unique",
-            "unique(student_id, date)",
-            "Attendance already exists for this student on this date."
-        )
-    ]
+
+    teacher_id = fields.Many2one(
+        "school.teacher",
+        string="Teacher",
+        required=True
+    )
+
+    attendance_line_ids = fields.One2many(
+        "school.attendance.line",
+        "attendance_id",
+        string="Students"
+    )
+
+
+    @api.onchange('class_id')
+    def _onchange_class_id(self):
+
+        if self.class_id:
+
+            self.attendance_line_ids = [(5,0,0)]
+
+            lines = []
+
+            for student in self.class_id.student_ids:
+                lines.append(
+                    (0,0,{
+                        "student_id": student.id,
+                        "status": "present"
+                    })
+                )
+
+            self.attendance_line_ids = lines

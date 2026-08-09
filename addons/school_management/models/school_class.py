@@ -10,7 +10,11 @@ class SchoolClass(models.Model):
     section = fields.Char(string='Section')
     academic_year = fields.Char(string='Academic Year', required=True)
     student_ids = fields.One2many('school.student', 'class_id', string='Students')
-
+    teacher_ids = fields.Many2many(
+        'school.teacher',
+        string='Assigned Teachers',
+        help='Teachers responsible for this class.'
+    )
     education_level = fields.Selection([
         ('kindergarten', 'Kindergarten'),
         ('primary', 'Primary'),

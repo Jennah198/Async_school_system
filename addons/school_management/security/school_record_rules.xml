@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Odoo ORs every group-based rule a user qualifies for, so the narrow rules
+         below widen automatically as a user gains the higher roles. -->
+
+    <!-- ============ Staff master data ============ -->
+
+    <record id="rule_staff_own" model="ir.rule">
+        <field name="name">Staff: own record</field>
+        <field name="model_id" ref="model_school_staff"/>
+        <field name="groups" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+    </record>
+
+    <record id="rule_staff_all" model="ir.rule">
+        <field name="name">Staff: all records for HR/Registrar</field>
+        <field name="model_id" ref="model_school_staff"/>
+        <field name="groups" eval="[(4, ref('group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ============ Students ============ -->
+
+    <record id="rule_student_teacher" model="ir.rule">
+        <field name="name">Students: only assigned classes</field>
+        <field name="model_id" ref="model_school_student"/>
+        <field name="groups" eval="[(4, ref('group_school_teacher'))]"/>
+        <field name="domain_force">[('class_id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <record id="rule_student_all" model="ir.rule">
+        <field name="name">Students: all for Registrar and Academic Director</field>
+        <field name="model_id" ref="model_school_student"/>
+        <field name="groups"
+               eval="[(4, ref('group_school_registrar')), (4, ref('group_school_academic_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ============ Attendance (brief section 9) ============ -->
+
+    <record id="attendance_teacher_rule" model="ir.rule">
+        <field name="name">Teacher sees own attendance</field>
+        <field name="model_id" ref="model_school_attendance"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">
+            [('teacher_id.user_id', '=', user.id)]
+        </field>
+    </record>
+
+    <record id="rule_attendance_all" model="ir.rule">
+        <field name="name">Attendance: all for Academic Director and Registrar</field>
+        <field name="model_id" ref="model_school_attendance"/>
+        <field name="groups"
+               eval="[(4, ref('group_school_academic_director')), (4, ref('group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ============ Marks (brief section 9) ============ -->
+
+    <record id="rule_mark_teacher" model="ir.rule">
+        <field name="name">Marks: only assigned class and subject</field>
+        <field name="model_id" ref="model_school_mark"/>
+        <field name="groups" eval="[(4, ref('group_school_teacher'))]"/>
+        <field name="domain_force">['&amp;', ('class_id', 'in', user.school_taught_class_ids.ids), ('subject_id', 'in', user.school_taught_subject_ids.ids)]</field>
+    </record>
+
+    <record id="rule_mark_all" model="ir.rule">
+        <field name="name">Marks: all for Academic Director and Registrar</field>
+        <field name="model_id" ref="model_school_mark"/>
+        <field name="groups"
+               eval="[(4, ref('group_school_academic_director')), (4, ref('group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ============ Class schedule ============ -->
+
+    <record id="rule_schedule_published" model="ir.rule">
+        <field name="name">Class schedule: published only</field>
+        <field name="model_id" ref="model_school_class_schedule"/>
+        <field name="groups" eval="[(4, ref('group_school_readonly'))]"/>
+        <field name="domain_force">[('state', '=', 'published')]</field>
+    </record>
+
+    <record id="rule_schedule_own" model="ir.rule">
+        <field name="name">Class schedule: own slots at any status</field>
+        <field name="model_id" ref="model_school_class_schedule"/>
+        <field name="groups" eval="[(4, ref('group_school_teacher'))]"/>
+        <field name="domain_force">[('teacher_id', '=', user.school_teacher_id.id)]</field>
+    </record>
+
+    <record id="rule_schedule_all" model="ir.rule">
+        <field name="name">Class schedule: all for Academic Director</field>
+        <field name="model_id" ref="model_school_class_schedule"/>
+        <field name="groups" eval="[(4, ref('group_school_academic_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ============ Programs (brief section 7.1 audience privacy) ============ -->
+
+    <record id="rule_program_own" model="ir.rule">
+        <field name="name">Programs: own as organizer</field>
+        <field name="model_id" ref="model_school_program"/>
+        <field name="groups" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="domain_force">[('organizer_id', 'in', user.school_staff_ids.ids)]</field>
+    </record>
+
+    <record id="rule_program_audience" model="ir.rule">
+        <field name="name">Programs: only where the user is in the audience</field>
+        <field name="model_id" ref="model_school_program"/>
+        <field name="groups" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="domain_force">['&amp;', ('state', '!=', 'draft'), '|', '|', '|', '|', '|', '|', '|', ('audience_type', '=', 'all_staff'), '&amp;', ('audience_type', '=', 'department'), ('department', '=', user.school_department), '&amp;', ('audience_type', '=', 'responsibility'), ('responsibility', 'in', user.school_responsibility_list or []), '&amp;', ('audience_type', '=', 'teacher_group'), ('teacher_ids', 'in', user.school_teacher_id.ids), '&amp;', ('audience_type', '=', 'subject_group'), ('subject_ids', 'in', user.school_taught_subject_ids.ids), '&amp;', ('audience_type', '=', 'class_section'), ('class_ids', 'in', user.school_taught_class_ids.ids), '&amp;', ('audience_type', '=', 'branch_campus'), ('campus_ids', 'in', user.school_campus_ids.ids), '&amp;', ('audience_type', '=', 'selected_staff'), ('staff_ids', 'in', user.school_staff_ids.ids)]</field>
+    </record>
+
+    <record id="rule_program_all" model="ir.rule">
+        <field name="name">Programs: all for Academic Director</field>
+        <field name="model_id" ref="model_school_program"/>
+        <field name="groups" eval="[(4, ref('group_school_academic_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ============ Announcements (brief section 8) ============ -->
+
+    <record id="rule_announcement_own" model="ir.rule">
+        <field name="name">Announcements: own as author</field>
+        <field name="model_id" ref="model_school_announcement"/>
+        <field name="groups" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="domain_force">[('author_id', '=', user.id)]</field>
+    </record>
+
+    <record id="rule_announcement_audience" model="ir.rule">
+        <field name="name">Announcements: live and targeted at the user</field>
+        <field name="model_id" ref="model_school_announcement"/>
+        <field name="groups" eval="[(4, ref('group_school_staff'))]"/>
+        <field name="domain_force">[('is_live', '=', True), '|', '|', '|', '|', '|', '|', '|', ('audience_type', '=', 'all_staff'), '&amp;', ('audience_type', '=', 'department'), ('department', '=', user.school_department), '&amp;', ('audience_type', '=', 'responsibility'), ('responsibility', 'in', user.school_responsibility_list or []), '&amp;', ('audience_type', '=', 'teacher_group'), ('teacher_ids', 'in', user.school_teacher_id.ids), '&amp;', ('audience_type', '=', 'subject_group'), ('subject_ids', 'in', user.school_taught_subject_ids.ids), '&amp;', ('audience_type', '=', 'class_section'), ('class_ids', 'in', user.school_taught_class_ids.ids), '&amp;', ('audience_type', '=', 'branch_campus'), ('campus_ids', 'in', user.school_campus_ids.ids), '&amp;', ('audience_type', '=', 'selected_staff'), ('staff_ids', 'in', user.school_staff_ids.ids)]</field>
+    </record>
+
+    <record id="rule_announcement_all" model="ir.rule">
+        <field name="name">Announcements: all for Academic Director</field>
+        <field name="model_id" ref="model_school_announcement"/>
+        <field name="groups" eval="[(4, ref('group_school_academic_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+</odoo>

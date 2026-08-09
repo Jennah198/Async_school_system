@@ -27,6 +27,7 @@
                             <field name="section"/>
                             <field name="academic_year"/>
                             <field name="education_level"/>
+                            <field name="teacher_ids" widget="many2many_tags"/>
                         </group>
                         <group>
                             <field name="is_entry_level"/>
