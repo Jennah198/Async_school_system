@@ -54,6 +54,9 @@ class SchoolEnrollment(models.Model):
         ('completed', 'Completed'),
     ], string='Status', default='draft', required=True, tracking=True)
     active = fields.Boolean(string='Active', default=True)
+    subject_ids = fields.One2many(
+        'school.student.subject', 'enrollment_id', string='Subjects',
+    )
 
     _sql_constraints = [
         ('roll_not_negative', 'CHECK(roll_number >= 0)',
@@ -155,6 +158,25 @@ class SchoolEnrollment(models.Model):
                 rec.roll_number = rec._next_roll_number()
             rec.state = 'active'
         self._sync_student_class()
+        self._derive_subject_enrollments()
+
+    def _derive_subject_enrollments(self):
+        """Give every active enrollment its class's compulsory subjects
+        (SRS §7.4) — the registrar never hand-builds a subject roster."""
+        StudentSubject = self.env['school.student.subject']
+        GradeSubject = self.env['school.grade.subject']
+        for rec in self.filtered(lambda r: r.state == 'active'):
+            wanted = GradeSubject.search([
+                ('class_id', '=', rec.class_id.id),
+                ('subject_type', '=', 'compulsory'),
+            ])
+            existing = StudentSubject.search([
+                ('enrollment_id', '=', rec.id),
+            ]).grade_subject_id
+            StudentSubject.create([
+                {'enrollment_id': rec.id, 'grade_subject_id': gs.id}
+                for gs in wanted - existing
+            ])
 
     def action_withdraw(self):
         for rec in self:

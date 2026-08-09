@@ -158,6 +158,20 @@
               groups="school_management.group_school_registrar"
               sequence="30"/>
 
+    <menuitem id="menu_school_grade_subject"
+              name="Curriculum"
+              parent="menu_school_registrar"
+              action="action_school_grade_subject"
+              groups="school_management.group_school_registrar"
+              sequence="31"/>
+
+    <menuitem id="menu_school_student_subject"
+              name="Subject Enrollments"
+              parent="menu_school_registrar"
+              action="action_school_student_subject"
+              groups="school_management.group_school_registrar"
+              sequence="32"/>
+
     <menuitem id="menu_school_class_schedule"
               name="Class Schedule"
               parent="menu_school_registrar"

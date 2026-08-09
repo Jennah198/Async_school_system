@@ -40,6 +40,15 @@
                             <field name="end_date" readonly="1"/>
                         </group>
                     </group>
+                    <group string="Subjects">
+                        <field name="subject_ids" nolabel="1" colspan="2">
+                            <tree editable="bottom">
+                                <field name="grade_subject_id" domain="[('class_id', '=', parent.class_id)]" options="{'no_create': True}"/>
+                                <field name="subject_type"/>
+                                <field name="state"/>
+                            </tree>
+                        </field>
+                    </group>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
