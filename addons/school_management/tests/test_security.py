@@ -101,9 +101,15 @@ class TestSchoolSecurity(TransactionCase):
         return student
 
     def _mark(self, student, subject):
+        # Marks belong to an assessment since 17.0.8.0.0.
+        assessment = self.env['school.assessment'].create({
+            'name': 'SEC Test', 'assessment_type': 'test',
+            'class_id': student.class_id.id, 'subject_id': subject.id,
+            'term_id': self._term().id, 'state': 'open',
+        })
         return self.env['school.mark'].create({
-            'student_id': student.id, 'subject_id': subject.id,
-            'term_id': self._term().id, 'exam_type': 'test', 'score': 70.0,
+            'assessment_id': assessment.id,
+            'student_id': student.id, 'score': 70.0,
         })
 
     def _attendance(self, student):
