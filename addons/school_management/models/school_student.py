@@ -61,6 +61,7 @@ class SchoolStudent(models.Model):
 
     enrollment_ids = fields.One2many('school.enrollment', 'student_id', string='Enrollments')
     enrollment_count = fields.Integer(compute='_compute_enrollment_count')
+    guardian_ids = fields.One2many('school.student.guardian', 'student_id', string='Guardians')
 
     _sql_constraints = [
         ('regno_unique', 'unique(regno)', 'Registration number must be unique.'),
@@ -152,6 +153,7 @@ class SchoolStudent(models.Model):
                 raise ValidationError("Only submitted registrations can be approved.")
             rec.registration_status = 'approved'
             rec._ensure_enrollment()
+            rec._ensure_guardian()
 
     def _ensure_enrollment(self):
         """Approval is the moment a registration becomes an academic placement:
@@ -174,6 +176,31 @@ class SchoolStudent(models.Model):
         })
         enrollment.action_activate()
         return enrollment
+
+    def _ensure_guardian(self):
+        """Turn the intake guardian chars into a partner-backed guardian link.
+        Reuses an existing contact when the same name and phone already exist,
+        so one parent serves several students as a single record."""
+        self.ensure_one()
+        if self.guardian_ids:
+            return self.guardian_ids
+        phone = self._get_full_phone(self.guardian_phone)
+        Partner = self.env['res.partner']
+        partner = Partner.search([
+            ('name', '=', self.guardian_name),
+            ('phone', '=', phone),
+        ], limit=1)
+        if not partner:
+            partner = Partner.create({
+                'name': self.guardian_name,
+                'phone': phone,
+                'type': 'contact',
+            })
+        return self.env['school.student.guardian'].create({
+            'student_id': self.id,
+            'partner_id': partner.id,
+            'is_primary': True,
+        })
 
     def action_view_enrollments(self):
         self.ensure_one()

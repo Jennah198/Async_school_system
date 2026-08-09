@@ -116,6 +116,13 @@
               groups="school_management.group_school_registrar"
               sequence="12"/>
 
+    <menuitem id="menu_school_student_guardian"
+              name="Guardians"
+              parent="menu_school_registrar"
+              action="action_school_student_guardian"
+              groups="school_management.group_school_registrar"
+              sequence="13"/>
+
     <menuitem id="menu_school_academic_year"
               name="Academic Years"
               parent="menu_school_registrar"

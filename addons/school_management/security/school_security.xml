@@ -34,6 +34,9 @@
     <record id="group_school_registrar" model="res.groups">
         <field name="name">Registrar / Academic Officer</field>
         <field name="category_id" ref="module_category_school"/>
+        <!-- Contact creation: guardians are res.partner records the registrar
+             creates during registration and approval. -->
+        <field name="implied_ids" eval="[(4, ref('base.group_partner_manager'))]"/>
         <field name="comment">Student records, class assignment, exam scheduling, transcripts, re-registration.</field>
     </record>
 
