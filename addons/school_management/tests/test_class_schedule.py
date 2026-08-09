@@ -100,19 +100,20 @@ class TestClassSchedule(TransactionCase):
                        start_time=8.5, end_time=9.5)
 
     def test_class_only_conflict_is_blocked(self):
-        """Same class, different teacher and room, overlapping time -> still blocked."""
+        """Same class, different teacher/subject/room, overlapping time -> still blocked."""
         other_teacher = self._teacher('TEST Teacher Three')
+        other_subject = self.env['school.subject'].create({'name': 'TEST English'})
         other_room = self.env['school.room'].create({'name': 'TEST Room 103'})
         self.env['school.teacher.assignment'].create({
             'teacher_id': other_teacher.id,
-            'subject_id': self.subject.id,
+            'subject_id': other_subject.id,
             'class_id': self.school_class.id,
             'term_id': self._term().id,
         })
         self._slot()
         with self.assertRaises(ValidationError):
-            self._slot(teacher_id=other_teacher.id, room_id=other_room.id,
-                       start_time=8.5, end_time=9.5)
+            self._slot(teacher_id=other_teacher.id, subject_id=other_subject.id,
+                       room_id=other_room.id, start_time=8.5, end_time=9.5)
 
     def test_room_only_conflict_is_blocked(self):
         """Same room, different teacher and class, overlapping time -> still blocked."""
