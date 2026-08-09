@@ -5,6 +5,7 @@ from . import school_academic_year
 from . import school_term
 from . import school_class
 from . import school_enrollment
+from . import school_enrollment_transfer
 from . import school_grade_subject
 from . import school_student_subject
 from . import school_student

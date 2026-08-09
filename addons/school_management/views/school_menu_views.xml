@@ -245,6 +245,13 @@
               groups="school_management.group_school_teacher"
               sequence="10"/>
 
+    <menuitem id="menu_school_take_attendance"
+              name="Take Attendance"
+              parent="menu_school_teacher_root"
+              action="action_school_attendance_roster"
+              groups="school_management.group_school_teacher"
+              sequence="15"/>
+
     <menuitem id="menu_school_attendance"
               name="Attendance Entry"
               parent="menu_school_teacher_root"
