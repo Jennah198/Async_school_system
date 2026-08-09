@@ -87,14 +87,18 @@ class TestSchoolSecurity(TransactionCase):
         })
 
     def _student(self, name, school_class):
-        return self.env['school.student'].create({
+        student = self.env['school.student'].create({
             'name': name, 'class_id': school_class.id,
             'date_of_birth': '2015-05-05',
             'guardian_name': 'SEC Guardian',
             'guardian_phone': '+251911234567',
             'birth_certificate': DUMMY_FILE,
+            'registration_date': '2026-08-01',
             'registration_status': 'approved',
         })
+        # Attendance requires an active enrollment since 17.0.7.0.0.
+        student._ensure_enrollment()
+        return student
 
     def _mark(self, student, subject):
         return self.env['school.mark'].create({
