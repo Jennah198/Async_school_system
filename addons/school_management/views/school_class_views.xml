@@ -32,6 +32,7 @@
                             <field name="is_entry_level"/>
                             <field name="min_age"/>
                             <field name="max_age"/>
+                            <field name="capacity"/>
                         </group>
                     </group>
                     <field name="student_ids"/>

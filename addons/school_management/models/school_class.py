@@ -16,6 +16,11 @@ class SchoolClass(models.Model):
         default=lambda self: self.env['school.academic.year']._default_year(),
     )
     student_ids = fields.One2many('school.student', 'class_id', string='Students')
+    enrollment_ids = fields.One2many('school.enrollment', 'class_id', string='Enrollments')
+    capacity = fields.Integer(
+        string='Capacity',
+        help='Maximum active enrollments. 0 means unlimited.',
+    )
 
     education_level = fields.Selection([
         ('kindergarten', 'Kindergarten'),
