@@ -114,10 +114,15 @@ class SchoolEnrollment(models.Model):
 
     def _sync_student_class(self):
         """Keep student.class_id mirroring the active enrollment so every
-        existing view, domain, and teacher record rule stays correct."""
+        existing view, domain, and teacher record rule stays correct.
+
+        A placement change is not a re-registration, so the registration
+        completeness constraint is skipped for this write only."""
         for rec in self.filtered(lambda r: r.state == 'active'):
             if rec.student_id.class_id != rec.class_id:
-                rec.student_id.class_id = rec.class_id
+                rec.student_id.with_context(
+                    skip_registration_completeness=True
+                ).class_id = rec.class_id
 
     def _next_roll_number(self):
         self.ensure_one()

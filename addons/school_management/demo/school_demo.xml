@@ -533,6 +533,40 @@
         <field name="registration_status">approved</field>
     </record>
 
+    <!-- ============ Enrollments (attendance derives from these) ============ -->
+
+    <record id="demo_enrollment_g1a_1" model="school.enrollment">
+        <field name="student_id" ref="demo_student_g1a_1"/>
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="enrollment_date">2026-07-20</field>
+        <field name="roll_number">1</field>
+        <field name="state">active</field>
+    </record>
+
+    <record id="demo_enrollment_g1a_2" model="school.enrollment">
+        <field name="student_id" ref="demo_student_g1a_2"/>
+        <field name="class_id" ref="demo_class_g1a"/>
+        <field name="enrollment_date">2026-07-20</field>
+        <field name="roll_number">2</field>
+        <field name="state">active</field>
+    </record>
+
+    <record id="demo_enrollment_g2a_1" model="school.enrollment">
+        <field name="student_id" ref="demo_student_g2a_1"/>
+        <field name="class_id" ref="demo_class_g2a"/>
+        <field name="enrollment_date">2026-07-20</field>
+        <field name="roll_number">1</field>
+        <field name="state">active</field>
+    </record>
+
+    <record id="demo_enrollment_g2a_2" model="school.enrollment">
+        <field name="student_id" ref="demo_student_g2a_2"/>
+        <field name="class_id" ref="demo_class_g2a"/>
+        <field name="enrollment_date">2026-07-20</field>
+        <field name="roll_number">2</field>
+        <field name="state">active</field>
+    </record>
+
     <!-- ============ Attendance ============ -->
 
     <record id="demo_attendance_0" model="school.attendance">

@@ -121,6 +121,8 @@ class SchoolStudent(models.Model):
     @api.constrains('registration_status', 'name', 'date_of_birth', 'guardian_name',
                      'guardian_phone', 'class_id', 'birth_certificate', 'previous_grade_document')
     def _check_required_fields_for_submission(self):
+        if self.env.context.get('skip_registration_completeness'):
+            return
         for rec in self:
             if rec.registration_status not in ('submitted', 'approved'):
                 continue
