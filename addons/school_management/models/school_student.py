@@ -59,9 +59,20 @@ class SchoolStudent(models.Model):
 
     active = fields.Boolean(string='Active', default=True)
 
+    enrollment_ids = fields.One2many('school.enrollment', 'student_id', string='Enrollments')
+    enrollment_count = fields.Integer(compute='_compute_enrollment_count')
+
     _sql_constraints = [
         ('regno_unique', 'unique(regno)', 'Registration number must be unique.'),
     ]
+
+    @api.depends('enrollment_ids')
+    def _compute_enrollment_count(self):
+        counts = dict(self.env['school.enrollment']._read_group(
+            [('student_id', 'in', self.ids)], ['student_id'], ['__count'],
+        ))
+        for rec in self:
+            rec.enrollment_count = counts.get(rec, 0)
 
     @api.depends('date_of_birth')
     def _compute_age(self):
@@ -140,3 +151,37 @@ class SchoolStudent(models.Model):
             if rec.registration_status != 'submitted':
                 raise ValidationError("Only submitted registrations can be approved.")
             rec.registration_status = 'approved'
+            rec._ensure_enrollment()
+
+    def _ensure_enrollment(self):
+        """Approval is the moment a registration becomes an academic placement:
+        create and activate the enrollment for the class chosen at registration."""
+        self.ensure_one()
+        Enrollment = self.env['school.enrollment']
+        existing = Enrollment.search([
+            ('student_id', '=', self.id),
+            ('academic_year_id', '=', self.class_id.academic_year_id.id),
+            ('state', 'in', ('draft', 'active')),
+        ], limit=1)
+        if existing:
+            if existing.state == 'draft':
+                existing.action_activate()
+            return existing
+        enrollment = Enrollment.create({
+            'student_id': self.id,
+            'class_id': self.class_id.id,
+            'enrollment_date': self.registration_date,
+        })
+        enrollment.action_activate()
+        return enrollment
+
+    def action_view_enrollments(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Enrollments',
+            'res_model': 'school.enrollment',
+            'view_mode': 'tree,form',
+            'domain': [('student_id', '=', self.id)],
+            'context': {'default_student_id': self.id},
+        }

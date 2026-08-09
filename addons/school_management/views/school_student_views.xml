@@ -25,6 +25,11 @@
                     <field name="registration_status" widget="statusbar" statusbar_visible="draft,submitted,approved"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_enrollments" type="object" class="oe_stat_button" icon="fa-graduation-cap">
+                            <field name="enrollment_count" widget="statinfo" string="Enrollments"/>
+                        </button>
+                    </div>
                     <group>
                         <group string="Identity">
                             <field name="regno" readonly="1"/>

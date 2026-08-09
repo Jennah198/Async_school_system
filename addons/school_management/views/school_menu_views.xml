@@ -109,6 +109,13 @@
               groups="school_management.group_school_registrar"
               sequence="10"/>
 
+    <menuitem id="menu_school_enrollment"
+              name="Enrollments"
+              parent="menu_school_registrar"
+              action="action_school_enrollment"
+              groups="school_management.group_school_registrar"
+              sequence="12"/>
+
     <menuitem id="menu_school_academic_year"
               name="Academic Years"
               parent="menu_school_registrar"
