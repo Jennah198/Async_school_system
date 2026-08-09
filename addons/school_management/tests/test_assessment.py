@@ -1,0 +1,202 @@
+import base64
+from datetime import timedelta
+
+from odoo import fields
+from odoo.exceptions import AccessError, ValidationError
+from odoo.tests.common import TransactionCase
+
+DUMMY_FILE = base64.b64encode(b'fictional test document')
+
+
+class TestAssessment(TransactionCase):
+    """SRS §9: mark lists are generated from subject enrollments, follow the
+    Draft→Open→Submitted→Approved→Locked→Published workflow, and reopen only
+    through the audited unlock."""
+
+    def setUp(self):
+        super().setUp()
+        self.today = fields.Date.context_today(self.env['school.assessment'])
+        self.yesterday = self.today - timedelta(days=1)
+        self.year = self.env['school.academic.year'].create({'name': '2096/2097'})
+        self.klass = self.env['school.class'].create({
+            'name': 'ASM Grade 1',
+            'academic_year_id': self.year.id,
+            'is_entry_level': True,
+        })
+        self.other_class = self.env['school.class'].create({
+            'name': 'ASM Grade 2',
+            'academic_year_id': self.year.id,
+        })
+        self.math = self.env['school.subject'].create({'name': 'ASM Mathematics'})
+        self.art = self.env['school.subject'].create({'name': 'ASM Art'})
+        self.term = self.env.ref('school_management.term_1')
+        self.env['school.grade.subject'].create({
+            'class_id': self.klass.id, 'subject_id': self.math.id,
+        })
+
+        self.teacher_user = self._user('asm_teacher', 'group_school_teacher')
+        self.officer_user = self._user('asm_officer', 'group_school_exam_officer')
+        self.registrar_user = self._user('asm_registrar', 'group_school_registrar')
+        self._assign(self._teacher('ASM Teacher', self.teacher_user), self.math, self.klass)
+
+        self.student_one = self._approved('ASM Student One', self.yesterday)
+        self.student_two = self._approved('ASM Student Two', self.yesterday)
+
+    # ---------- fixtures ----------
+
+    def _user(self, login, group_name):
+        # message_post refuses an author without an email address.
+        return self.env['res.users'].create({
+            'name': login, 'login': login, 'email': f'{login}@school.example',
+            'groups_id': [(6, 0, [
+                self.env.ref('base.group_user').id,
+                self.env.ref(f'school_management.{group_name}').id,
+            ])],
+        })
+
+    def _teacher(self, name, user):
+        first_name, _, last_name = name.partition(' ')
+        job_title = self.env['school.job.title'].create({
+            'name': 'ASM Teacher', 'department': 'academic',
+        })
+        staff = self.env['school.staff'].create({
+            'first_name': first_name, 'last_name': last_name or 'Staff',
+            'department': 'academic', 'job_title_id': job_title.id,
+            'employment_status': 'active', 'phone': '+251911550000',
+            'user_id': user.id,
+        })
+        self.env['school.staff.responsibility'].create({
+            'staff_id': staff.id, 'responsibility': 'teacher',
+            'is_primary': True, 'start_date': '2026-07-01', 'department': 'academic',
+        })
+        staff.action_activate()
+        return self.env['school.teacher'].create({'staff_id': staff.id, 'user_id': user.id})
+
+    def _assign(self, teacher, subject, school_class):
+        return self.env['school.teacher.assignment'].create({
+            'teacher_id': teacher.id, 'subject_id': subject.id,
+            'class_id': school_class.id, 'term_id': self.term.id,
+        })
+
+    def _approved(self, name, registration_date):
+        student = self.env['school.student'].create({
+            'name': name,
+            'date_of_birth': '2090-01-01',
+            'guardian_name': 'Guardian of %s' % name,
+            'guardian_phone': '+251911550001',
+            'class_id': self.klass.id,
+            'birth_certificate': DUMMY_FILE,
+            'registration_date': registration_date,
+        })
+        student.action_mark_submitted()
+        student.action_mark_approved()
+        return student
+
+    def _assessment(self, **overrides):
+        vals = {
+            'name': 'Test 1', 'assessment_type': 'test',
+            'class_id': self.klass.id, 'subject_id': self.math.id,
+            'term_id': self.term.id, 'date': self.today,
+        }
+        vals.update(overrides)
+        return self.env['school.assessment'].create(vals)
+
+    # ---------- generation (BR-06, AC-06, AC-07, BR-10) ----------
+
+    def test_open_generates_rows_from_subject_enrollments(self):
+        assessment = self._assessment()
+        assessment.action_open()
+        self.assertEqual(assessment.state, 'open')
+        self.assertEqual(len(assessment.mark_ids), 2)
+        self.assertEqual(set(assessment.mark_ids.mapped('mark_status')), {'pending'})
+        self.assertEqual(set(assessment.mark_ids.mapped('grade')), {False})
+        self.assertEqual(assessment.mark_ids.mapped('class_id'), self.klass)
+
+    def test_late_enrollment_not_listed(self):
+        assessment = self._assessment(date=self.yesterday)
+        assessment.action_open()
+        self.assertEqual(len(assessment.mark_ids), 2)
+        self._approved('ASM Late Joiner', self.today)
+        assessment.action_regenerate()
+        self.assertEqual(len(assessment.mark_ids), 2)
+
+    def test_open_without_teacher_assignment_blocked(self):
+        assessment = self._assessment(subject_id=self.art.id)
+        with self.assertRaises(ValidationError):
+            assessment.action_open()
+
+    def test_teacher_cannot_create_mark_rows(self):
+        assessment = self._assessment()
+        assessment.action_open()
+        with self.assertRaises(AccessError):
+            self.env['school.mark'].with_user(self.teacher_user).create({
+                'assessment_id': assessment.id,
+                'student_id': self.student_one.id,
+                'score': 50.0,
+            })
+
+    # ---------- entry ----------
+
+    def test_score_entry_flips_pending_to_recorded(self):
+        assessment = self._assessment()
+        assessment.action_open()
+        row_one, row_two = assessment.mark_ids
+        row_one.write({'score': 85.0})
+        self.assertEqual(row_one.mark_status, 'recorded')
+        self.assertEqual(row_one.grade, 'B')
+        row_two.write({'mark_status': 'absent'})
+        self.assertFalse(row_two.grade)
+
+    # ---------- workflow (BR-11, AC-13) ----------
+
+    def test_locked_marks_require_authorized_unlock(self):
+        assessment = self._assessment()
+        assessment.action_open()
+        assessment.mark_ids.write({'score': 60.0})
+        assessment.with_user(self.teacher_user).action_submit()
+
+        with self.assertRaises(AccessError):
+            assessment.with_user(self.registrar_user).action_approve()
+        assessment.with_user(self.officer_user).action_approve()
+        assessment.with_user(self.officer_user).action_lock()
+        self.assertEqual(assessment.state, 'locked')
+
+        with self.assertRaises(ValidationError):
+            assessment.mark_ids[0].write({'score': 90.0})
+        with self.assertRaises(ValidationError):
+            assessment.mark_ids[0].unlink()
+
+        wizard = self.env['school.assessment.unlock'].with_user(self.officer_user).create({
+            'assessment_id': assessment.id, 'reason': 'Score typed for the wrong student.',
+        })
+        wizard.action_confirm()
+        self.assertEqual(assessment.state, 'open')
+        assessment.mark_ids[0].write({'score': 90.0})
+        self.assertTrue(any('wrong student' in body
+                            for body in assessment.message_ids.mapped('body')))
+
+    def test_publish_follows_lock(self):
+        assessment = self._assessment()
+        assessment.action_open()
+        assessment.action_submit()
+        officer = assessment.with_user(self.officer_user)
+        officer.action_approve()
+        with self.assertRaises(ValidationError):
+            officer.action_publish()
+        officer.action_lock()
+        officer.action_publish()
+        self.assertEqual(assessment.state, 'published')
+
+    # ---------- history (regression: marks used to follow the student) ----------
+
+    def test_transfer_does_not_rewrite_mark_class(self):
+        assessment = self._assessment(date=self.yesterday)
+        assessment.action_open()
+        self.env['school.enrollment.transfer'].create({
+            'enrollment_id': self.student_one.enrollment_ids.filtered(
+                lambda e: e.state == 'active').id,
+            'new_class_id': self.other_class.id,
+            'effective_date': self.today,
+        }).action_confirm()
+        row = assessment.mark_ids.filtered(lambda m: m.student_id == self.student_one)
+        self.assertEqual(row.class_id, self.klass)

@@ -106,6 +106,109 @@
     </record>
 
     <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  GUARDIANS                                                            -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="rule_guardian_all_registrar" model="ir.rule">
+        <field name="name">Guardians: all records — Registrar</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_guardian_all_director" model="ir.rule">
+        <field name="name">Guardians: all records — Director</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_guardian_own_classes_teacher" model="ir.rule">
+        <field name="name">Guardians: own class students only — Teacher</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('student_id.class_id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <record id="rule_guardian_contact_frontoffice" model="ir.rule">
+        <field name="name">Guardians: all rows (contact lookup) — Front Office</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_frontoffice'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  ENROLLMENTS                                                          -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="rule_enrollment_all_registrar" model="ir.rule">
+        <field name="name">Enrollments: all records — Registrar</field>
+        <field name="model_id" ref="model_school_enrollment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_enrollment_all_director" model="ir.rule">
+        <field name="name">Enrollments: all records — Director</field>
+        <field name="model_id" ref="model_school_enrollment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_enrollment_own_classes_teacher" model="ir.rule">
+        <field name="name">Enrollments: own classes only — Teacher</field>
+        <field name="model_id" ref="model_school_enrollment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('class_id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  CURRICULUM + SUBJECT ENROLLMENTS                                     -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="rule_grade_subject_all_registrar" model="ir.rule">
+        <field name="name">Curriculum: all records — Registrar</field>
+        <field name="model_id" ref="model_school_grade_subject"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_grade_subject_all_director" model="ir.rule">
+        <field name="name">Curriculum: all records — Director</field>
+        <field name="model_id" ref="model_school_grade_subject"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_grade_subject_own_classes_teacher" model="ir.rule">
+        <field name="name">Curriculum: own classes only — Teacher</field>
+        <field name="model_id" ref="model_school_grade_subject"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('class_id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <record id="rule_student_subject_all_registrar" model="ir.rule">
+        <field name="name">Subject enrollments: all records — Registrar</field>
+        <field name="model_id" ref="model_school_student_subject"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_student_subject_all_director" model="ir.rule">
+        <field name="name">Subject enrollments: all records — Director</field>
+        <field name="model_id" ref="model_school_student_subject"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_student_subject_own_classes_teacher" model="ir.rule">
+        <field name="name">Subject enrollments: own classes only — Teacher</field>
+        <field name="model_id" ref="model_school_student_subject"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('class_id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
     <!--  ATTENDANCE                                                           -->
     <!-- ══════════════════════════════════════════════════════════════════════ -->
 
@@ -151,6 +254,34 @@
     <record id="rule_mark_own_class_subject_teacher" model="ir.rule">
         <field name="name">Marks: own class and subject only — Teacher</field>
         <field name="model_id" ref="model_school_mark"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">['&amp;',
+            ('class_id', 'in', user.school_taught_class_ids.ids),
+            ('subject_id', 'in', user.school_taught_subject_ids.ids)
+        ]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  ASSESSMENTS                                                          -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="rule_assessment_all_registrar" model="ir.rule">
+        <field name="name">Assessments: all records — Registrar</field>
+        <field name="model_id" ref="model_school_assessment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_assessment_all_director" model="ir.rule">
+        <field name="name">Assessments: all records — Director</field>
+        <field name="model_id" ref="model_school_assessment"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_assessment_own_class_subject_teacher" model="ir.rule">
+        <field name="name">Assessments: own class and subject only — Teacher</field>
+        <field name="model_id" ref="model_school_assessment"/>
         <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
         <field name="domain_force">['&amp;',
             ('class_id', 'in', user.school_taught_class_ids.ids),

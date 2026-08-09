@@ -78,15 +78,21 @@ class SchoolStudent(models.Model):
 
     active = fields.Boolean(string='Active', default=True)
 
-    enrollment_ids = fields.One2many(
-        'school.enrollment',
-        'student_id',
-        string="Enrollments"
-    )
+    enrollment_ids = fields.One2many('school.enrollment', 'student_id', string='Enrollments')
+    enrollment_count = fields.Integer(compute='_compute_enrollment_count')
+    guardian_ids = fields.One2many('school.student.guardian', 'student_id', string='Guardians')
 
     _sql_constraints = [
         ('regno_unique', 'unique(regno)', 'Registration number must be unique.'),
     ]
+
+    @api.depends('enrollment_ids')
+    def _compute_enrollment_count(self):
+        counts = dict(self.env['school.enrollment']._read_group(
+            [('student_id', 'in', self.ids)], ['student_id'], ['__count'],
+        ))
+        for rec in self:
+            rec.enrollment_count = counts.get(rec, 0)
 
     @api.depends('date_of_birth')
     def _compute_age(self):
@@ -136,6 +142,8 @@ class SchoolStudent(models.Model):
     @api.constrains('registration_status', 'name', 'date_of_birth', 'guardian_name',
                      'guardian_phone', 'class_id', 'birth_certificate', 'previous_grade_document')
     def _check_required_fields_for_submission(self):
+        if self.env.context.get('skip_registration_completeness'):
+            return
         for rec in self:
             if rec.registration_status not in ('submitted', 'approved'):
                 continue
@@ -167,15 +175,66 @@ class SchoolStudent(models.Model):
             if rec.registration_status != 'submitted':
                 raise ValidationError("Only submitted registrations can be approved.")
             rec.registration_status = 'approved'
-            if not rec.enrollment_ids:
-                self.env['school.enrollment'].create({
-                    'student_id': rec.id,
-                    'academic_year_id': rec.academic_year_id.id,
-                    'grade_id': rec.class_id.id,
-                    'section_id': rec.section_id.id if rec.section_id else False,
-                    'admission_type': rec.admission_type or 'new',
-                    'status': 'active',
-                })
+            rec._ensure_enrollment()
+            rec._ensure_guardian()
+
+    def _ensure_enrollment(self):
+        """Approval is the moment a registration becomes an academic placement:
+        create and activate the enrollment for the class chosen at registration."""
+        self.ensure_one()
+        Enrollment = self.env['school.enrollment']
+        existing = Enrollment.search([
+            ('student_id', '=', self.id),
+            ('academic_year_id', '=', self.class_id.academic_year_id.id),
+            ('state', 'in', ('draft', 'active')),
+        ], limit=1)
+        if existing:
+            if existing.state == 'draft':
+                existing.action_activate()
+            return existing
+        enrollment = Enrollment.create({
+            'student_id': self.id,
+            'class_id': self.class_id.id,
+            'enrollment_date': self.registration_date,
+        })
+        enrollment.action_activate()
+        return enrollment
+
+    def _ensure_guardian(self):
+        """Turn the intake guardian chars into a partner-backed guardian link.
+        Reuses an existing contact when the same name and phone already exist,
+        so one parent serves several students as a single record."""
+        self.ensure_one()
+        if self.guardian_ids:
+            return self.guardian_ids
+        phone = self._get_full_phone(self.guardian_phone)
+        Partner = self.env['res.partner']
+        partner = Partner.search([
+            ('name', '=', self.guardian_name),
+            ('phone', '=', phone),
+        ], limit=1)
+        if not partner:
+            partner = Partner.create({
+                'name': self.guardian_name,
+                'phone': phone,
+                'type': 'contact',
+            })
+        return self.env['school.student.guardian'].create({
+            'student_id': self.id,
+            'partner_id': partner.id,
+            'is_primary': True,
+        })
+
+    def action_view_enrollments(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Enrollments',
+            'res_model': 'school.enrollment',
+            'view_mode': 'tree,form',
+            'domain': [('student_id', '=', self.id)],
+            'context': {'default_student_id': self.id},
+        }
 
     def action_print_student_report(self):
         return self.env.ref('school_management.action_report_school_student').report_action(self)

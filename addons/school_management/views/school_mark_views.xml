@@ -4,15 +4,18 @@
         <field name="name">school.mark.tree</field>
         <field name="model">school.mark</field>
         <field name="arch" type="xml">
-            <tree editable="bottom" decoration-danger="grade == 'F'" decoration-success="grade == 'A'">
+            <tree editable="bottom" decoration-danger="grade == 'F'" decoration-success="grade == 'A'"
+                  decoration-muted="mark_status == 'pending'">
+                <field name="assessment_id"/>
                 <field name="student_id"/>
                 <field name="class_id" readonly="1" optional="show"/>
                 <field name="subject_id"/>
                 <field name="term_id"/>
                 <field name="exam_type"/>
+                <field name="mark_status"/>
                 <field name="score"/>
                 <field name="max_score"/>
-                <field name="percentage" widget="percentage" readonly="1" optional="show"/>
+                <field name="percentage" readonly="1" optional="show"/>
                 <field name="grade" readonly="1"/>
                 <field name="academic_year_id" readonly="1" optional="hide"/>
                 <field name="recorded_by_id" optional="hide"/>
@@ -33,11 +36,13 @@
                             <field name="academic_year_id" readonly="1"/>
                         </group>
                         <group string="Assessment">
+                            <field name="assessment_id"/>
                             <field name="subject_id"/>
                             <field name="term_id"/>
                             <field name="exam_type"/>
                         </group>
                         <group string="Result">
+                            <field name="mark_status"/>
                             <field name="score"/>
                             <field name="max_score"/>
                             <field name="percentage" readonly="1"/>

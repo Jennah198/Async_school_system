@@ -80,6 +80,60 @@ class TestClassSchedule(TransactionCase):
         with self.assertRaises(ValidationError):
             self._slot(start_time=8.5, end_time=9.5)
 
+    def test_teacher_only_conflict_is_blocked(self):
+        """Same teacher, different class and room, overlapping time -> still blocked."""
+        other_class = self.env['school.class'].create({
+            'name': 'TEST Grade 6',
+            'section_id': self._section('section_a').id,
+            'academic_year_id': self._year().id,
+        })
+        other_room = self.env['school.room'].create({'name': 'TEST Room 102'})
+        self.env['school.teacher.assignment'].create({
+            'teacher_id': self.teacher.id,
+            'subject_id': self.subject.id,
+            'class_id': other_class.id,
+            'term_id': self._term().id,
+        })
+        self._slot()
+        with self.assertRaises(ValidationError):
+            self._slot(class_id=other_class.id, room_id=other_room.id,
+                       start_time=8.5, end_time=9.5)
+
+    def test_class_only_conflict_is_blocked(self):
+        """Same class, different teacher/subject/room, overlapping time -> still blocked."""
+        other_teacher = self._teacher('TEST Teacher Three')
+        other_subject = self.env['school.subject'].create({'name': 'TEST English'})
+        other_room = self.env['school.room'].create({'name': 'TEST Room 103'})
+        self.env['school.teacher.assignment'].create({
+            'teacher_id': other_teacher.id,
+            'subject_id': other_subject.id,
+            'class_id': self.school_class.id,
+            'term_id': self._term().id,
+        })
+        self._slot()
+        with self.assertRaises(ValidationError):
+            self._slot(teacher_id=other_teacher.id, subject_id=other_subject.id,
+                       room_id=other_room.id, start_time=8.5, end_time=9.5)
+
+    def test_room_only_conflict_is_blocked(self):
+        """Same room, different teacher and class, overlapping time -> still blocked."""
+        other_teacher = self._teacher('TEST Teacher Four')
+        other_class = self.env['school.class'].create({
+            'name': 'TEST Grade 7',
+            'section_id': self._section('section_a').id,
+            'academic_year_id': self._year().id,
+        })
+        self.env['school.teacher.assignment'].create({
+            'teacher_id': other_teacher.id,
+            'subject_id': self.subject.id,
+            'class_id': other_class.id,
+            'term_id': self._term().id,
+        })
+        self._slot()
+        with self.assertRaises(ValidationError):
+            self._slot(teacher_id=other_teacher.id, class_id=other_class.id,
+                       start_time=8.5, end_time=9.5)
+
     def test_back_to_back_slot_is_allowed(self):
         self._slot()
         self.assertTrue(self._slot(start_time=9.0, end_time=10.0))

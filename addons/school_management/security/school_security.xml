@@ -34,6 +34,9 @@
     <record id="group_school_registrar" model="res.groups">
         <field name="name">Registrar / Academic Officer</field>
         <field name="category_id" ref="module_category_school"/>
+        <!-- Contact creation: guardians are res.partner records the registrar
+             creates during registration and approval. -->
+        <field name="implied_ids" eval="[(4, ref('base.group_partner_manager'))]"/>
         <field name="comment">Student records, class assignment, exam scheduling, transcripts, re-registration.</field>
     </record>
 
@@ -55,6 +58,15 @@
         <field name="comment">Fee invoices, payment recording, financial reports. No academic data access.</field>
     </record>
 
+    <!-- ── 7. Exam Officer ─────────────────────────────────────────────────── -->
+    <!-- Owns the assessment workflow: review, approve, lock, publish, and      -->
+    <!-- the audited unlock of mark lists (SRS §9, BR-11).                     -->
+    <record id="group_school_exam_officer" model="res.groups">
+        <field name="name">Exam Officer</field>
+        <field name="category_id" ref="module_category_school"/>
+        <field name="comment">Create assessments, review and approve mark lists, lock and publish results, authorized unlocks.</field>
+    </record>
+
     <!-- ── 6. Front Office / Communication Officer ─────────────────────────── -->
     <!-- Telegram community broadcasts, parent inquiry logging, issue routing.  -->
     <!-- No editing rights on grades, attendance, or fee records.              -->
@@ -74,6 +86,7 @@
             (4, ref('group_school_teacher')),
             (4, ref('group_school_finance')),
             (4, ref('group_school_frontoffice')),
+            (4, ref('group_school_exam_officer')),
         ]"/>
         <field name="comment">Full access: user management, Telegram bot config, system backups, all records.</field>
     </record>
