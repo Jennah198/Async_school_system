@@ -5,6 +5,7 @@ from . import school_academic_year
 from . import school_term
 from . import school_class
 from . import school_student
+from . import school_enrollment
 from . import school_staff
 from . import school_attendance
 from . import school_mark
@@ -20,3 +21,5 @@ from . import school_documents
 from . import res_users
 from . import school_teacher_links
 from . import school_dashboard
+from . import school_admission_wizard
+

@@ -25,6 +25,8 @@ attendance tracking and mark/result entry referencing the same student record.
     'data': [
         'security/school_security.xml',
         'security/ir.model.access.csv',
+        'views/school_admission_wizard_views.xml',
+        'views/school_enrollment_views.xml',
         'security/school_record_rules.xml',
         'data/school_academic_year_data.xml',
         'data/school_term_data.xml',
@@ -40,6 +42,8 @@ attendance tracking and mark/result entry referencing the same student record.
         'views/school_teacher_views.xml',
         'views/school_teacher_dashboard_views.xml',
         'views/school_student_views.xml',
+        'views/school_student_dashboard_views.xml',
+         'views/school_student_list_views.xml',
         'views/school_staff_views.xml',
         'views/school_attendance_views.xml',
         'views/school_mark_views.xml',

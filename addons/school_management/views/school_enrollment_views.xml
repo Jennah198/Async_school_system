@@ -1,0 +1,84 @@
+<odoo>
+    <!-- Tree/List View -->
+    <record id="view_school_enrollment_tree" model="ir.ui.view">
+        <field name="name">school.enrollment.tree</field>
+        <field name="model">school.enrollment</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="student_id"/>
+                <field name="academic_year_id"/>
+                <field name="grade_id"/>
+                <field name="section_id"/>
+                <field name="shift"/>
+                <field name="roll_number"/>
+                <field name="admission_type"/>
+                <field name="status"/>
+                <button name="action_open_student_dashboard"
+                        type="object"
+                        string="View Dashboard"
+                        class="btn-link"
+                        icon="fa-id-card"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_school_enrollment_form" model="ir.ui.view">
+        <field name="name">school.enrollment.form</field>
+        <field name="model">school.enrollment</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="student_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                        <field name="academic_year_id"/>
+                        <field name="grade_id"/>
+                        <field name="section_id"/>
+                        <field name="shift"/>
+                        <field name="roll_number"/>
+                        <field name="admission_type"/>
+                        <field name="enrollment_date"/>
+                        <field name="end_date"/>
+                        <field name="status"/>
+                        <field name="notes"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View: enables grouping by Academic Year -> Grade -> Section -->
+    <record id="view_school_enrollment_search" model="ir.ui.view">
+        <field name="name">school.enrollment.search</field>
+        <field name="model">school.enrollment</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="student_id"/>
+                <field name="academic_year_id"/>
+                <field name="grade_id"/>
+                <field name="section_id"/>
+                <filter string="Active" name="filter_active" domain="[('status', '=', 'active')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Academic Year" name="groupby_year" context="{'group_by': 'academic_year_id'}"/>
+                    <filter string="Grade" name="groupby_grade" context="{'group_by': 'grade_id'}"/>
+                    <filter string="Section" name="groupby_section" context="{'group_by': 'section_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_school_enrollment" model="ir.actions.act_window">
+        <field name="name">Enrollments</field>
+        <field name="res_model">school.enrollment</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_school_enrollment_search"/>
+        <field name="context">{'search_default_groupby_year': 1, 'search_default_groupby_grade': 1, 'search_default_groupby_section': 1}</field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_school_enrollment"
+              name="Enrollments"
+              parent="school_management.menu_school_registrar"
+              action="action_school_enrollment"/>
+</odoo>

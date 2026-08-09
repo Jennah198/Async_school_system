@@ -1,9 +1,8 @@
 import re
-
 from dateutil.relativedelta import relativedelta
 
-from odoo import api, fields, models # type: ignore
-from odoo.exceptions import ValidationError # type: ignore
+from odoo import api, fields, models  # type: ignore
+from odoo.exceptions import ValidationError  # type: ignore
 
 
 class SchoolStudent(models.Model):
@@ -37,8 +36,28 @@ class SchoolStudent(models.Model):
         ('secondary', 'Secondary'),
         ('high_school', 'High School'),
     ], string='Education Level')
-    class_id = fields.Many2one('school.class', string='Grade / Class', required=True,
-                                domain="[('education_level', '=', education_level)]")
+
+    admission_type = fields.Selection([
+        ('new', 'New'),
+        ('transfer', 'Transfer'),
+    ], string='Admission Type', default='new')
+
+    class_id = fields.Many2one(
+        'school.class',
+        string='Grade / Class',
+        required=True,
+        domain="[('education_level', '=', education_level)]"
+    )
+
+    academic_year_id = fields.Many2one(
+        'school.academic.year',
+        string="Academic Year",
+        required=True
+    )
+    section_id = fields.Many2one(
+        'school.section',
+        string="Section"
+    )
 
     registration_status = fields.Selection([
         ('draft', 'Draft'),
@@ -58,6 +77,12 @@ class SchoolStudent(models.Model):
     previous_grade_document_filename = fields.Char(string='Previous Grade Document Filename')
 
     active = fields.Boolean(string='Active', default=True)
+
+    enrollment_ids = fields.One2many(
+        'school.enrollment',
+        'student_id',
+        string="Enrollments"
+    )
 
     _sql_constraints = [
         ('regno_unique', 'unique(regno)', 'Registration number must be unique.'),
@@ -100,6 +125,8 @@ class SchoolStudent(models.Model):
             missing.append('Guardian Phone (invalid number — set Nationality for automatic country code, or include + code manually)')
         if not self.class_id:
             missing.append('Grade / Class')
+        if not self.academic_year_id:
+            missing.append('Academic Year')
         if not self.birth_certificate:
             missing.append('Birth Certificate')
         if self.class_id and not self.class_id.is_entry_level and not self.previous_grade_document:
@@ -140,3 +167,15 @@ class SchoolStudent(models.Model):
             if rec.registration_status != 'submitted':
                 raise ValidationError("Only submitted registrations can be approved.")
             rec.registration_status = 'approved'
+            if not rec.enrollment_ids:
+                self.env['school.enrollment'].create({
+                    'student_id': rec.id,
+                    'academic_year_id': rec.academic_year_id.id,
+                    'grade_id': rec.class_id.id,
+                    'section_id': rec.section_id.id if rec.section_id else False,
+                    'admission_type': rec.admission_type or 'new',
+                    'status': 'active',
+                })
+
+    def action_print_student_report(self):
+        return self.env.ref('school_management.action_report_school_student').report_action(self)

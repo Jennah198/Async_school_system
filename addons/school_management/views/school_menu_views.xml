@@ -102,12 +102,12 @@
               groups="school_management.group_school_registrar"
               sequence="20"/>
 
-    <menuitem id="menu_school_student"
+  <!--  <menuitem id="menu_school_student"
               name="Students"
               parent="menu_school_registrar"
               action="action_school_student"
               groups="school_management.group_school_registrar"
-              sequence="10"/>
+              sequence="10"/> -->
 
     <menuitem id="menu_school_academic_year"
               name="Academic Years"
