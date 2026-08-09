@@ -106,6 +106,38 @@
     </record>
 
     <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  GUARDIANS                                                            -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="rule_guardian_all_registrar" model="ir.rule">
+        <field name="name">Guardians: all records — Registrar</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_guardian_all_director" model="ir.rule">
+        <field name="name">Guardians: all records — Director</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_guardian_own_classes_teacher" model="ir.rule">
+        <field name="name">Guardians: own class students only — Teacher</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('student_id.class_id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <record id="rule_guardian_contact_frontoffice" model="ir.rule">
+        <field name="name">Guardians: all rows (contact lookup) — Front Office</field>
+        <field name="model_id" ref="model_school_student_guardian"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_frontoffice'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
     <!--  ENROLLMENTS                                                          -->
     <!-- ══════════════════════════════════════════════════════════════════════ -->
 

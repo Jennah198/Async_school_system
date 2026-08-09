@@ -48,6 +48,16 @@
                             <field name="address"/>
                         </group>
                     </group>
+                    <group string="Guardians">
+                        <field name="guardian_ids" nolabel="1" colspan="2">
+                            <tree editable="bottom">
+                                <field name="partner_id"/>
+                                <field name="relationship"/>
+                                <field name="phone"/>
+                                <field name="is_primary"/>
+                            </tree>
+                        </field>
+                    </group>
                     <group string="Emergency Contact">
                         <field name="emergency_contact_name"/>
                         <field name="emergency_contact_phone" placeholder="e.g. 912345678 (no country code needed)"/>

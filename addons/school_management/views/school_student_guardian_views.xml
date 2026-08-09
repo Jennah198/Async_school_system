@@ -1,0 +1,37 @@
+<odoo>
+    <record id="view_school_student_guardian_tree" model="ir.ui.view">
+        <field name="name">school.student.guardian.tree</field>
+        <field name="model">school.student.guardian</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="student_id"/>
+                <field name="partner_id"/>
+                <field name="relationship"/>
+                <field name="phone"/>
+                <field name="is_primary"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_school_student_guardian_search" model="ir.ui.view">
+        <field name="name">school.student.guardian.search</field>
+        <field name="model">school.student.guardian</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="student_id"/>
+                <field name="partner_id"/>
+                <filter name="filter_primary" string="Primary Contacts" domain="[('is_primary', '=', True)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_student" string="Student" context="{'group_by': 'student_id'}"/>
+                    <filter name="group_relationship" string="Relationship" context="{'group_by': 'relationship'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_school_student_guardian" model="ir.actions.act_window">
+        <field name="name">Guardians</field>
+        <field name="res_model">school.student.guardian</field>
+        <field name="view_mode">tree</field>
+    </record>
+</odoo>
