@@ -55,17 +55,17 @@
                         <field name="previous_grade_document_filename" invisible="1"/>
                     </group>
                     <notebook>
-                        <page string="Enrollment History">
-                            <field name="enrollment_ids" readonly="1">
-                                <tree>
-                                    <field name="academic_year_id"/>
-                                    <field name="grade_id"/>
-                                    <field name="section_id"/>
-                                    <field name="roll_number"/>
-                                    <field name="status"/>
-                                </tree>
-                            </field>
-                        </page>
+<page string="Enrollment History">
+    <field name="enrollment_ids" readonly="1">
+        <tree>
+            <field name="name"/>
+            <field name="academic_year_id"/>
+            <field name="class_id"/>
+            <field name="roll_number"/>
+            <field name="state"/>
+        </tree>
+    </field>
+</page>
                     </notebook>
                 </sheet>
             </form>
