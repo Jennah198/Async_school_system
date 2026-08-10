@@ -95,7 +95,11 @@
     <!-- ══════════════════════════════════════════════════════════════════════ -->
     <!--  REGISTRAR — students, classes, exams, scheduling                     -->
     <!-- ══════════════════════════════════════════════════════════════════════ -->
-
+     <menuitem id="menu_school_admission_wizard"
+              name="Student Registration"
+              parent="school_management.menu_school_registrar"
+              action="action_school_admission_wizard"/>
+              
     <menuitem id="menu_school_registrar"
               name="Registrar"
               parent="menu_school_root"

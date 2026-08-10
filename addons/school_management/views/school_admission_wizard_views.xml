@@ -21,8 +21,5 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_school_admission_wizard"
-              name="Student Registration"
-              parent="school_management.menu_school_registrar"
-              action="action_school_admission_wizard"/>
+    
 </odoo>
