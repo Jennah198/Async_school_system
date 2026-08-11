@@ -25,6 +25,12 @@ class SchoolMark(models.Model):
         domain="[('registration_status', '=', 'approved')]",
         help='Only approved student registrations can receive marks.',
     )
+    # Optional link to SRS §7.4 student subject enrollment to track dropped status/electives
+    student_subject_id = fields.Many2one(
+        'school.student.subject', string='Student Subject Enrollment',
+        ondelete='set null', index=True,
+        help='Links mark to specific student subject enrollment roster if applicable.'
+    )
     # Snapshot of the class at recording time — a later transfer must not
     # rewrite mark history (same fix as attendance in 17.0.7.0.0).
     class_id = fields.Many2one(
@@ -60,8 +66,21 @@ class SchoolMark(models.Model):
     ], string='Status', required=True, default='recorded')
     score = fields.Float(string='Score', required=True, default=0.0)
     max_score = fields.Float(string='Out Of', required=True, default=100.0)
-    percentage = fields.Float(string='Percentage', compute='_compute_percentage', store=True)
-    grade = fields.Char(string='Grade', compute='_compute_percentage', store=True)
+    
+    # Weight contribution from parent assessment
+    weight = fields.Float(
+        related='assessment_id.weight', string='Weight (%)', readonly=True,
+    )
+    percentage = fields.Float(
+        string='Percentage', compute='_compute_percentage', store=True,
+    )
+    weighted_score = fields.Float(
+        string='Weighted Score', compute='_compute_percentage', store=True,
+        help='Contribution percentage calculated toward term total mark.'
+    )
+    grade = fields.Char(
+        string='Grade', compute='_compute_percentage', store=True,
+    )
 
     recorded_by_id = fields.Many2one(
         'res.users', string='Recorded By', default=lambda self: self.env.user, readonly=True,
@@ -76,15 +95,18 @@ class SchoolMark(models.Model):
         ('score_not_negative', 'CHECK(score >= 0)', 'Score cannot be negative.'),
     ]
 
-    @api.depends('score', 'max_score', 'mark_status')
+    @api.depends('score', 'max_score', 'mark_status', 'assessment_id.weight')
     def _compute_percentage(self):
         for rec in self:
             if rec.mark_status in SCORED_STATUSES:
                 rec.percentage = (rec.score / rec.max_score * 100) if rec.max_score else 0.0
                 rec.grade = next((g for floor, g in GRADE_BANDS if rec.percentage >= floor), 'F')
+                weight_val = rec.assessment_id.weight if rec.assessment_id else 0.0
+                rec.weighted_score = (rec.percentage * weight_val / 100.0)
             else:
                 rec.percentage = 0.0
                 rec.grade = False
+                rec.weighted_score = 0.0
 
     @api.constrains('score', 'max_score')
     def _check_score_within_max(self):
@@ -92,20 +114,24 @@ class SchoolMark(models.Model):
             if rec.score > rec.max_score:
                 raise ValidationError('Score cannot be greater than Out Of.')
 
-    @api.constrains('student_id', 'subject_id', 'term_id')
+    @api.constrains('student_id', 'subject_id', 'term_id', 'class_id')
     def _check_subject_taught_to_class(self):
         """A mark only makes sense where someone is assigned to teach that subject
-        to that class in that term (BR-05)."""
+        to that class in that term (BR-05). Safely handles unassigned class fallbacks."""
         for rec in self:
+            target_class = rec.class_id or rec.assessment_id.class_id or rec.student_id.class_id
+            if not target_class or not rec.subject_id or not rec.term_id:
+                continue
+
             taught = self.env['school.teacher.assignment'].search_count([
                 ('subject_id', '=', rec.subject_id.id),
-                ('class_id', '=', rec.class_id.id),
+                ('class_id', '=', target_class.id),
                 ('term_id', '=', rec.term_id.id),
             ])
             if not taught:
                 raise ValidationError(
                     f'{rec.subject_id.name} is not assigned to any teacher for '
-                    f'{rec.class_id.display_name} in {rec.term_id.name}.'
+                    f'{target_class.display_name} in {rec.term_id.name}.'
                 )
 
     @api.onchange('assessment_id')
@@ -119,7 +145,7 @@ class SchoolMark(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            assessment = self.env['school.assessment'].browse(vals.get('assessment_id'))
+            assessment = self.env['school.assessment'].browse(vals.get('assessment_id')) if vals.get('assessment_id') else False
             if assessment and assessment.state not in ('draft', 'open'):
                 raise ValidationError(
                     'Mark list rows can only be added while the assessment is open.')
@@ -128,15 +154,15 @@ class SchoolMark(models.Model):
                 vals.setdefault('term_id', assessment.term_id.id)
                 vals.setdefault('exam_type', assessment.assessment_type)
                 vals.setdefault('max_score', assessment.max_mark)
-            if not vals.get('class_id'):
+            if not vals.get('class_id') and vals.get('student_id'):
                 student = self.env['school.student'].browse(vals['student_id'])
-                vals['class_id'] = (assessment.class_id or student.class_id).id
+                vals['class_id'] = (assessment.class_id or student.class_id).id if assessment else student.class_id.id
         return super().create(vals_list)
 
     def write(self, vals):
         if ENTRY_FIELDS & vals.keys():
             locked = self.filtered(
-                lambda m: m.assessment_id.state not in ('draft', 'open'))
+                lambda m: m.assessment_id and m.assessment_id.state not in ('draft', 'open'))
             if locked:
                 raise ValidationError(
                     'Marks can only be edited while their assessment is open. '
@@ -149,7 +175,7 @@ class SchoolMark(models.Model):
         return super().write(vals)
 
     def unlink(self):
-        if any(m.assessment_id.state not in ('draft', 'open') for m in self):
+        if any(m.assessment_id and m.assessment_id.state not in ('draft', 'open') for m in self):
             raise ValidationError(
                 'Mark list rows cannot be deleted once the assessment is submitted.')
         return super().unlink()

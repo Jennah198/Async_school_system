@@ -1,9 +1,8 @@
 import re
-
 from dateutil.relativedelta import relativedelta
 
-from odoo import api, fields, models # type: ignore
-from odoo.exceptions import ValidationError # type: ignore
+from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class SchoolStudent(models.Model):
@@ -24,12 +23,12 @@ class SchoolStudent(models.Model):
 
     guardian_name = fields.Char(string='Parent / Guardian Name', required=True)
     guardian_phone = fields.Char(string='Guardian Phone', required=True,
-                                  help='Enter the local number. Country code is added automatically based on Nationality.')
+                                  help='Enter local number or include + with country code.')
     address = fields.Text(string='Address')
 
     emergency_contact_name = fields.Char(string='Emergency Contact Name')
     emergency_contact_phone = fields.Char(string='Emergency Contact Phone',
-                                           help='Enter the local number. Country code is added automatically based on Nationality.')
+                                           help='Enter local number or include + with country code.')
 
     education_level = fields.Selection([
         ('kindergarten', 'Kindergarten'),
@@ -38,7 +37,7 @@ class SchoolStudent(models.Model):
         ('high_school', 'High School'),
     ], string='Education Level')
     class_id = fields.Many2one('school.class', string='Grade / Class', required=True,
-                                domain="[('education_level', '=', education_level)]")
+                                domain="['|', ('education_level', '=', False), ('education_level', '=', education_level)]")
 
     registration_status = fields.Selection([
         ('draft', 'Draft'),
@@ -69,11 +68,8 @@ class SchoolStudent(models.Model):
 
     @api.depends('enrollment_ids')
     def _compute_enrollment_count(self):
-        counts = dict(self.env['school.enrollment']._read_group(
-            [('student_id', 'in', self.ids)], ['student_id'], ['__count'],
-        ))
         for rec in self:
-            rec.enrollment_count = counts.get(rec, 0)
+            rec.enrollment_count = len(rec.enrollment_ids)
 
     @api.depends('date_of_birth')
     def _compute_age(self):
@@ -95,7 +91,7 @@ class SchoolStudent(models.Model):
 
     def _is_valid_phone(self, phone):
         full_phone = self._get_full_phone(phone)
-        if not full_phone or not full_phone.startswith('+'):
+        if not full_phone:
             return False
         digits = re.sub(r'\D', '', full_phone)
         return len(digits) >= 7

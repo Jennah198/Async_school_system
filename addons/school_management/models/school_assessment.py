@@ -87,7 +87,7 @@ class SchoolAssessment(models.Model):
         if self.env.su:
             return
         if not self.env.user.has_group('school_management.group_school_exam_officer'):
-            raise AccessError('Only an Exam Officer can do this.')
+            raise AccessError('Only an Exam Officer can perform this action.')
 
     def _check_teacher_assigned(self):
         """BR-05: no mark list without an active teacher subject assignment."""
@@ -127,15 +127,16 @@ class SchoolAssessment(models.Model):
                 'student_id': line.student_id.id,
                 'mark_status': 'pending',
             })
-        self.env['school.mark'].create(vals_list)
+        if vals_list:
+            self.env['school.mark'].create(vals_list)
 
     def action_open(self):
         for rec in self:
             if rec.state != 'draft':
                 raise ValidationError('Only draft assessments can be opened.')
             rec._check_teacher_assigned()
-            rec.state = 'open'
             rec._generate_mark_list()
+            rec.state = 'open'
 
     def action_regenerate(self):
         """Pick up subject enrollments added since opening. Idempotent."""
@@ -159,6 +160,19 @@ class SchoolAssessment(models.Model):
 
     def action_publish(self):
         self._transition('locked', 'published')
+
+    def action_unlock_wizard(self):
+        """Triggers the unlock popup dialog from the form view header."""
+        self.ensure_one()
+        self._require_exam_officer()
+        return {
+            'name': 'Unlock Assessment for Correction',
+            'type': 'ir.actions.act_window',
+            'res_model': 'school.assessment.unlock',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_assessment_id': self.id},
+        }
 
     def _transition(self, src, dst):
         for rec in self:
@@ -184,6 +198,6 @@ class SchoolAssessmentUnlock(models.TransientModel):
         assessment = self.assessment_id
         assessment._require_exam_officer()
         if assessment.state not in ('approved', 'locked', 'published'):
-            raise ValidationError('This assessment is not locked.')
-        assessment.message_post(body='Unlocked for correction: %s' % self.reason)
+            raise ValidationError('This assessment is not locked or approved.')
+        assessment.message_post(body=f'Unlocked for correction: {self.reason}')
         assessment.state = 'open'
