@@ -6,11 +6,5 @@
         <field name="view_mode">tree,form</field>
     </record>
 
-    <!-- Menu Item -->
-    <menuitem id="menu_school_student_list"
-              name="Student List"
-              parent="menu_school_registrar"
-              action="action_school_student_list"
-              groups="school_management.group_school_registrar"
-              sequence="12"/>
+ 
 </odoo>

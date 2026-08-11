@@ -111,12 +111,12 @@
     <field name="model">school.program</field>
     <field name="inherit_id" ref="view_school_program_form"/>
     <field name="arch" type="xml">
-        <field name="staff_ids" position="before">
+        <xpath expr="//field[@name='staff_ids']" position="before">
             <field name="campus_ids" 
                    widget="many2many_tags" 
                    invisible="audience_type != 'branch_campus'" 
                    required="audience_type == 'branch_campus'"/>
-        </field>
+        </xpath>
     </field>
 </record>
     <record id="view_school_announcement_form_campus" model="ir.ui.view">
@@ -124,12 +124,12 @@
         <field name="model">school.announcement</field>
         <field name="inherit_id" ref="view_school_announcement_form"/>
         <field name="arch" type="xml">
-            <field name="staff_ids" position="before">
+            <xpath expr="//field[@name='staff_ids']" position="before">
                 <field name="campus_ids" 
        widget="many2many_tags" 
        invisible="[('audience_type', '!=', 'branch_campus')]"
        required="[('audience_type', '=', 'branch_campus')]"/>
-            </field>
+            </xpath>
         </field>
     </record>
 
