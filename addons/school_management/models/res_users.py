@@ -1,4 +1,12 @@
+import re
+
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
+
+
+EMAIL_REGEX = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+# At least 8 chars, one uppercase, one lowercase, one digit, one special character.
+PASSWORD_REGEX = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$')
 
 
 class ResUsers(models.Model):
@@ -47,3 +55,29 @@ class ResUsers(models.Model):
             user.school_responsibility_list = sorted(set(
                 assignments.mapped('responsibility') + responsibilities.mapped('responsibility')
             ))
+
+    def _check_strong_password(self, password):
+        if not password:
+            return
+        if not PASSWORD_REGEX.match(password):
+            raise ValidationError(
+                'Password must be at least 8 characters long and include an uppercase '
+                'letter, a lowercase letter, a number, and a special character.'
+            )
+
+    def _check_valid_email_format(self, email):
+        if email and not EMAIL_REGEX.match(email):
+            raise ValidationError('"%s" is not a valid email address.' % email)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            self._check_strong_password(vals.get('password'))
+            self._check_valid_email_format(vals.get('email') or vals.get('login'))
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._check_strong_password(vals.get('password'))
+        if 'email' in vals:
+            self._check_valid_email_format(vals.get('email'))
+        return super().write(vals)

@@ -264,3 +264,5 @@ class SchoolTeacher(models.Model):
         })
         user.action_reset_password()
         self.user_id = user.id
+    def action_create_login_user(self): 
+        for teacher in self: teacher._create_teacher_user()
