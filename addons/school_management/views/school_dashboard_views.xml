@@ -123,8 +123,17 @@
 
     <record id="action_school_my_mark_tasks" model="ir.actions.act_window">
         <field name="name">Mark Entry</field>
-        <field name="res_model">school.mark</field>
+        <field name="res_model">school.assessment</field>
         <field name="view_mode">list,form</field>
         <field name="context">{'search_default_group_class': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create an assessment to enter marks.
+            </p>
+            <p>
+                Choose the class, subject, term, and exact teacher assignment,
+                then use Open &amp; Generate List to load the eligible students.
+            </p>
+        </field>
     </record>
 </odoo>

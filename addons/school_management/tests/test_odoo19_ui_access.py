@@ -69,3 +69,8 @@ class TestOdoo19UiAccess(TransactionCase):
             with self.subTest(view=xml_id):
                 self.assertIn('create="0"', arch)
                 self.assertIn('delete="0"', arch)
+
+    def test_mark_entry_opens_the_assessment_workflow(self):
+        action = self.env.ref('school_management.action_school_my_mark_tasks')
+        self.assertEqual(action.res_model, 'school.assessment')
+        self.assertEqual(action.view_mode, 'list,form')
