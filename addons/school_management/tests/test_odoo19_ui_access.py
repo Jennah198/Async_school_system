@@ -103,3 +103,13 @@ class TestOdoo19UiAccess(TransactionCase):
         ):
             with self.subTest(instruction=instruction):
                 self.assertIn(instruction, help_html)
+
+    def test_assessment_form_guides_scope_and_uses_full_width(self):
+        arch = self.env.ref(
+            'school_management.view_school_assessment_form').arch_db
+        self.assertIn('matching_assignment_count', arch)
+        self.assertIn('No active teacher assignment matches', arch)
+        self.assertIn("('start_date', '&lt;=', date)", arch)
+        self.assertIn('<chatter', arch)
+        self.assertGreater(arch.index('<chatter'), arch.index('<sheet'))
+        self.assertLess(arch.index('<chatter'), arch.index('</sheet>'))

@@ -32,7 +32,11 @@ class SchoolAssessment(models.Model):
     teacher_assignment_id = fields.Many2one(
         'school.teacher.assignment', string='Teacher Assignment',
         ondelete='restrict', index=True,
-        domain="[('class_id', '=', class_id), ('subject_id', '=', subject_id), ('term_id', '=', term_id), ('state', '=', 'active')]"
+        domain="[('class_id', '=', class_id), ('subject_id', '=', subject_id), ('term_id', '=', term_id), ('state', '=', 'active'), ('active', '=', True), ('start_date', '<=', date), '|', ('end_date', '=', False), ('end_date', '>=', date)]"
+    )
+    matching_assignment_count = fields.Integer(
+        string='Matching Teacher Assignments',
+        compute='_compute_matching_assignment_count',
     )
     term_id = fields.Many2one(
         'school.term', string='Term', required=True, ondelete='restrict')
@@ -74,6 +78,27 @@ class SchoolAssessment(models.Model):
         for rec in self:
             rec.mark_count = len(rec.mark_ids)
 
+    def _matching_assignment_domain(self):
+        self.ensure_one()
+        if not (self.class_id and self.subject_id and self.term_id and self.date):
+            return [('id', '=', 0)]
+        return [
+            ('class_id', '=', self.class_id.id),
+            ('subject_id', '=', self.subject_id.id),
+            ('term_id', '=', self.term_id.id),
+            ('state', '=', 'active'),
+            ('active', '=', True),
+            ('start_date', '<=', self.date),
+            '|', ('end_date', '=', False), ('end_date', '>=', self.date),
+        ]
+
+    @api.depends('class_id', 'subject_id', 'term_id', 'date')
+    def _compute_matching_assignment_count(self):
+        Assignment = self.env['school.teacher.assignment']
+        for rec in self:
+            rec.matching_assignment_count = Assignment.search_count(
+                rec._matching_assignment_domain())
+
     @api.onchange('class_id')
     def _onchange_class_id(self):
         for rec in self:
@@ -85,10 +110,15 @@ class SchoolAssessment(models.Model):
                     ('active', '=', True)]):
                 rec.subject_id = False
             rec.teacher_assignment_id = False
+            rec._onchange_assessment_scope()
 
     @api.onchange('subject_id', 'term_id', 'date')
     def _onchange_assessment_scope(self):
-        self.teacher_assignment_id = False
+        Assignment = self.env['school.teacher.assignment']
+        for rec in self:
+            matches = Assignment.search(rec._matching_assignment_domain(), limit=2)
+            rec.matching_assignment_count = len(matches)
+            rec.teacher_assignment_id = matches if len(matches) == 1 else False
 
     @api.constrains('class_id', 'subject_id', 'term_id', 'date', 'teacher_assignment_id')
     def _check_assessment_scope(self):

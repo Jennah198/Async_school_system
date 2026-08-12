@@ -91,7 +91,23 @@
                             <field name="subject_id" domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]" options="{'no_create': True}"/>
                             <field name="term_id" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
                             <field name="academic_year_id"/>
-                            <field name="teacher_assignment_id" required="1" options="{'no_create': True}"/>
+                            <field name="matching_assignment_count" invisible="1"/>
+                            <div class="alert alert-info" role="alert"
+                                 invisible="class_id and subject_id and term_id">
+                                Select Grade / Class, Subject, and Term first. The matching
+                                teacher assignment will then be selected automatically.
+                            </div>
+                            <div class="alert alert-warning" role="alert"
+                                 invisible="not class_id or not subject_id or not term_id or matching_assignment_count != 0">
+                                No active teacher assignment matches this class, subject,
+                                term, and assessment date. Create it under
+                                Registrar → Teacher Assignments before entering marks.
+                            </div>
+                            <field name="teacher_assignment_id"
+                                   domain="[('class_id', '=', class_id), ('subject_id', '=', subject_id), ('term_id', '=', term_id), ('state', '=', 'active'), ('active', '=', True), ('start_date', '&lt;=', date), '|', ('end_date', '=', False), ('end_date', '&gt;=', date)]"
+                                   invisible="not class_id or not subject_id or not term_id"
+                                   required="class_id and subject_id and term_id"
+                                   options="{'no_create': True}"/>
                         </group>
                         <group string="Marking">
                             <field name="date"/>
@@ -114,8 +130,8 @@
                             </list>
                         </field>
                     </group>
+                    <chatter/>
                 </sheet>
-                <chatter/>
             </form>
         </field>
     </record>

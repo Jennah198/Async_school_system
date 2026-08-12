@@ -135,6 +135,33 @@ class TestAssessment(TransactionCase):
         with self.assertRaises(ValidationError):
             self._assessment(subject_id=self.art.id)
 
+    def test_scope_onchange_selects_the_exact_active_assignment(self):
+        assignment = self.env['school.teacher.assignment'].search([
+            ('class_id', '=', self.klass.id),
+            ('subject_id', '=', self.math.id),
+            ('term_id', '=', self.term.id),
+        ], limit=1)
+        assessment = self.env['school.assessment'].new({
+            'class_id': self.klass.id,
+            'subject_id': self.math.id,
+            'term_id': self.term.id,
+            'date': self.today,
+        })
+        assessment._onchange_assessment_scope()
+        self.assertEqual(assessment.matching_assignment_count, 1)
+        self.assertEqual(assessment.teacher_assignment_id, assignment)
+
+    def test_scope_onchange_rejects_assignment_outside_effective_dates(self):
+        assessment = self.env['school.assessment'].new({
+            'class_id': self.klass.id,
+            'subject_id': self.math.id,
+            'term_id': self.term.id,
+            'date': self.term.date_start - timedelta(days=1),
+        })
+        assessment._onchange_assessment_scope()
+        self.assertEqual(assessment.matching_assignment_count, 0)
+        self.assertFalse(assessment.teacher_assignment_id)
+
     def test_assessment_rejects_assignment_from_another_class(self):
         other_assignment = self._assign(
             self._teacher('ASM Other Teacher', self._user(
