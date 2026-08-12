@@ -10,7 +10,7 @@ class SchoolTeacherAssignment(models.Model):
 
     name = fields.Char(string='Assignment', compute='_compute_name', store=True)
     weekly_periods = fields.Integer(string='Periods per Week', default=1, required=True)
-    start_date = fields.Date(string='Start Date', required=True, default=lambda self: fields.Date.context_today(self))
+    start_date = fields.Date(string='Start Date', required=True)
     end_date = fields.Date(string='End Date')
     teacher_id = fields.Many2one('school.teacher', string='Teacher', required=True, ondelete='cascade')
     subject_id = fields.Many2one('school.subject', string='Subject', required=True)
@@ -28,19 +28,31 @@ class SchoolTeacherAssignment(models.Model):
         ('department_head', 'Department Head'),
         ('coordinator', 'Academic Coordinator'),
     ], string='Responsibility', default='teacher', required=True)
+    teaching_role = fields.Selection([
+        ('lead', 'Lead Teacher'), ('assistant', 'Assistant Teacher'),
+        ('substitute', 'Substitute Teacher'), ('examiner', 'Examiner'),
+    ], default='lead', required=True)
+    state = fields.Selection([
+        ('draft', 'Draft'), ('active', 'Active'), ('ended', 'Ended'),
+        ('cancelled', 'Cancelled'),
+    ], default='active', required=True, tracking=True)
     active = fields.Boolean(string='Active', default=True)
 
-    @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term_id', 'active')
+    @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term_id',
+                    'state', 'active', 'start_date', 'end_date')
     def _check_single_teacher_per_subject_class_term(self):
         """Brief section 6: one active teacher per subject/class/section for a given academic period."""
-        for rec in self.filtered(lambda r: r.active):
+        for rec in self.filtered(lambda r: r.active and r.state == 'active'):
             clash = self.search([
                 ('id', '!=', rec.id),
                 ('subject_id', '=', rec.subject_id.id),
                 ('class_id', '=', rec.class_id.id),
                 ('academic_year_id', '=', rec.academic_year_id.id),
                 ('term_id', '=', rec.term_id.id),
+                ('state', '=', 'active'),
                 ('active', '=', True),
+                ('start_date', '<=', rec.end_date or fields.Date.to_date('9999-12-31')),
+                '|', ('end_date', '=', False), ('end_date', '>=', rec.start_date),
             ], limit=1)
             if clash:
                 raise ValidationError(
@@ -48,16 +60,21 @@ class SchoolTeacherAssignment(models.Model):
                     f'{rec.subject_id.name} for {rec.academic_year_id.name} {rec.term_id.name}.'
                 )
 
-    @api.constrains('responsibility', 'class_id', 'academic_year_id', 'term_id', 'active')
+    @api.constrains('responsibility', 'class_id', 'academic_year_id', 'term_id',
+                    'state', 'active', 'start_date', 'end_date')
     def _check_single_homeroom_per_class(self):
         """Brief section 6: one active homeroom teacher per class/section and period."""
-        for rec in self.filtered(lambda r: r.responsibility == 'homeroom' and r.active):
+        for rec in self.filtered(
+                lambda r: r.responsibility == 'homeroom' and r.active and r.state == 'active'):
             clash = self.search([
                 ('id', '!=', rec.id),
                 ('responsibility', '=', 'homeroom'),
                 ('class_id', '=', rec.class_id.id),
                 ('academic_year_id', '=', rec.academic_year_id.id),
                 ('term_id', '=', rec.term_id.id),
+                ('state', '=', 'active'), ('active', '=', True),
+                ('start_date', '<=', rec.end_date or fields.Date.to_date('9999-12-31')),
+                '|', ('end_date', '=', False), ('end_date', '>=', rec.start_date),
             ], limit=1)
             if clash:
                 raise ValidationError(
@@ -69,12 +86,14 @@ class SchoolTeacherAssignment(models.Model):
     def _check_staff_can_take_work(self):
         """Brief section 4: suspended or inactive staff take no new assignments."""
         for rec in self:
-            state = rec.teacher_id.staff_id.state
-            if state in ('suspended', 'inactive', 'archived'):
+            state = rec.teacher_id.staff_id.employment_status
+            if state not in ('active', 'on_leave'):
                 raise ValidationError(
                     f'{rec.teacher_id.name} is {state} as a staff member and cannot '
                     'receive new assignments.'
                 )
+            if not rec.teacher_id.staff_id.active:
+                raise ValidationError('Inactive staff cannot receive assignments.')
 
     @api.constrains('teacher_id', 'subject_id', 'start_date')
     def _check_teacher_and_subject_active(self):
@@ -91,6 +110,21 @@ class SchoolTeacherAssignment(models.Model):
             if rec.end_date and rec.end_date < rec.start_date:
                 raise ValidationError('End date cannot be before the start date.')
 
+    @api.constrains('term_id', 'academic_year_id', 'start_date', 'end_date')
+    def _check_period(self):
+        for rec in self:
+            if rec.term_id.academic_year_id != rec.academic_year_id:
+                raise ValidationError('The assignment term must belong to its academic year.')
+            if rec.start_date < rec.term_id.date_start:
+                raise ValidationError('The assignment cannot start before its term.')
+            if rec.end_date and rec.end_date > rec.term_id.date_end:
+                raise ValidationError('The assignment cannot end after its term.')
+
+    def unlink(self):
+        if any(rec.state != 'draft' for rec in self):
+            raise ValidationError('Teacher assignment history cannot be deleted.')
+        return super().unlink()
+
     @api.constrains('weekly_periods', 'teacher_id', 'active')
     def _check_workload(self):
         for rec in self:
@@ -106,6 +140,9 @@ class SchoolTeacherAssignment(models.Model):
                 )
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('start_date') and vals.get('term_id'):
+                vals['start_date'] = self.env['school.term'].browse(vals['term_id']).date_start
         records = super().create(vals_list)
         for rec in records:
             partner = rec.teacher_id.user_id.partner_id

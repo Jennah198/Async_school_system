@@ -6,7 +6,7 @@
         <field name="name">school.mark.tree</field>
         <field name="model">school.mark</field>
         <field name="arch" type="xml">
-            <tree editable="bottom" 
+            <list editable="bottom"
                   decoration-danger="grade == 'F'" 
                   decoration-success="grade == 'A'"
                   decoration-muted="mark_status in ('pending', 'exempt', 'not_enrolled')">
@@ -25,7 +25,7 @@
                 <field name="grade" readonly="1"/>
                 <field name="academic_year_id" readonly="1" optional="hide"/>
                 <field name="recorded_by_id" readonly="1" optional="hide"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -91,7 +91,7 @@
                 <filter string="Failing (&lt; 50%)" name="failing" domain="[('percentage', '&lt;', 50), ('mark_status', 'in', ('recorded', 'transfer'))]"/>
                 <separator/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter string="Assessment" name="group_assessment" context="{'group_by': 'assessment_id'}"/>
                     <filter string="Class" name="group_class" context="{'group_by': 'class_id'}"/>
                     <filter string="Subject" name="group_subject" context="{'group_by': 'subject_id'}"/>
@@ -108,7 +108,7 @@
     <record id="action_school_mark" model="ir.actions.act_window">
         <field name="name">Mark List</field>
         <field name="res_model">school.mark</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_school_mark_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

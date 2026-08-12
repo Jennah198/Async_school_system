@@ -87,12 +87,14 @@ class SchoolClassSchedule(models.Model):
     reschedule_reason = fields.Text(string='Reschedule Reason', tracking=True)
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('schedule_end_after_start', 'CHECK(end_time > start_time)',
-         'End time must be after the start time.'),
-        ('schedule_time_within_day', 'CHECK(start_time >= 0 AND end_time <= 24)',
-         'Times must fall between 00:00 and 24:00.'),
-    ]
+    _schedule_end_after_start = models.Constraint(
+        'CHECK(end_time > start_time)',
+        'End time must be after the start time.',
+    )
+    _schedule_time_within_day = models.Constraint(
+        'CHECK(start_time >= 0 AND end_time <= 24)',
+        'Times must fall between 00:00 and 24:00.',
+    )
 
     @api.depends('subject_id', 'class_id', 'day_of_week', 'date', 'start_time')
     def _compute_display_name(self):

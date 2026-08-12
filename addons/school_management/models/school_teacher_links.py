@@ -34,7 +34,7 @@ class SchoolTeacherLinks(models.Model):
             'type': 'ir.actions.act_window',
             'name': name,
             'res_model': model,
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'domain': domain,
             'context': context or {},
         }

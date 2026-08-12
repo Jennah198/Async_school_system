@@ -82,7 +82,7 @@ class TestGuardian(TransactionCase):
         registrar = self.env['res.users'].create({
             'name': 'GRD Registrar',
             'login': 'grd_registrar',
-            'groups_id': [
+            'group_ids': [
                 (4, self.env.ref('base.group_user').id),
                 (4, self.env.ref('school_management.group_school_registrar').id),
             ],

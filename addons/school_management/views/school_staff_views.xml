@@ -7,7 +7,7 @@
         <field name="name">school.staff.tree</field>
         <field name="model">school.staff</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="staff_id"/>
                 <field name="name"/>
                 <field name="department"/>
@@ -19,7 +19,7 @@
                        decoration-danger="employment_status in ('resigned', 'terminated')"
                        widget="badge"/>
                 <field name="phone"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -114,7 +114,7 @@
                 <filter name="filter_inactive" string="Inactive"
                         domain="[('active', '=', False)]"/>
                 <separator/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_department" string="Department"
                             context="{'group_by': 'department'}"/>
                     <filter name="group_employment_status" string="Employment Status"
@@ -131,7 +131,7 @@
     <record id="action_school_staff" model="ir.actions.act_window">
         <field name="name">Staff</field>
         <field name="res_model">school.staff</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Register your first staff member!
@@ -145,11 +145,11 @@
         <field name="name">school.job.title.tree</field>
         <field name="model">school.job.title</field>
         <field name="arch" type="xml">
-            <tree editable="bottom">
+            <list editable="bottom">
                 <field name="name"/>
                 <field name="department"/>
                 <field name="active" widget="boolean_toggle"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -161,7 +161,7 @@
                 <field name="name"/>
                 <filter name="inactive" string="Archived"
                         domain="[('active', '=', False)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_department" string="Department"
                             context="{'group_by': 'department'}"/>
                 </group>
@@ -172,7 +172,7 @@
     <record id="action_school_job_title" model="ir.actions.act_window">
         <field name="name">Job Titles</field>
         <field name="res_model">school.job.title</field>
-        <field name="view_mode">tree</field>
+        <field name="view_mode">list</field>
     </record>
 
 </odoo>

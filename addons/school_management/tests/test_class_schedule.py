@@ -2,7 +2,7 @@ from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
 # A year distinct from seeded/demo records (2026/2027) so the fixture never collides.
-YEAR = '2028/2029'
+YEAR = '2048/2049'
 
 
 class TestClassSchedule(TransactionCase):
@@ -11,10 +11,19 @@ class TestClassSchedule(TransactionCase):
         """Academic year is a master record now. Reuse it across a test so the
         class/section/year unique constraint behaves as it does in production."""
         Year = self.env['school.academic.year']
-        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
+        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({
+            'name': YEAR, 'date_start': '2048-01-01', 'date_end': '2049-12-31'})
 
     def _term(self, ref='term_1'):
-        return self.env.ref('school_management.%s' % ref)
+        sequence = 1 if ref == 'term_1' else 2
+        return self.env['school.term'].search([
+            ('academic_year_id', '=', self._year().id), ('sequence', '=', sequence * 10),
+        ], limit=1) or self.env['school.term'].create({
+            'name': 'TEST Term %s' % sequence, 'academic_year_id': self._year().id,
+            'date_start': '2048-01-01' if sequence == 1 else '2049-01-01',
+            'date_end': '2048-12-31' if sequence == 1 else '2049-12-31',
+            'sequence': sequence * 10,
+        })
 
     def _section(self, ref='section_a'):
         return self.env.ref('school_management.%s' % ref)

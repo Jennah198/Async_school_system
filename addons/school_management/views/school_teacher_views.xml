@@ -6,7 +6,7 @@
         <field name="name">school.teacher.tree</field>
         <field name="model">school.teacher</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="teacher_id"/>
                 <field name="name"/>
                 <field name="department"/>
@@ -17,7 +17,7 @@
                        decoration-success="teaching_status == 'active'"
                        decoration-danger="teaching_status == 'inactive'"
                        widget="badge"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -57,7 +57,7 @@
                     <notebook>
                         <page string="Assignments">
                             <field name="assignment_ids">
-                                <tree editable="bottom">
+                                <list editable="bottom">
                                     <field name="subject_id"/>
                                     <field name="class_id"/>
                                     <field name="term_id"/>
@@ -65,7 +65,7 @@
                                     <field name="weekly_periods"/>
                                     <field name="start_date"/>
                                     <field name="end_date"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
                     </notebook>
@@ -93,7 +93,7 @@
                 <separator/>
                 <filter name="filter_archived" string="Archived"
                         domain="[('active', '=', False)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_department" string="Department"
                             context="{'group_by': 'department'}"/>
                     <filter name="group_teaching_status" string="Teaching Status"
@@ -109,10 +109,10 @@
     <record id="action_school_teacher" model="ir.actions.act_window">
         <field name="name">Teachers</field>
         <field name="res_model">school.teacher</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="view_ids" eval="[
             (5, 0, 0),
-            (0, 0, {'view_mode': 'tree', 'view_id': ref('view_school_teacher_tree')}),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_school_teacher_tree')}),
             (0, 0, {'view_mode': 'form', 'view_id': ref('view_school_teacher_form')})
         ]"/>
         <field name="search_view_id" ref="view_school_teacher_search"/>

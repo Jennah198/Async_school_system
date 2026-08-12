@@ -4,7 +4,7 @@
         <field name="name">school.class.schedule.tree</field>
         <field name="model">school.class.schedule</field>
         <field name="arch" type="xml">
-            <tree decoration-muted="state == 'cancelled'">
+            <list decoration-muted="state == 'cancelled'">
                 <field name="day_of_week"/>
                 <field name="date" optional="show"/>
                 <field name="start_time" widget="float_time"/>
@@ -20,7 +20,7 @@
                        decoration-success="state == 'published'"
                        decoration-danger="state == 'cancelled'"
                        decoration-warning="state == 'rescheduled'"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -119,7 +119,7 @@
                 <filter string="One-off Session" name="one_off" domain="[('date', '!=', False)]"/>
                 <separator/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter string="Day of Week" name="group_day" context="{'group_by': 'day_of_week'}"/>
                     <filter string="Teacher" name="group_teacher" context="{'group_by': 'teacher_id'}"/>
                     <filter string="Class / Section" name="group_class" context="{'group_by': 'class_id'}"/>
@@ -135,7 +135,7 @@
     <record id="action_school_class_schedule" model="ir.actions.act_window">
         <field name="name">Class Schedule</field>
         <field name="res_model">school.class.schedule</field>
-        <field name="view_mode">tree,calendar,form</field>
+        <field name="view_mode">list,calendar,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Schedule the first class period.
@@ -146,7 +146,7 @@
     <record id="action_school_weekly_timetable" model="ir.actions.act_window">
         <field name="name">Weekly Timetable</field>
         <field name="res_model">school.class.schedule</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="domain">[('date', '=', False)]</field>
         <field name="context">{'search_default_group_day': 1, 'search_default_published': 1}</field>
     </record>

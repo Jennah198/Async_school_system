@@ -17,7 +17,9 @@ class TestAssessment(TransactionCase):
         super().setUp()
         self.today = fields.Date.context_today(self.env['school.assessment'])
         self.yesterday = self.today - timedelta(days=1)
-        self.year = self.env['school.academic.year'].create({'name': '2096/2097'})
+        self.year = self.env['school.academic.year'].create({
+            'name': '2096/2097', 'date_start': self.today - timedelta(days=365),
+            'date_end': self.today + timedelta(days=365)})
         self.klass = self.env['school.class'].create({
             'name': 'ASM Grade 1',
             'academic_year_id': self.year.id,
@@ -29,7 +31,10 @@ class TestAssessment(TransactionCase):
         })
         self.math = self.env['school.subject'].create({'name': 'ASM Mathematics'})
         self.art = self.env['school.subject'].create({'name': 'ASM Art'})
-        self.term = self.env.ref('school_management.term_1')
+        self.term = self.env['school.term'].create({
+            'name': 'ASM Term', 'academic_year_id': self.year.id,
+            'date_start': self.today - timedelta(days=365),
+            'date_end': self.today + timedelta(days=365)})
         self.env['school.grade.subject'].create({
             'class_id': self.klass.id, 'subject_id': self.math.id,
         })
@@ -48,7 +53,7 @@ class TestAssessment(TransactionCase):
         # message_post refuses an author without an email address.
         return self.env['res.users'].create({
             'name': login, 'login': login, 'email': f'{login}@school.example',
-            'groups_id': [(6, 0, [
+            'group_ids': [(6, 0, [
                 self.env.ref('base.group_user').id,
                 self.env.ref(f'school_management.{group_name}').id,
             ])],
@@ -177,6 +182,16 @@ class TestAssessment(TransactionCase):
                             for body in assessment.message_ids.mapped('body')))
 
     def test_publish_follows_lock(self):
+        self.env.company.school_grading_configured = True
+        scheme = self.env['school.grading.scheme'].create({
+            'name': 'ASM Scheme', 'pass_percentage': 50.0,
+            'band_ids': [
+                (0, 0, {'name': 'A', 'minimum_percentage': 80, 'maximum_percentage': 100}),
+                (0, 0, {'name': 'B', 'minimum_percentage': 50, 'maximum_percentage': 79.99}),
+                (0, 0, {'name': 'F', 'minimum_percentage': 0, 'maximum_percentage': 49.99}),
+            ],
+        })
+        self.env.company.school_grading_scheme_id = scheme
         assessment = self._assessment()
         assessment.action_open()
         assessment.action_submit()
@@ -188,6 +203,37 @@ class TestAssessment(TransactionCase):
         officer.action_publish()
         self.assertEqual(assessment.state, 'published')
 
+    def test_published_marks_create_versioned_report_card(self):
+        scheme = self.env['school.grading.scheme'].create({
+            'name': 'ASM Report Scheme', 'pass_percentage': 50.0,
+            'band_ids': [
+                (0, 0, {'name': 'Pass', 'minimum_percentage': 50, 'maximum_percentage': 100}),
+                (0, 0, {'name': 'Fail', 'minimum_percentage': 0, 'maximum_percentage': 49.99}),
+            ],
+        })
+        self.env.company.write({
+            'school_grading_configured': True, 'school_grading_scheme_id': scheme.id,
+        })
+        assessment = self._assessment()
+        assessment.action_open()
+        assessment.mark_ids.write({'score': 75.0})
+        assessment.action_submit()
+        officer = assessment.with_user(self.officer_user)
+        officer.action_approve()
+        officer.action_lock()
+        officer.action_publish()
+        card = self.env['school.report.card'].generate_for(self.student_one, self.term)
+        self.assertEqual(card.version, 1)
+        self.assertEqual(card.result, 'pass')
+        card.with_user(self.officer_user).action_approve()
+        card.with_user(self.officer_user).action_publish()
+        correction = self.env['school.report.card'].generate_for(
+            self.student_one, self.term, correction_reason='Approved correction')
+        correction.with_user(self.officer_user).action_approve()
+        correction.with_user(self.officer_user).action_publish()
+        self.assertEqual(correction.version, 2)
+        self.assertEqual(card.state, 'superseded')
+
     # ---------- history (regression: marks used to follow the student) ----------
 
     def test_transfer_does_not_rewrite_mark_class(self):
@@ -198,6 +244,7 @@ class TestAssessment(TransactionCase):
                 lambda e: e.state == 'active').id,
             'new_class_id': self.other_class.id,
             'effective_date': self.today,
+            'reason': 'Historical mark regression',
         }).action_confirm()
         row = assessment.mark_ids.filtered(lambda m: m.student_id == self.student_one)
         self.assertEqual(row.class_id, self.klass)

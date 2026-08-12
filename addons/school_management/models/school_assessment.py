@@ -29,6 +29,10 @@ class SchoolAssessment(models.Model):
         'school.class', string='Grade / Class', required=True, ondelete='restrict')
     subject_id = fields.Many2one(
         'school.subject', string='Subject', required=True, ondelete='restrict')
+    teacher_assignment_id = fields.Many2one(
+        'school.teacher.assignment', string='Teacher Assignment',
+        ondelete='restrict', index=True,
+        domain="[('class_id', '=', class_id), ('subject_id', '=', subject_id), ('term_id', '=', term_id)]")
     term_id = fields.Many2one(
         'school.term', string='Term', required=True, ondelete='restrict')
     academic_year_id = fields.Many2one(
@@ -45,6 +49,7 @@ class SchoolAssessment(models.Model):
         ('draft', 'Draft'),
         ('open', 'Open'),
         ('submitted', 'Submitted'),
+        ('returned', 'Returned'),
         ('approved', 'Approved'),
         ('locked', 'Locked'),
         ('published', 'Published'),
@@ -52,18 +57,40 @@ class SchoolAssessment(models.Model):
 
     mark_ids = fields.One2many('school.mark', 'assessment_id', string='Mark List')
     mark_count = fields.Integer(compute='_compute_mark_count')
+    event_ids = fields.One2many('school.assessment.event', 'assessment_id', string='Audit Events')
 
-    _sql_constraints = [
-        ('max_mark_positive', 'CHECK(max_mark > 0)',
-         'Maximum Mark must be greater than zero.'),
-        ('weight_not_negative', 'CHECK(weight >= 0)',
-         'Weight cannot be negative.'),
-    ]
+    _max_mark_positive = models.Constraint(
+        'CHECK(max_mark > 0)',
+        'Maximum Mark must be greater than zero.',
+    )
+    _weight_not_negative = models.Constraint(
+        'CHECK(weight >= 0)',
+        'Weight cannot be negative.',
+    )
 
     @api.depends('mark_ids')
     def _compute_mark_count(self):
         for rec in self:
             rec.mark_count = len(rec.mark_ids)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('teacher_assignment_id') and all(
+                    vals.get(field) for field in ('class_id', 'subject_id', 'term_id')):
+                assessment_date = fields.Date.to_date(
+                    vals.get('date') or fields.Date.context_today(self))
+                assignment = self.env['school.teacher.assignment'].search([
+                    ('class_id', '=', vals['class_id']),
+                    ('subject_id', '=', vals['subject_id']),
+                    ('term_id', '=', vals['term_id']),
+                    ('state', '=', 'active'),
+                    ('start_date', '<=', assessment_date),
+                    '|', ('end_date', '=', False), ('end_date', '>=', assessment_date),
+                ], limit=1)
+                if assignment:
+                    vals['teacher_assignment_id'] = assignment.id
+        return super().create(vals_list)
 
     def write(self, vals):
         if SETUP_FIELDS & vals.keys() and any(r.state != 'draft' for r in self):
@@ -92,15 +119,30 @@ class SchoolAssessment(models.Model):
     def _check_teacher_assigned(self):
         """BR-05: no mark list without an active teacher subject assignment."""
         for rec in self:
-            assigned = self.env['school.teacher.assignment'].search_count([
+            assigned = rec.teacher_assignment_id or self.env['school.teacher.assignment'].search([
                 ('subject_id', '=', rec.subject_id.id),
                 ('class_id', '=', rec.class_id.id),
                 ('term_id', '=', rec.term_id.id),
-            ])
+                ('state', '=', 'active'),
+                ('start_date', '<=', rec.date),
+                '|', ('end_date', '=', False), ('end_date', '>=', rec.date),
+            ], limit=1)
             if not assigned:
                 raise ValidationError(
                     f'{rec.subject_id.name} has no teacher assigned for '
                     f'{rec.class_id.display_name} in {rec.term_id.name}.')
+            if assigned.class_id != rec.class_id or assigned.subject_id != rec.subject_id \
+                    or assigned.term_id != rec.term_id:
+                raise ValidationError('The assessment must use the exact applicable assignment.')
+            if not rec.teacher_assignment_id:
+                rec.teacher_assignment_id = assigned
+
+    def _require_assignment_owner(self):
+        if self.env.su or self.env.user.has_group('school_management.group_school_exam_officer'):
+            return
+        for rec in self:
+            if rec.teacher_assignment_id.teacher_id.user_id != self.env.user:
+                raise AccessError('Teachers may only manage assessments for their exact assignment.')
 
     def _generate_mark_list(self):
         """BR-06 / AC-06: rows come from subject enrollments valid at the
@@ -111,6 +153,8 @@ class SchoolAssessment(models.Model):
             ('grade_subject_id.class_id', '=', self.class_id.id),
             ('subject_id', '=', self.subject_id.id),
             ('state', '=', 'enrolled'),
+            ('date_start', '<=', self.date),
+            '|', ('date_end', '=', False), ('date_end', '>=', self.date),
             ('enrollment_id.state', '!=', 'draft'),
             ('enrollment_id.enrollment_date', '<=', self.date),
             '|', ('enrollment_id.end_date', '=', False),
@@ -125,6 +169,7 @@ class SchoolAssessment(models.Model):
             vals_list.append({
                 'assessment_id': self.id,
                 'student_id': line.student_id.id,
+                'student_subject_id': line.id,
                 'mark_status': 'pending',
             })
         if vals_list:
@@ -135,6 +180,7 @@ class SchoolAssessment(models.Model):
             if rec.state != 'draft':
                 raise ValidationError('Only draft assessments can be opened.')
             rec._check_teacher_assigned()
+            rec._require_assignment_owner()
             rec._generate_mark_list()
             rec.state = 'open'
 
@@ -143,14 +189,29 @@ class SchoolAssessment(models.Model):
         for rec in self:
             if rec.state != 'open':
                 raise ValidationError('Only open assessments can be regenerated.')
+            rec._require_assignment_owner()
             rec._generate_mark_list()
 
     def action_submit(self):
+        self._require_assignment_owner()
         self._transition('open', 'submitted')
 
     def action_return(self):
         self._require_exam_officer()
-        self._transition('submitted', 'open')
+        for rec in self:
+            if rec.state != 'submitted':
+                raise ValidationError('Only submitted assessments can be returned.')
+            rec.state = 'returned'
+            self.env['school.assessment.event'].sudo().create({
+                'assessment_id': rec.id,
+                'event_type': 'returned',
+                'actor_id': self.env.user.id,
+                'reason': self.env.context.get('transition_reason'),
+            })
+
+    def action_reopen(self):
+        self._require_assignment_owner()
+        self._transition('returned', 'open')
 
     def action_approve(self):
         self._transition('submitted', 'approved')
@@ -159,6 +220,10 @@ class SchoolAssessment(models.Model):
         self._transition('approved', 'locked')
 
     def action_publish(self):
+        if not self.env.company.school_grading_configured \
+                or not self.env.company.school_grading_scheme_id:
+            raise ValidationError(
+                'Publishing is blocked until a grading policy is configured in School Settings.')
         self._transition('locked', 'published')
 
     def action_unlock_wizard(self):
@@ -180,6 +245,37 @@ class SchoolAssessment(models.Model):
                 raise ValidationError(
                     f'Only {src} assessments can move to {dst}.')
             rec.state = dst
+            self.env['school.assessment.event'].sudo().create({
+                'assessment_id': rec.id,
+                'event_type': dst,
+                'actor_id': self.env.user.id,
+                'reason': self.env.context.get('transition_reason'),
+            })
+
+
+class SchoolAssessmentEvent(models.Model):
+    _name = 'school.assessment.event'
+    _description = 'Immutable Assessment Audit Event'
+    _order = 'occurred_at desc, id desc'
+
+    assessment_id = fields.Many2one(
+        'school.assessment', required=True, ondelete='restrict', index=True)
+    event_type = fields.Selection([
+        ('open', 'Opened'), ('submitted', 'Submitted'), ('returned', 'Returned'),
+        ('approved', 'Approved'), ('locked', 'Locked'), ('published', 'Published'),
+        ('unlocked', 'Unlocked'), ('mark_correction', 'Mark Corrected'),
+    ], required=True)
+    actor_id = fields.Many2one(
+        'res.users', required=True, readonly=True, default=lambda self: self.env.user)
+    occurred_at = fields.Datetime(required=True, readonly=True, default=fields.Datetime.now)
+    reason = fields.Text()
+    changed_values = fields.Json(readonly=True)
+
+    def write(self, vals):
+        raise AccessError('Assessment audit events are immutable.')
+
+    def unlink(self):
+        raise AccessError('Assessment audit events are immutable.')
 
 
 class SchoolAssessmentUnlock(models.TransientModel):
@@ -200,4 +296,10 @@ class SchoolAssessmentUnlock(models.TransientModel):
         if assessment.state not in ('approved', 'locked', 'published'):
             raise ValidationError('This assessment is not locked or approved.')
         assessment.message_post(body=f'Unlocked for correction: {self.reason}')
+        self.env['school.assessment.event'].sudo().create({
+            'assessment_id': assessment.id,
+            'event_type': 'unlocked',
+            'actor_id': self.env.user.id,
+            'reason': self.reason,
+        })
         assessment.state = 'open'

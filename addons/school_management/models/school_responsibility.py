@@ -40,9 +40,10 @@ class SchoolCampus(models.Model):
     address = fields.Text(string='Address')
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('campus_name_unique', 'unique(name)', 'This branch or campus already exists.'),
-    ]
+    _campus_name_unique = models.Constraint(
+        'unique(name)',
+        'This branch or campus already exists.',
+    )
 
 
 class SchoolStaffResponsibility(models.Model):
@@ -75,14 +76,14 @@ class SchoolStaffResponsibility(models.Model):
     end_date = fields.Date(string='Effective To', tracking=True)
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('responsibility_unique',
-         'unique(staff_id, responsibility, department, start_date)',
-         'This staff member already holds that responsibility from the same date.'),
-        ('responsibility_dates_valid',
-         'CHECK(end_date IS NULL OR end_date >= start_date)',
-         'The effective-to date cannot be before the effective-from date.'),
-    ]
+    _responsibility_unique = models.Constraint(
+        'unique(staff_id, responsibility, department, start_date)',
+        'This staff member already holds that responsibility from the same date.',
+    )
+    _responsibility_dates_valid = models.Constraint(
+        'CHECK(end_date IS NULL OR end_date >= start_date)',
+        'The effective-to date cannot be before the effective-from date.',
+    )
 
     @api.depends('staff_id', 'responsibility')
     def _compute_display_name(self):
@@ -200,6 +201,10 @@ class SchoolStaffResponsibilityLink(models.Model):
                 raise ValidationError('A staff member cannot report to themselves.')
 
     def action_activate(self):
+        for rec in self:
+            if not rec.staff_id:
+                rec.staff_id = self.env['ir.sequence'].next_by_code('school.staff') or 'New'
+        self._ensure_employee()
         self.write({'state': 'active'})
         teachers = self.env['school.teacher'].search([('staff_id', 'in', self.ids)])
         if teachers:
@@ -239,7 +244,7 @@ class SchoolStaffResponsibilityLink(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Responsibilities',
             'res_model': 'school.staff.responsibility',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'domain': [('staff_id', '=', self.id)],
             'context': {'default_staff_id': self.id},
         }

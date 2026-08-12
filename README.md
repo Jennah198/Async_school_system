@@ -2,14 +2,14 @@
 
 <!-- markdownlint-disable MD013 -->
 
-An Odoo 17 add-on covering student registration, staff and teacher registration,
-assignments, program and class scheduling, targeted announcements, attendance,
-and marks.
+An Odoo 19 Community add-on covering the full school lifecycle: admissions,
+effective-dated enrollment and curriculum, staff/HR integration, assignments,
+scheduling, attendance, assessments, documents, reporting, and audit controls.
 
 ## What you need
 
 You do **not** need to install Odoo, PostgreSQL, or Python on your computer.
-Docker downloads and runs Odoo 17 and PostgreSQL 16 for this project.
+Docker downloads and runs Odoo 19 Community and PostgreSQL 16 for this project.
 
 Install these tools first:
 
@@ -85,6 +85,11 @@ Both `.env` and `config/odoo.conf` are gitignored. Never commit them.
 
 Port 8070 on the host maps to Odoo's 8069 in the container (see
 `docker-compose.yml`).
+
+For migration rehearsals or side-by-side validation, use the isolated
+`docker-compose.odoo19.yml` project described in
+[`docs/MIGRATION_RUNBOOK.md`](docs/MIGRATION_RUNBOOK.md). It has separate
+service and volume names and must not be pointed at the Odoo 17 volumes.
 
 The default PostgreSQL values in `.env.example` match
 `config/odoo.conf.example`. If you change `POSTGRES_USER` or

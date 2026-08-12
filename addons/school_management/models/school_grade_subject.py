@@ -16,6 +16,9 @@ class SchoolGradeSubject(models.Model):
         'school.class', string='Grade / Class', required=True, index=True,
         ondelete='cascade',
     )
+    grade_id = fields.Many2one(
+        related='class_id.grade_id', store=True, index=True)
+    stream_id = fields.Many2one('school.stream', ondelete='restrict')
     subject_id = fields.Many2one(
         'school.subject', string='Subject', required=True, index=True,
         ondelete='restrict',
@@ -26,13 +29,23 @@ class SchoolGradeSubject(models.Model):
     subject_type = fields.Selection([
         ('compulsory', 'Compulsory'),
         ('optional', 'Optional'),
+        ('stream', 'Stream'),
+        ('elective', 'Elective'),
+        ('non_graded', 'Non-Graded'),
     ], string='Type', required=True, default='compulsory')
+    maximum_mark = fields.Float(default=100.0, required=True)
+    pass_mark = fields.Float(default=50.0, required=True)
+    optional_selection_limit = fields.Integer(default=0)
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('class_subject_unique', 'unique(class_id, subject_id)',
-         'This subject is already on the curriculum of this class.'),
-    ]
+    _class_subject_unique = models.Constraint(
+        'unique(class_id, subject_id)',
+        'This subject is already on the curriculum of this class.',
+    )
+    _grade_subject_marks_valid = models.Constraint(
+        'CHECK(maximum_mark > 0 AND pass_mark >= 0 AND pass_mark <= maximum_mark)',
+        'Pass mark must be between zero and the maximum mark.',
+    )
 
     def name_get(self):
         return [(rec.id, '%s — %s' % (rec.class_id.display_name, rec.subject_id.name))

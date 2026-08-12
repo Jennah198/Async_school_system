@@ -7,6 +7,7 @@ class SchoolClass(models.Model):
     _order = 'name, section_id, academic_year_id'
 
     name = fields.Char(string='Grade / Class', required=True)
+    grade_id = fields.Many2one('school.grade', string='Grade', ondelete='restrict', index=True)
     section_id = fields.Many2one(
         'school.section', string='Section', ondelete='restrict', index=True,
     )
@@ -21,6 +22,10 @@ class SchoolClass(models.Model):
         string='Capacity',
         help='Maximum active enrollments. 0 means unlimited.',
     )
+    shift_id = fields.Many2one('school.shift', ondelete='restrict')
+    stream_id = fields.Many2one('school.stream', ondelete='restrict')
+    campus_id = fields.Many2one('school.campus', ondelete='restrict')
+    homeroom_teacher_id = fields.Many2one('school.teacher', ondelete='restrict')
 
     education_level = fields.Selection([
         ('kindergarten', 'Kindergarten'),
@@ -40,9 +45,15 @@ class SchoolClass(models.Model):
 
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('class_section_year_unique', 'unique(name, section_id, academic_year_id)',
-         'This class/section already exists for this academic year.'),
-        ('age_range_valid', 'CHECK(min_age <= max_age OR min_age = 0 OR max_age = 0)',
-         'Minimum age cannot be greater than maximum age.'),
-    ]
+    _class_section_year_unique = models.Constraint(
+        'unique(name, section_id, academic_year_id)',
+        'This class/section already exists for this academic year.',
+    )
+    _age_range_valid = models.Constraint(
+        'CHECK(min_age <= max_age OR min_age = 0 OR max_age = 0)',
+        'Minimum age cannot be greater than maximum age.',
+    )
+    _capacity_nonnegative = models.Constraint(
+        'CHECK(capacity >= 0)',
+        'Capacity cannot be negative.',
+    )

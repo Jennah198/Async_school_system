@@ -83,10 +83,14 @@ class SchoolTeacher(models.Model):
         compute='_compute_dashboard_kpis'
     )
 
-    _sql_constraints = [
-        ('teacher_id_unique', 'unique(teacher_id)', 'Teacher ID must be unique.'),
-        ('staff_id_unique', 'unique(staff_id)', 'This staff member already has a teacher profile.'),
-    ]
+    _teacher_id_unique = models.Constraint(
+        'unique(teacher_id)',
+        'Teacher ID must be unique.',
+    )
+    _staff_id_unique = models.Constraint(
+        'unique(staff_id)',
+        'This staff member already has a teacher profile.',
+    )
 
     # =========================================================================
     # COMPUTE METHODS
@@ -182,7 +186,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'My Students',
             'res_model': 'school.student',
-            'view_mode': 'tree,form,kanban',
+            'view_mode': 'list,form,kanban',
             'domain': [('class_id', 'in', class_ids)],
         }
 
@@ -192,7 +196,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'My Class Schedule',
             'res_model': 'school.class.schedule',
-            'view_mode': 'calendar,tree,form',
+            'view_mode': 'calendar,list,form',
             'domain': [('teacher_id', '=', self.id)],
         }
 
@@ -203,7 +207,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Class Attendance',
             'res_model': 'school.attendance',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'domain': [('class_id', 'in', class_ids)],
         }
 
@@ -215,7 +219,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Mark List Analysis',
             'res_model': 'school.mark',
-            'view_mode': 'tree,form,graph,pivot',
+            'view_mode': 'list,form,graph,pivot',
             'domain': [('class_id', 'in', class_ids), ('subject_id', 'in', subject_ids)],
         }
 
@@ -260,7 +264,7 @@ class SchoolTeacher(models.Model):
             'name': self.name,
             'login': self.staff_id.email,
             'email': self.staff_id.email,
-            'groups_id': groups,
+            'group_ids': groups,
         })
         user.action_reset_password()
         self.user_id = user.id

@@ -88,19 +88,28 @@ class SchoolMark(models.Model):
     note = fields.Text(string='Remarks')
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('assessment_student_unique', 'unique(assessment_id, student_id)',
-         'This student is already on the mark list for this assessment.'),
-        ('max_score_positive', 'CHECK(max_score > 0)', 'Out Of must be greater than zero.'),
-        ('score_not_negative', 'CHECK(score >= 0)', 'Score cannot be negative.'),
-    ]
+    _assessment_student_unique = models.Constraint(
+        'unique(assessment_id, student_id)',
+        'This student is already on the mark list for this assessment.',
+    )
+    _max_score_positive = models.Constraint(
+        'CHECK(max_score > 0)',
+        'Out Of must be greater than zero.',
+    )
+    _score_not_negative = models.Constraint(
+        'CHECK(score >= 0)',
+        'Score cannot be negative.',
+    )
 
     @api.depends('score', 'max_score', 'mark_status', 'assessment_id.weight')
     def _compute_percentage(self):
         for rec in self:
             if rec.mark_status in SCORED_STATUSES:
                 rec.percentage = (rec.score / rec.max_score * 100) if rec.max_score else 0.0
-                rec.grade = next((g for floor, g in GRADE_BANDS if rec.percentage >= floor), 'F')
+                scheme = rec.env.company.school_grading_scheme_id
+                band = scheme.grade_for(rec.percentage) if scheme else False
+                rec.grade = band.name if band else next(
+                    (g for floor, g in GRADE_BANDS if rec.percentage >= floor), 'F')
                 weight_val = rec.assessment_id.weight if rec.assessment_id else 0.0
                 rec.weighted_score = (rec.percentage * weight_val / 100.0)
             else:
@@ -172,7 +181,26 @@ class SchoolMark(models.Model):
                 if pending:
                     super(SchoolMark, pending).write(dict(vals, mark_status='recorded'))
                     return super(SchoolMark, self - pending).write(vals)
-        return super().write(vals)
+        tracked = ENTRY_FIELDS & vals.keys()
+        before = {
+            rec.id: {field: rec[field] for field in tracked}
+            for rec in self
+        } if tracked else {}
+        result = super().write(vals)
+        for rec in self.filtered(lambda mark: mark.id in before):
+            changed = {
+                field: {'old': before[rec.id][field], 'new': rec[field]}
+                for field in tracked if before[rec.id][field] != rec[field]
+            }
+            if changed:
+                self.env['school.assessment.event'].sudo().create({
+                    'assessment_id': rec.assessment_id.id,
+                    'event_type': 'mark_correction',
+                    'actor_id': self.env.user.id,
+                    'reason': self.env.context.get('correction_reason'),
+                    'changed_values': changed,
+                })
+        return result
 
     def unlink(self):
         if any(m.assessment_id and m.assessment_id.state not in ('draft', 'open') for m in self):

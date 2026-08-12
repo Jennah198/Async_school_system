@@ -1,7 +1,7 @@
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-YEAR = '2029/2030'
+YEAR = '2049/2050'
 
 
 class TestResponsibilityAndStaffControl(TransactionCase):
@@ -11,10 +11,16 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         """Academic year is a master record now. Reuse it across a test so the
         class/section/year unique constraint behaves as it does in production."""
         Year = self.env['school.academic.year']
-        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({'name': YEAR})
+        return Year.search([('name', '=', YEAR)], limit=1) or Year.create({
+            'name': YEAR, 'date_start': '2049-01-01', 'date_end': '2050-12-31'})
 
     def _term(self, ref='term_1'):
-        return self.env.ref('school_management.%s' % ref)
+        return self.env['school.term'].search([
+            ('academic_year_id', '=', self._year().id), ('sequence', '=', 10),
+        ], limit=1) or self.env['school.term'].create({
+            'name': 'RESP Term', 'academic_year_id': self._year().id,
+            'date_start': '2049-01-01', 'date_end': '2050-12-31', 'sequence': 10,
+        })
 
     def _section(self, ref='section_a'):
         return self.env.ref('school_management.%s' % ref)
@@ -61,7 +67,8 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'department': department, 'job_title_id': title.id,
             'employment_status': 'active', 'phone': '+251911000000', 'campus_id': campus.id,
             # school.teacher.create auto-provisions a login from this address.
-            'email': '%s@test.invalid' % name.lower().replace(' ', '.'),
+            'email': '%s.%s@test.invalid' % (
+                name.lower().replace(' ', '.'), self.env['school.staff'].search_count([])),
         })
 
     def _responsibility(self, staff, code, **overrides):
@@ -162,7 +169,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     def _user_for(self, staff, login, group):
         user = self.env['res.users'].create({
             'name': login, 'login': login,
-            'groups_id': [(6, 0, [
+            'group_ids': [(6, 0, [
                 self.env.ref('base.group_user').id,
                 self.env.ref(f'school_management.{group}').id,
             ])],

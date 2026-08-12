@@ -30,7 +30,7 @@ jobs:
           echo "Odoo did not become ready in time"
           exit 1
 
-      - name: Install module with demo data and run tests
+      - name: Install Odoo 19 module with demo data and run tests
         run: |
           docker compose exec -T odoo odoo -c /etc/odoo/odoo.conf -d ci_test_db \
             -i school_management \
