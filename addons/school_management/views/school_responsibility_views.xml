@@ -95,10 +95,7 @@
                         </group>
                     </group>
                 </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="message_ids"/>
-                </div>
+                <chatter/>
             </form>
         </field>
     </record>
@@ -185,12 +182,7 @@
                     </field>
                 </page>
             </notebook>
-            <xpath expr="//form" position="inside">
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="message_ids"/>
-                </div>
-            </xpath>
+            <xpath expr="//form" position="inside"><chatter/></xpath>
         </field>
     </record>
 
