@@ -73,7 +73,7 @@ class ResUsers(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             self._check_strong_password(vals.get('password'))
-            self._check_valid_email_format(vals.get('email') or vals.get('login'))
+            self._check_valid_email_format(vals.get('email'))
         return super().create(vals_list)
 
     def write(self, vals):

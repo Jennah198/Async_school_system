@@ -6,3 +6,4 @@ from . import test_attendance_roster
 from . import test_assessment
 from . import test_security
 from . import test_responsibility
+from . import test_user_validation
