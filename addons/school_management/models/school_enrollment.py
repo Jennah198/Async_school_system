@@ -25,8 +25,6 @@ class SchoolEnrollment(models.Model):
         'school.class', string='Grade / Class', required=True, index=True,
         ondelete='restrict', tracking=True,
     )
-    # The class already belongs to exactly one year; storing the year again
-    # independently would create a second source of truth.
     academic_year_id = fields.Many2one(
         related='class_id.academic_year_id', string='Academic Year',
         store=True, index=True,
@@ -65,8 +63,6 @@ class SchoolEnrollment(models.Model):
          'The end date cannot be before the enrollment date.'),
     ]
 
-    # Integer fields store 0 for "unset", so a SQL unique constraint would
-    # collide on every unnumbered draft. Enforced in Python instead.
     @api.constrains('class_id', 'roll_number', 'state')
     def _check_roll_unique(self):
         for rec in self:
@@ -113,11 +109,6 @@ class SchoolEnrollment(models.Model):
         return res
 
     def _sync_student_class(self):
-        """Keep student.class_id mirroring the active enrollment so every
-        existing view, domain, and teacher record rule stays correct.
-
-        A placement change is not a re-registration, so the registration
-        completeness constraint is skipped for this write only."""
         for rec in self.filtered(lambda r: r.state == 'active'):
             if rec.student_id.class_id != rec.class_id:
                 rec.student_id.with_context(
@@ -166,8 +157,6 @@ class SchoolEnrollment(models.Model):
         self._derive_subject_enrollments()
 
     def _derive_subject_enrollments(self):
-        """Give every active enrollment its class's compulsory subjects
-        (SRS §7.4) — the registrar never hand-builds a subject roster."""
         StudentSubject = self.env['school.student.subject']
         GradeSubject = self.env['school.grade.subject']
         for rec in self.filtered(lambda r: r.state == 'active'):
@@ -199,3 +188,14 @@ class SchoolEnrollment(models.Model):
                 'Withdraw them instead.'
             )
         return super().unlink()
+
+    def action_open_student_dashboard(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'school.student',
+            'res_id': self.student_id.id,
+            'view_mode': 'form',
+            'view_id': self.env.ref('school_management.view_school_student_dashboard_form').id,
+            'target': 'current',
+        }

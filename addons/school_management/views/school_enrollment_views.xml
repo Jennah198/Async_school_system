@@ -37,6 +37,11 @@
                 <field name="roll_number"/>
                 <field name="admission_type"/>
                 <field name="state"/>
+                <button name="action_open_student_dashboard"
+                        type="object"
+                        string="View Dashboard"
+                        class="btn-link"
+                        icon="fa-id-card"/>
             </tree>
         </field>
     </record>
@@ -112,4 +117,5 @@
         <field name="view_mode">tree,form</field>
         <field name="context">{'search_default_filter_active': 1}</field>
     </record>
+
 </odoo>

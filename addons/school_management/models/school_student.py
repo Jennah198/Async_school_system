@@ -1,9 +1,8 @@
 import re
-
 from dateutil.relativedelta import relativedelta
 
-from odoo import api, fields, models # type: ignore
-from odoo.exceptions import ValidationError # type: ignore
+from odoo import api, fields, models  # type: ignore
+from odoo.exceptions import ValidationError  # type: ignore
 
 
 class SchoolStudent(models.Model):
@@ -37,8 +36,28 @@ class SchoolStudent(models.Model):
         ('secondary', 'Secondary'),
         ('high_school', 'High School'),
     ], string='Education Level')
-    class_id = fields.Many2one('school.class', string='Grade / Class', required=True,
-                                domain="[('education_level', '=', education_level)]")
+
+    admission_type = fields.Selection([
+        ('new', 'New'),
+        ('transfer', 'Transfer'),
+    ], string='Admission Type', default='new')
+
+    class_id = fields.Many2one(
+        'school.class',
+        string='Grade / Class',
+        required=True,
+        domain="[('education_level', '=', education_level)]"
+    )
+
+    academic_year_id = fields.Many2one(
+        'school.academic.year',
+        string="Academic Year",
+        required=True
+    )
+    section_id = fields.Many2one(
+        'school.section',
+        string="Section"
+    )
 
     registration_status = fields.Selection([
         ('draft', 'Draft'),
@@ -112,6 +131,8 @@ class SchoolStudent(models.Model):
             missing.append('Guardian Phone (invalid number — set Nationality for automatic country code, or include + code manually)')
         if not self.class_id:
             missing.append('Grade / Class')
+        if not self.academic_year_id:
+            missing.append('Academic Year')
         if not self.birth_certificate:
             missing.append('Birth Certificate')
         if self.class_id and not self.class_id.is_entry_level and not self.previous_grade_document:
@@ -214,3 +235,6 @@ class SchoolStudent(models.Model):
             'domain': [('student_id', '=', self.id)],
             'context': {'default_student_id': self.id},
         }
+
+    def action_print_student_report(self):
+        return self.env.ref('school_management.action_report_school_student').report_action(self)

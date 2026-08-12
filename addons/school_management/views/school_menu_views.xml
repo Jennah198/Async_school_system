@@ -102,6 +102,16 @@
               groups="school_management.group_school_registrar,school_management.group_school_exam_officer"
               sequence="20"/>
 
+    <menuitem id="menu_school_admission_wizard"
+              name="Student Registration"
+              parent="menu_school_registrar"
+              action="action_school_admission_wizard"/>
+    <menuitem id="menu_school_student_list"
+              name="Student List"
+              parent="menu_school_registrar"
+              action="action_school_student_list"
+              groups="school_management.group_school_registrar"
+              sequence="11"/>
     <menuitem id="menu_school_assessment"
               name="Assessments"
               parent="menu_school_registrar"

@@ -497,6 +497,7 @@
         <field name="guardian_phone">+251911100001</field>
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="birth_certificate">RklDVElPTkFMIGRlbW8gYmlydGggY2VydGlmaWNhdGUgLSBub3QgYSByZWFsIGRvY3VtZW50</field>
+        <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="registration_status">approved</field>
     </record>
 
@@ -508,6 +509,7 @@
         <field name="guardian_phone">+251911100002</field>
         <field name="class_id" ref="demo_class_g1a"/>
         <field name="birth_certificate">RklDVElPTkFMIGRlbW8gYmlydGggY2VydGlmaWNhdGUgLSBub3QgYSByZWFsIGRvY3VtZW50</field>
+        <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="registration_status">approved</field>
     </record>
 
@@ -519,6 +521,7 @@
         <field name="guardian_phone">+251911100003</field>
         <field name="class_id" ref="demo_class_g2a"/>
         <field name="birth_certificate">RklDVElPTkFMIGRlbW8gYmlydGggY2VydGlmaWNhdGUgLSBub3QgYSByZWFsIGRvY3VtZW50</field>
+        <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="registration_status">approved</field>
     </record>
 
@@ -530,6 +533,7 @@
         <field name="guardian_phone">+251911100004</field>
         <field name="class_id" ref="demo_class_g2a"/>
         <field name="birth_certificate">RklDVElPTkFMIGRlbW8gYmlydGggY2VydGlmaWNhdGUgLSBub3QgYSByZWFsIGRvY3VtZW50</field>
+        <field name="academic_year_id" ref="academic_year_2026_2027"/>
         <field name="registration_status">approved</field>
     </record>
 

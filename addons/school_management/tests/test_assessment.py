@@ -84,6 +84,7 @@ class TestAssessment(TransactionCase):
             'date_of_birth': '2090-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911550001',
+            'academic_year_id': self.year.id,
             'class_id': self.klass.id,
             'birth_certificate': DUMMY_FILE,
             'registration_date': registration_date,

@@ -22,7 +22,7 @@
                     <button name="action_mark_submitted" type="object" string="Submit" class="oe_highlight" invisible="registration_status != 'draft'"/>
                     <button name="action_mark_approved" type="object" string="Approve" class="oe_highlight" invisible="registration_status != 'submitted'"/>
                     <button string="Discard" special="cancel" class="btn-secondary"/>
-                    <field name="registration_status" widget="statusbar" statusbar_visible="draft,submitted,approved"/>
+                    <field name="registration_status" widget="statusbar" statusbar_visible="draft,submitted,approved,incomplete,rejected"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -39,7 +39,10 @@
                             <field name="gender"/>
                             <field name="nationality_id"/>
                             <field name="education_level"/>
+                            <field name="admission_type"/>
                             <field name="class_id" options="{'no_create': True, 'no_create_edit': True}"/>
+                            <field name="academic_year_id"/>
+                            <field name="section_id"/>
                         </group>
                         <group string="Parent / Guardian">
                             <field name="guardian_name"/>

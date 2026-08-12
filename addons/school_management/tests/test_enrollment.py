@@ -27,6 +27,7 @@ class TestEnrollment(TransactionCase):
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911223344',
             'class_id': self.klass.id,
+            'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
             # The registration constraint re-validates on any class change of an
             # approved student, and the transfer target below is not entry-level.

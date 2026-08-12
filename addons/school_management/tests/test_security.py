@@ -89,6 +89,7 @@ class TestSchoolSecurity(TransactionCase):
     def _student(self, name, school_class):
         student = self.env['school.student'].create({
             'name': name, 'class_id': school_class.id,
+            'academic_year_id': school_class.academic_year_id.id,
             'date_of_birth': '2015-05-05',
             'guardian_name': 'SEC Guardian',
             'guardian_phone': '+251911234567',
