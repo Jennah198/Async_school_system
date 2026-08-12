@@ -134,7 +134,16 @@ class SchoolAssessment(models.Model):
             rec.teacher_assignment_id = False
             rec._onchange_assessment_scope()
 
-    @api.onchange('subject_id', 'term_id', 'date')
+    @api.onchange('term_id')
+    def _onchange_term_id(self):
+        for rec in self.filtered('term_id'):
+            if not rec.date or rec.date < rec.term_id.date_start:
+                rec.date = rec.term_id.date_start
+            elif rec.date > rec.term_id.date_end:
+                rec.date = rec.term_id.date_end
+        self._onchange_assessment_scope()
+
+    @api.onchange('subject_id', 'date')
     def _onchange_assessment_scope(self):
         Assignment = self.env['school.teacher.assignment']
         for rec in self:

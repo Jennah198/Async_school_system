@@ -167,6 +167,18 @@ class TestAssessment(TransactionCase):
                 ValidationError, 'Assessment Date must be within'):
             self._assessment(date=self.term.date_start - timedelta(days=1))
 
+    def test_selecting_term_clamps_default_date_to_its_range(self):
+        assessment = self.env['school.assessment'].new({
+            'date': self.term.date_start - timedelta(days=1),
+            'term_id': self.term.id,
+        })
+        assessment._onchange_term_id()
+        self.assertEqual(assessment.date, self.term.date_start)
+
+        assessment.date = self.term.date_end + timedelta(days=1)
+        assessment._onchange_term_id()
+        self.assertEqual(assessment.date, self.term.date_end)
+
     def test_assessment_rejects_assignment_from_another_class(self):
         other_assignment = self._assign(
             self._teacher('ASM Other Teacher', self._user(
