@@ -123,3 +123,5 @@ access_school_report_card_admin,report card admin,model_school_report_card,schoo
 access_school_report_card_exam,report card exam officer,model_school_report_card,school_management.group_school_exam_officer,1,1,1,0
 access_school_report_card_registrar,report card registrar,model_school_report_card,school_management.group_school_registrar,1,0,0,0
 access_school_report_card_teacher,report card teacher,model_school_report_card,school_management.group_school_teacher,1,0,0,0
+access_school_report_card_generate_admin,report card generator admin,model_school_report_card_generate,school_management.group_school_admin,1,1,1,1
+access_school_report_card_generate_exam,report card generator exam officer,model_school_report_card_generate,school_management.group_school_exam_officer,1,1,1,1

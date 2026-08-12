@@ -311,6 +311,40 @@ class TestAssessment(TransactionCase):
         self.assertEqual(correction.version, 2)
         self.assertEqual(card.state, 'superseded')
 
+    def test_report_card_wizard_generates_and_opens_percentage_average(self):
+        scheme = self.env['school.grading.scheme'].create({
+            'name': 'ASM Wizard Scheme', 'pass_percentage': 50.0,
+            'band_ids': [
+                (0, 0, {'name': 'Pass', 'minimum_percentage': 50,
+                        'maximum_percentage': 100}),
+                (0, 0, {'name': 'Fail', 'minimum_percentage': 0,
+                        'maximum_percentage': 49.99}),
+            ],
+        })
+        self.env.company.write({
+            'school_grading_configured': True,
+            'school_grading_scheme_id': scheme.id,
+        })
+        assessment = self._assessment()
+        assessment.action_open()
+        assessment.mark_ids.write({'score': 82.0})
+        assessment.action_submit()
+        officer = assessment.with_user(self.officer_user)
+        officer.action_approve()
+        officer.action_lock()
+        officer.action_publish()
+
+        wizard = self.env['school.report.card.generate'].with_user(
+            self.officer_user).create({
+                'student_id': self.student_one.id,
+                'term_id': self.term.id,
+            })
+        action = wizard.action_generate()
+        card = self.env['school.report.card'].browse(action['res_id'])
+        self.assertEqual(action['res_model'], 'school.report.card')
+        self.assertEqual(action['view_mode'], 'form')
+        self.assertEqual(card.overall_average, 82.0)
+
     # ---------- history (regression: marks used to follow the student) ----------
 
     def test_transfer_does_not_rewrite_mark_class(self):

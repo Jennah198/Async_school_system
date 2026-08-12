@@ -146,7 +146,10 @@ class SchoolReportCard(models.Model):
             })
             results.append(values)
         average = sum(row['percentage'] for row in results) / len(results)
-        attendance = self.env['school.attendance']._read_group(
+        # Generation is already restricted to trusted academic roles. Read
+        # only this student's term aggregate without granting Exam Officers
+        # general access to sensitive attendance screens.
+        attendance = self.env['school.attendance'].sudo()._read_group(
             [('student_id', '=', student.id),
              ('date', '>=', term.date_start), ('date', '<=', term.date_end)],
             ['status'], ['__count'])
@@ -191,3 +194,70 @@ class ResCompanySchoolResults(models.Model):
 
     school_grading_scheme_id = fields.Many2one(
         'school.grading.scheme', string='Active Grading Scheme', ondelete='restrict')
+
+
+class SchoolReportCardGenerate(models.TransientModel):
+    _name = 'school.report.card.generate'
+    _description = 'Generate Student Report Card'
+
+    student_id = fields.Many2one(
+        'school.student', string='Student', required=True,
+        domain=[('registration_status', '=', 'approved'), ('active', '=', True)],
+    )
+    term_id = fields.Many2one(
+        'school.term', string='Term', required=True,
+        domain=[('active', '=', True)],
+    )
+    correction_reason = fields.Text(
+        help='Required when generating a corrected version of an existing report card.')
+
+    @api.onchange('term_id')
+    def _onchange_term_id(self):
+        for wizard in self.filtered('term_id'):
+            if wizard.student_id and not wizard.student_id.enrollment_ids.filtered(
+                    lambda enrollment: enrollment.academic_year_id ==
+                    wizard.term_id.academic_year_id):
+                wizard.student_id = False
+            return {
+                'domain': {
+                    'student_id': [
+                        ('registration_status', '=', 'approved'),
+                        ('active', '=', True),
+                        ('enrollment_ids.academic_year_id', '=',
+                         wizard.term_id.academic_year_id.id),
+                    ],
+                },
+            }
+
+    def action_generate(self):
+        self.ensure_one()
+        if not (self.env.su
+                or self.env.user.has_group('school_management.group_school_admin')
+                or self.env.user.has_group('school_management.group_school_exam_officer')):
+            raise AccessError(
+                'Only a School Administrator or Examination Officer can generate report cards.')
+        enrollment = self.student_id.enrollment_ids.filtered(
+            lambda item: item.academic_year_id == self.term_id.academic_year_id)
+        if not enrollment:
+            raise ValidationError(
+                '%s is not enrolled in the %s academic year.' % (
+                    self.student_id.name, self.term_id.academic_year_id.name))
+        previous = self.env['school.report.card'].search_count([
+            ('student_id', '=', self.student_id.id),
+            ('term_id', '=', self.term_id.id),
+        ])
+        if previous and not self.correction_reason:
+            raise ValidationError(
+                'Enter a correction reason before generating a new report-card version.')
+        card = self.env['school.report.card'].generate_for(
+            self.student_id, self.term_id,
+            correction_reason=self.correction_reason or None,
+        )
+        return {
+            'type': 'ir.actions.act_window',
+            'name': card.name,
+            'res_model': 'school.report.card',
+            'res_id': card.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }

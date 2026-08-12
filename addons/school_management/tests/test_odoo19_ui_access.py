@@ -70,6 +70,15 @@ class TestOdoo19UiAccess(TransactionCase):
                 self.assertIn('create="0"', arch)
                 self.assertIn('delete="0"', arch)
 
+    def test_report_cards_are_generated_not_manually_created(self):
+        arch = self.env.ref(
+            'school_management.view_school_report_card_list').arch_db
+        self.assertIn('create="0"', arch)
+        self.assertIn('Generate Report Card', arch)
+        self.assertIn('Overall Average (%)', arch)
+        action = self.env.ref('school_management.action_school_report_card')
+        self.assertIn('Generate Report Card', action.help)
+
     def test_mark_entry_opens_the_assessment_workflow(self):
         action = self.env.ref('school_management.action_school_my_mark_tasks')
         self.assertEqual(action.res_model, 'school.assessment')
