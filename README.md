@@ -91,6 +91,24 @@ For migration rehearsals or side-by-side validation, use the isolated
 [`docs/MIGRATION_RUNBOOK.md`](docs/MIGRATION_RUNBOOK.md). It has separate
 service and volume names and must not be pointed at the Odoo 17 volumes.
 
+### Load the complete Odoo 19 SRS sample workflow
+
+After the Odoo 19 module is installed or upgraded, populate the existing
+`school19` database with a connected demonstration dataset:
+
+```bash
+./scripts/seed-odoo19-srs.sh school19
+```
+
+The command is additive and idempotent: it never resets the database, preserves
+records entered through the UI, and can be run again safely. It reuses the
+existing `2026/2027` year and terms when present; the fictional business records
+start with `SRS Demo` and cover academic setup, staff and teachers, students and
+guardians, curriculum, assignments, attendance, published assessments and
+marks, report cards, documents, rooms, schedules, a program, and an
+announcement. It also installs a complete grading scheme and selects it for
+report-card calculation without changing the other school settings.
+
 The default PostgreSQL values in `.env.example` match
 `config/odoo.conf.example`. If you change `POSTGRES_USER` or
 `POSTGRES_PASSWORD` in `.env`, make the same change to `db_user` or

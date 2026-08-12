@@ -30,3 +30,4 @@ from . import res_users
 from . import school_teacher_links
 from . import school_dashboard
 from . import school_admission_wizard
+from . import school_demo_seed

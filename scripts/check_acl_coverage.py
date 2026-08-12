@@ -15,12 +15,23 @@ def declared_models():
     models = set()
     for path in (ADDON / 'models').glob('*.py'):
         tree = ast.parse(path.read_text(), filename=str(path))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == '_name':
-                        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                            models.add(node.value.value)
+        for class_node in (node for node in tree.body if isinstance(node, ast.ClassDef)):
+            # AbstractModel helpers do not create database tables and therefore
+            # have no ir.model.access record to audit.
+            if any(
+                    isinstance(base, ast.Attribute)
+                    and isinstance(base.value, ast.Name)
+                    and base.value.id == 'models'
+                    and base.attr == 'AbstractModel'
+                    for base in class_node.bases):
+                continue
+            for node in class_node.body:
+                if not isinstance(node, ast.Assign):
+                    continue
+                if any(isinstance(target, ast.Name) and target.id == '_name'
+                       for target in node.targets):
+                    if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                        models.add(node.value.value)
     return models
 
 
