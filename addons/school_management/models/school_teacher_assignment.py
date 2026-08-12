@@ -51,9 +51,18 @@ class SchoolTeacherAssignment(models.Model):
 
     @api.onchange('term_id')
     def _onchange_term_id(self):
-        for rec in self.filtered(lambda item: item.term_id and item.class_id):
-            if rec.term_id.academic_year_id != rec.class_id.academic_year_id:
+        for rec in self.filtered('term_id'):
+            if rec.class_id and rec.term_id.academic_year_id != rec.class_id.academic_year_id:
                 rec.term_id = False
+                continue
+            if not rec.start_date or rec.start_date < rec.term_id.date_start:
+                rec.start_date = rec.term_id.date_start
+            elif rec.start_date > rec.term_id.date_end:
+                rec.start_date = rec.term_id.date_end
+            if rec.end_date and rec.end_date > rec.term_id.date_end:
+                rec.end_date = rec.term_id.date_end
+            if rec.end_date and rec.end_date < rec.start_date:
+                rec.end_date = rec.start_date
 
     @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term_id',
                     'state', 'active', 'start_date', 'end_date')

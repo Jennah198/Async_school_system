@@ -164,6 +164,18 @@ class TestResponsibilityAndStaffControl(TransactionCase):
                 teacher_id=other_teacher.id, subject_id=history.id, responsibility='homeroom',
             )
 
+    def test_selecting_assignment_term_clamps_dates_to_term(self):
+        term = self._term()
+        assignment = self.env['school.teacher.assignment'].new({
+            'class_id': self.class_a.id,
+            'term_id': term.id,
+            'start_date': term.date_start.replace(year=term.date_start.year - 1),
+            'end_date': term.date_end.replace(year=term.date_end.year + 1),
+        })
+        assignment._onchange_term_id()
+        self.assertEqual(assignment.start_date, term.date_start)
+        self.assertEqual(assignment.end_date, term.date_end)
+
     # ---------- section 8: audiences that only staff records can satisfy ----------
 
     def _user_for(self, staff, login, group):
