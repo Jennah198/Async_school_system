@@ -94,7 +94,6 @@
                     </button>
                 </div>
             </sheet>
-            <xpath expr="//form" position="inside"><chatter/></xpath>
         </field>
     </record>
 

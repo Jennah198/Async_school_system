@@ -82,3 +82,15 @@ class TestOdoo19UiAccess(TransactionCase):
             'school_management.view_school_grade_subject_form').arch_db
         self.assertIn("class_grade_level not in ('11', '12')", arch)
         self.assertIn('Maximum &amp; Pass Marks', arch)
+
+    def test_teacher_form_keeps_chatter_below_full_width_content(self):
+        arch = self.env.ref(
+            'school_management.view_school_teacher_form').arch_db
+        self.assertIn('<chatter', arch)
+        self.assertGreater(arch.index('<chatter'), arch.index('<sheet'))
+        self.assertLess(arch.index('<chatter'), arch.index('</sheet>'))
+        self.assertNotIn('<group string="Availability">', arch)
+
+        links_arch = self.env.ref(
+            'school_management.view_school_teacher_form_links').arch_db
+        self.assertNotIn('expr="//form"', links_arch)

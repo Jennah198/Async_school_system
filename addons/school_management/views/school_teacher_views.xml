@@ -47,12 +47,10 @@
                             <field name="specialization"/>
                             <field name="years_of_experience"/>
                             <field name="hire_date"/>
+                            <field name="available_days"/>
+                            <field name="max_weekly_workload"/>
                             <field name="active" widget="boolean_toggle"/>
                         </group>
-                    </group>
-                    <group string="Availability">
-                        <field name="available_days"/>
-                        <field name="max_weekly_workload"/>
                     </group>
                     <notebook>
                         <page string="Assignments">
@@ -69,6 +67,7 @@
                             </field>
                         </page>
                     </notebook>
+                    <chatter/>
                 </sheet>
             </form>
         </field>
