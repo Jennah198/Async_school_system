@@ -30,7 +30,8 @@ class SchoolAttendance(models.Model):
         "school.student",
         string="Student",
         required=True,
-        index=True
+        index=True,
+        domain="[('registration_status', '=', 'approved'), ('enrollment_ids.state', '=', 'active')]",
     )
 
     class_id = fields.Many2one(
@@ -89,7 +90,8 @@ class SchoolAttendance(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        if 'enrollment_id' in vals or 'student_id' in vals:
+        if {'enrollment_id', 'student_id', 'date', 'attendance_type',
+                'teacher_assignment_id', 'student_subject_id'} & vals.keys():
             self._complete_from_enrollment(vals)
         return super().write(vals)
 
@@ -142,12 +144,25 @@ class SchoolAttendance(models.Model):
                 raise ValidationError('Subject attendance requires an exact class assignment.')
             if assignment.subject_id != student_subject.subject_id:
                 raise ValidationError('The student is not enrolled in the assigned subject.')
+            if student_subject.student_id != enrollment.student_id \
+                    or student_subject.enrollment_id != enrollment \
+                    or student_subject.state != 'enrolled' \
+                    or student_subject.date_start > date \
+                    or (student_subject.date_end and student_subject.date_end < date):
+                raise ValidationError(
+                    'The subject enrollment must belong to this student and be effective on the attendance date.')
             if assignment.start_date > date or (assignment.end_date and assignment.end_date < date):
                 raise ValidationError('The teacher assignment is not effective on this date.')
 
-    @api.constrains('enrollment_id', 'date')
+    @api.constrains('enrollment_id', 'placement_id', 'student_id', 'class_id', 'date')
     def _check_date_within_enrollment(self):
         for rec in self:
+            placement = rec.enrollment_id.placement_ids.placement_on(rec.date)
+            if rec.student_id != rec.enrollment_id.student_id \
+                    or not placement or rec.placement_id != placement \
+                    or rec.class_id != placement.class_id:
+                raise ValidationError(
+                    'Attendance student and class must match the effective enrollment placement.')
             if rec.date < rec.enrollment_id.enrollment_date:
                 raise ValidationError(
                     'Attendance on %s is before the enrollment of %s started (%s).'

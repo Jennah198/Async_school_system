@@ -38,3 +38,34 @@ class TestOdoo19UiAccess(TransactionCase):
                 self.assertNotIn('message_follower_ids', arch)
                 self.assertNotIn('message_ids', arch)
                 self.assertIn('<chatter', arch)
+
+    def test_dependent_academic_pickers_are_scoped(self):
+        expected_fragments = {
+            'view_school_student_form': [
+                "('academic_year_id', '=', academic_year_id)"],
+            'view_school_assessment_form': [
+                "('grade_subject_ids.class_id', '=', class_id)",
+                "('academic_year_id', '=', academic_year_id)",
+                'teacher_assignment_id'],
+            'view_school_teacher_assignment_form': [
+                "('grade_subject_ids.class_id', '=', class_id)",
+                "('academic_year_id', '=', academic_year_id)"],
+            'view_school_class_schedule_form': [
+                "('grade_subject_ids.class_id', '=', class_id)",
+                "('academic_year_id', '=', academic_year_id)",
+                'teacher_assignment_id'],
+            'view_school_enrollment_transfer_form': [
+                "('academic_year_id', '=', academic_year_id)"],
+        }
+        for xml_id, fragments in expected_fragments.items():
+            arch = self.env.ref('school_management.%s' % xml_id).arch_db
+            for fragment in fragments:
+                with self.subTest(view=xml_id, fragment=fragment):
+                    self.assertIn(fragment, arch)
+
+    def test_marks_are_generated_roster_rows_not_manual_records(self):
+        for xml_id in ('view_school_mark_tree', 'view_school_mark_form'):
+            arch = self.env.ref('school_management.%s' % xml_id).arch_db
+            with self.subTest(view=xml_id):
+                self.assertIn('create="0"', arch)
+                self.assertIn('delete="0"', arch)

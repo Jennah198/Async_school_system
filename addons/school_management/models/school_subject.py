@@ -20,6 +20,8 @@ class SchoolSubject(models.Model):
         ('high_school', 'High School'),
     ], string='Education Level')
     active = fields.Boolean(string='Active', default=True)
+    grade_subject_ids = fields.One2many(
+        'school.grade.subject', 'subject_id', string='Curriculum Offerings')
 
     _subject_name_unique = models.Constraint(
         'unique(name, education_level)',

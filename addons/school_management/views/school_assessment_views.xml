@@ -88,9 +88,10 @@
                         <group string="Scope">
                             <field name="assessment_type"/>
                             <field name="class_id" options="{'no_create': True}"/>
-                            <field name="subject_id" options="{'no_create': True}"/>
-                            <field name="term_id" options="{'no_create': True}"/>
+                            <field name="subject_id" domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]" options="{'no_create': True}"/>
+                            <field name="term_id" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
                             <field name="academic_year_id"/>
+                            <field name="teacher_assignment_id" required="1" options="{'no_create': True}"/>
                         </group>
                         <group string="Marking">
                             <field name="date"/>
@@ -101,7 +102,7 @@
                     <group string="Mark List">
                         <field name="mark_ids" nolabel="1" colspan="2"
                                readonly="state not in ('draft', 'open')">
-                            <list editable="bottom" decoration-muted="mark_status == 'pending'"
+                            <list editable="bottom" create="0" delete="0" decoration-muted="mark_status == 'pending'"
                                   decoration-danger="grade == 'F'">
                                 <field name="student_id" readonly="1" force_save="1"/>
                                 <field name="score"/>

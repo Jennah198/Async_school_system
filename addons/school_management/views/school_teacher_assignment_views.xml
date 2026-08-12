@@ -24,10 +24,10 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="subject_id"/>
                             <field name="class_id"/>
                             <field name="academic_year_id"/>
-                            <field name="term_id"/>
+                            <field name="subject_id" domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]" options="{'no_create': True}"/>
+                            <field name="term_id" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
                         </group>
                         <group>
                             <field name="teacher_id"

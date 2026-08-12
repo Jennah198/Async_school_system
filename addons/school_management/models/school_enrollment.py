@@ -126,10 +126,18 @@ class SchoolEnrollment(models.Model):
 
     def _sync_student_class(self):
         for rec in self.filtered(lambda r: r.state == 'active'):
-            if rec.student_id.class_id != rec.class_id:
-                rec.student_id.with_context(
-                    skip_registration_completeness=True
-                ).class_id = rec.class_id
+            values = {
+                'class_id': rec.class_id.id,
+                'academic_year_id': rec.academic_year_id.id,
+                'section_id': rec.class_id.section_id.id,
+            }
+            if rec.class_id.education_level:
+                values['education_level'] = rec.class_id.education_level
+            if rec.class_id.stream_id:
+                values['stream_id'] = rec.class_id.stream_id.id
+            rec.student_id.with_context(
+                skip_registration_completeness=True
+            ).write(values)
 
     def _next_roll_number(self):
         self.ensure_one()

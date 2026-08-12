@@ -59,9 +59,9 @@
                             <field name="nationality_id" options="{'no_create': True}" readonly="registration_status == 'approved'"/>
                             <field name="education_level" readonly="registration_status == 'approved'"/>
                             <field name="admission_type" readonly="registration_status == 'approved'"/>
-                            <field name="class_id" options="{'no_create': True, 'no_create_edit': True}" readonly="registration_status == 'approved'"/>
-                            <field name="academic_year_id" readonly="registration_status == 'approved'"/>
-                            <field name="section_id" readonly="registration_status == 'approved'"/>
+                            <field name="academic_year_id" options="{'no_create': True}" readonly="registration_status == 'approved'"/>
+                            <field name="class_id" domain="[('academic_year_id', '=', academic_year_id), '|', ('education_level', '=', False), ('education_level', '=', education_level)]" options="{'no_create': True, 'no_create_edit': True}" readonly="registration_status == 'approved'"/>
+                            <field name="section_id" readonly="1"/>
                         </group>
                         <group string="Intake Parent / Guardian">
                             <field name="guardian_name" readonly="registration_status == 'approved'"/>

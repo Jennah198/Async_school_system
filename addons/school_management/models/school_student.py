@@ -59,7 +59,7 @@ class SchoolStudent(models.Model):
         'school.class',
         string='Grade / Class',
         required=True,
-        domain="['|', ('education_level', '=', False), ('education_level', '=', education_level)]"
+        domain="[('academic_year_id', '=', academic_year_id), '|', ('education_level', '=', False), ('education_level', '=', education_level)]"
     )
 
     academic_year_id = fields.Many2one(
@@ -69,7 +69,8 @@ class SchoolStudent(models.Model):
     )
     section_id = fields.Many2one(
         'school.section',
-        string="Section"
+        string="Section",
+        readonly=True,
     )
 
     registration_status = fields.Selection([
@@ -116,6 +117,39 @@ class SchoolStudent(models.Model):
         'unique(admission_number)',
         'Admission number must be unique.',
     )
+
+    @api.onchange('academic_year_id', 'education_level')
+    def _onchange_registration_scope(self):
+        for rec in self:
+            if rec.class_id and (
+                    rec.class_id.academic_year_id != rec.academic_year_id
+                    or (rec.education_level and rec.class_id.education_level
+                        and rec.class_id.education_level != rec.education_level)):
+                rec.class_id = False
+                rec.section_id = False
+
+    @api.onchange('class_id')
+    def _onchange_class_id(self):
+        for rec in self.filtered('class_id'):
+            rec.academic_year_id = rec.class_id.academic_year_id
+            rec.section_id = rec.class_id.section_id
+            if rec.class_id.education_level:
+                rec.education_level = rec.class_id.education_level
+            if rec.class_id.stream_id:
+                rec.stream_id = rec.class_id.stream_id
+
+    @api.constrains('class_id', 'academic_year_id', 'section_id', 'education_level')
+    def _check_registration_scope(self):
+        for rec in self.filtered('class_id'):
+            if rec.class_id.academic_year_id != rec.academic_year_id:
+                raise ValidationError(
+                    'The Grade / Class must belong to the selected academic year.')
+            if rec.section_id and rec.section_id != rec.class_id.section_id:
+                raise ValidationError('The section must match the selected Grade / Class.')
+            if rec.education_level and rec.class_id.education_level \
+                    and rec.education_level != rec.class_id.education_level:
+                raise ValidationError(
+                    'The education level must match the selected Grade / Class.')
 
     @api.depends('enrollment_ids')
     def _compute_enrollment_count(self):

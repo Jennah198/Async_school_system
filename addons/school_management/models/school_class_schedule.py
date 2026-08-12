@@ -46,6 +46,12 @@ class SchoolClassSchedule(models.Model):
         ondelete='restrict', index=True, tracking=True,
     )
 
+    teacher_assignment_id = fields.Many2one(
+        'school.teacher.assignment', string='Teacher Assignment',
+        ondelete='restrict', index=True,
+        domain="[('class_id', '=', class_id), ('subject_id', '=', subject_id), ('term_id', '=', term_id), ('state', '=', 'active')]",
+    )
+
     subject_id = fields.Many2one(
         'school.subject', string='Subject',
         required=True, ondelete='restrict', tracking=True,
@@ -87,6 +93,31 @@ class SchoolClassSchedule(models.Model):
     reschedule_reason = fields.Text(string='Reschedule Reason', tracking=True)
     active = fields.Boolean(string='Active', default=True)
 
+    @api.onchange('class_id')
+    def _onchange_class_id(self):
+        for rec in self:
+            if rec.term_id and rec.term_id.academic_year_id != rec.class_id.academic_year_id:
+                rec.term_id = False
+            if rec.subject_id and rec.class_id and not self.env['school.grade.subject'].search_count([
+                    ('class_id', '=', rec.class_id.id),
+                    ('subject_id', '=', rec.subject_id.id), ('active', '=', True)]):
+                rec.subject_id = False
+            rec.teacher_assignment_id = False
+            rec.teacher_id = False
+
+    @api.onchange('subject_id', 'term_id')
+    def _onchange_schedule_scope(self):
+        self.teacher_assignment_id = False
+        self.teacher_id = False
+
+    @api.onchange('teacher_assignment_id')
+    def _onchange_teacher_assignment_id(self):
+        for rec in self.filtered('teacher_assignment_id'):
+            rec.class_id = rec.teacher_assignment_id.class_id
+            rec.subject_id = rec.teacher_assignment_id.subject_id
+            rec.term_id = rec.teacher_assignment_id.term_id
+            rec.teacher_id = rec.teacher_assignment_id.teacher_id
+
     _schedule_end_after_start = models.Constraint(
         'CHECK(end_time > start_time)',
         'End time must be after the start time.',
@@ -118,22 +149,39 @@ class SchoolClassSchedule(models.Model):
                     'Set a day of week for a recurring class, or an exact date for a one-off session.'
                 )
 
-    @api.constrains('teacher_id', 'subject_id', 'class_id', 'term_id', 'academic_year_id')
+    @api.constrains('teacher_assignment_id', 'teacher_id', 'subject_id', 'class_id',
+                    'term_id', 'academic_year_id')
     def _check_teacher_assignment(self):
         for rec in self:
-            has_assignment = self.env['school.teacher.assignment'].search_count([
-                ('teacher_id', '=', rec.teacher_id.id),
-                ('subject_id', '=', rec.subject_id.id),
-                ('class_id', '=', rec.class_id.id),
-                ('academic_year_id', '=', rec.academic_year_id.id),
-                ('term_id', '=', rec.term_id.id),
-            ])
-            if not has_assignment:
+            assignment = rec.teacher_assignment_id
+            if assignment.teacher_id != rec.teacher_id \
+                    or assignment.subject_id != rec.subject_id \
+                    or assignment.class_id != rec.class_id \
+                    or assignment.academic_year_id != rec.academic_year_id \
+                    or assignment.term_id != rec.term_id \
+                    or assignment.state != 'active':
                 raise ValidationError(
-                    f'{rec.teacher_id.name} has no active assignment for '
-                    f'{rec.subject_id.name} in {rec.class_id.display_name} '
-                    f'({rec.academic_year_id.name}, {rec.term_id.name}).'
+                    'The schedule must use one exact active teacher assignment.'
                 )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('teacher_assignment_id') and all(
+                    vals.get(field) for field in ('teacher_id', 'subject_id', 'class_id', 'term_id')):
+                assignment = self.env['school.teacher.assignment'].search([
+                    ('teacher_id', '=', vals['teacher_id']),
+                    ('subject_id', '=', vals['subject_id']),
+                    ('class_id', '=', vals['class_id']),
+                    ('term_id', '=', vals['term_id']),
+                    ('state', '=', 'active'),
+                ], limit=1)
+                if assignment:
+                    vals['teacher_assignment_id'] = assignment.id
+            if not vals.get('teacher_assignment_id'):
+                raise ValidationError(
+                    'Select the exact active teacher assignment for this schedule.')
+        return super().create(vals_list)
 
     @api.constrains('state', 'teacher_id', 'subject_id', 'class_id')
     def _check_published_records_are_active(self):

@@ -38,6 +38,23 @@ class SchoolTeacherAssignment(models.Model):
     ], default='active', required=True, tracking=True)
     active = fields.Boolean(string='Active', default=True)
 
+    @api.onchange('class_id')
+    def _onchange_class_id(self):
+        for rec in self:
+            if rec.term_id and rec.term_id.academic_year_id != rec.class_id.academic_year_id:
+                rec.term_id = False
+            if rec.subject_id and rec.class_id and not self.env['school.grade.subject'].search_count([
+                    ('class_id', '=', rec.class_id.id),
+                    ('subject_id', '=', rec.subject_id.id),
+                    ('active', '=', True)]):
+                rec.subject_id = False
+
+    @api.onchange('term_id')
+    def _onchange_term_id(self):
+        for rec in self.filtered(lambda item: item.term_id and item.class_id):
+            if rec.term_id.academic_year_id != rec.class_id.academic_year_id:
+                rec.term_id = False
+
     @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term_id',
                     'state', 'active', 'start_date', 'end_date')
     def _check_single_teacher_per_subject_class_term(self):
@@ -104,6 +121,20 @@ class SchoolTeacherAssignment(models.Model):
                     raise ValidationError('Cannot create a future assignment for an inactive teacher.')
             if not rec.subject_id.active:
                 raise ValidationError('Cannot assign an inactive subject.')
+
+    @api.constrains('subject_id', 'class_id')
+    def _check_subject_on_curriculum(self):
+        for rec in self:
+            curriculum = self.env['school.grade.subject'].search_count([
+                ('class_id', '=', rec.class_id.id), ('active', '=', True)])
+            offered = self.env['school.grade.subject'].search_count([
+                ('class_id', '=', rec.class_id.id),
+                ('subject_id', '=', rec.subject_id.id),
+                ('active', '=', True)])
+            if curriculum and not offered:
+                raise ValidationError(
+                    '%s is not on the curriculum of %s.' % (
+                        rec.subject_id.name, rec.class_id.display_name))
     @api.constrains('start_date', 'end_date')
     def _check_dates(self):
         for rec in self:

@@ -38,6 +38,9 @@ class TestAssessment(TransactionCase):
         self.env['school.grade.subject'].create({
             'class_id': self.klass.id, 'subject_id': self.math.id,
         })
+        self.env['school.grade.subject'].create({
+            'class_id': self.other_class.id, 'subject_id': self.math.id,
+        })
 
         self.teacher_user = self._user('asm_teacher', 'group_school_teacher')
         self.officer_user = self._user('asm_officer', 'group_school_exam_officer')
@@ -61,7 +64,9 @@ class TestAssessment(TransactionCase):
 
     def _teacher(self, name, user):
         first_name, _, last_name = name.partition(' ')
-        job_title = self.env['school.job.title'].create({
+        job_title = self.env['school.job.title'].search([
+            ('name', '=', 'ASM Teacher'), ('department', '=', 'academic'),
+        ], limit=1) or self.env['school.job.title'].create({
             'name': 'ASM Teacher', 'department': 'academic',
         })
         staff = self.env['school.staff'].create({
@@ -127,9 +132,16 @@ class TestAssessment(TransactionCase):
         self.assertEqual(len(assessment.mark_ids), 2)
 
     def test_open_without_teacher_assignment_blocked(self):
-        assessment = self._assessment(subject_id=self.art.id)
         with self.assertRaises(ValidationError):
-            assessment.action_open()
+            self._assessment(subject_id=self.art.id)
+
+    def test_assessment_rejects_assignment_from_another_class(self):
+        other_assignment = self._assign(
+            self._teacher('ASM Other Teacher', self._user(
+                'asm_other_teacher', 'group_school_teacher')),
+            self.math, self.other_class)
+        with self.assertRaisesRegex(ValidationError, 'exact applicable assignment'):
+            self._assessment(teacher_assignment_id=other_assignment.id)
 
     def test_teacher_cannot_create_mark_rows(self):
         assessment = self._assessment()
@@ -152,6 +164,27 @@ class TestAssessment(TransactionCase):
         self.assertEqual(row_one.grade, 'B')
         row_two.write({'mark_status': 'absent'})
         self.assertFalse(row_two.grade)
+
+    def test_mark_rejects_student_from_another_class(self):
+        """A mark row must belong to the assessment's generated roster."""
+        other_student = self.env['school.student'].create({
+            'name': 'ASM Grade Two Student',
+            'date_of_birth': '2090-01-01',
+            'guardian_name': 'Guardian of Grade Two Student',
+            'guardian_phone': '+251911550099',
+            'academic_year_id': self.year.id,
+            'class_id': self.other_class.id,
+            'birth_certificate': DUMMY_FILE,
+            'previous_grade_document': DUMMY_FILE,
+            'registration_status': 'approved',
+        })
+        assessment = self._assessment()
+        with self.assertRaisesRegex(ValidationError, 'not enrolled'):
+            self.env['school.mark'].create({
+                'assessment_id': assessment.id,
+                'student_id': other_student.id,
+                'score': 50.0,
+            })
 
     # ---------- workflow (BR-11, AC-13) ----------
 

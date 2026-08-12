@@ -127,6 +127,8 @@ class SchoolPromotionWizard(models.TransientModel):
     enrollment_id = fields.Many2one(
         'school.enrollment', required=True, domain=[('state', '=', 'active')])
     next_class_id = fields.Many2one('school.class', required=True, ondelete='restrict')
+    current_academic_year_id = fields.Many2one(
+        related='enrollment_id.academic_year_id', readonly=True)
     effective_date = fields.Date(required=True, default=lambda self: fields.Date.context_today(self))
 
     def action_confirm(self):

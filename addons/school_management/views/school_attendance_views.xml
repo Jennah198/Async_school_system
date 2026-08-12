@@ -25,7 +25,7 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="student_id"/>
+                            <field name="student_id" options="{'no_create': True}"/>
                             <field name="class_id" readonly="1"/>
                             <field name="enrollment_id" readonly="1"/>
                         </group>

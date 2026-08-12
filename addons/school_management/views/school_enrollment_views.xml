@@ -7,7 +7,8 @@
             <form>
                 <group>
                     <field name="enrollment_id" options="{'no_create': True}"/>
-                    <field name="new_class_id" options="{'no_create': True}"/>
+                    <field name="academic_year_id" readonly="1"/>
+                    <field name="new_class_id" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
                     <field name="effective_date"/>
                 </group>
                 <footer>

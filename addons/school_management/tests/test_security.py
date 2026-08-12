@@ -87,6 +87,9 @@ class TestSchoolSecurity(TransactionCase):
         return self.env['school.teacher'].create({'staff_id': staff.id, 'user_id': user.id})
 
     def _assign(self, teacher, subject, school_class):
+        self.env['school.grade.subject'].create({
+            'class_id': school_class.id, 'subject_id': subject.id,
+        })
         return self.env['school.teacher.assignment'].create({
             'teacher_id': teacher.id, 'subject_id': subject.id,
             'class_id': school_class.id, 'term_id': self._term().id,
@@ -109,13 +112,15 @@ class TestSchoolSecurity(TransactionCase):
 
     def _mark(self, student, subject):
         # Marks belong to an assessment since 17.0.8.0.0.
+        assignment = self.env['school.teacher.assignment'].search([
+            ('class_id', '=', student.class_id.id), ('subject_id', '=', subject.id),
+        ], limit=1)
         assessment = self.env['school.assessment'].create({
             'name': 'SEC Test', 'assessment_type': 'test',
             'class_id': student.class_id.id, 'subject_id': subject.id,
             'term_id': self._term().id, 'state': 'open',
-            'teacher_assignment_id': self.env['school.teacher.assignment'].search([
-                ('class_id', '=', student.class_id.id), ('subject_id', '=', subject.id),
-            ], limit=1).id,
+            'teacher_assignment_id': assignment.id,
+            'date': assignment.start_date,
         })
         return self.env['school.mark'].create({
             'assessment_id': assessment.id,

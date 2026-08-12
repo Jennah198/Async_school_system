@@ -14,7 +14,10 @@ class SchoolEnrollmentTransfer(models.TransientModel):
     )
     new_class_id = fields.Many2one(
         'school.class', string='New Grade / Class', required=True,
+        domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]",
     )
+    academic_year_id = fields.Many2one(
+        related='enrollment_id.academic_year_id', readonly=True)
     effective_date = fields.Date(
         string='Effective Date', required=True,
         default=lambda self: fields.Date.context_today(self),
