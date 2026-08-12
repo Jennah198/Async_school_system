@@ -151,6 +151,16 @@ class SchoolStudent(models.Model):
                 raise ValidationError(
                     'The education level must match the selected Grade / Class.')
 
+    @api.constrains('class_id', 'stream_id')
+    def _check_stream_grade(self):
+        for rec in self.filtered('stream_id'):
+            if not rec.class_id.grade_id \
+                    or rec.class_id.grade_id.level not in ('11', '12'):
+                raise ValidationError(
+                    'Academic streams are only available for Grades 11 and 12.')
+            if rec.class_id.stream_id and rec.stream_id != rec.class_id.stream_id:
+                raise ValidationError('The student stream must match the selected class stream.')
+
     @api.depends('enrollment_ids')
     def _compute_enrollment_count(self):
         for rec in self:

@@ -1,4 +1,5 @@
-from odoo import fields, models # type: ignore
+from odoo import api, fields, models # type: ignore
+from odoo.exceptions import ValidationError
 
 
 class SchoolClass(models.Model):
@@ -57,3 +58,16 @@ class SchoolClass(models.Model):
         'CHECK(capacity >= 0)',
         'Capacity cannot be negative.',
     )
+
+    @api.onchange('grade_id')
+    def _onchange_grade_id(self):
+        for rec in self:
+            if rec.grade_id and rec.grade_id.level not in ('11', '12'):
+                rec.stream_id = False
+
+    @api.constrains('grade_id', 'stream_id')
+    def _check_stream_grade(self):
+        for rec in self.filtered('stream_id'):
+            if not rec.grade_id or rec.grade_id.level not in ('11', '12'):
+                raise ValidationError(
+                    'Academic streams are only available for Grades 11 and 12.')

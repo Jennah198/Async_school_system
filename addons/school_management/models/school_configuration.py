@@ -25,6 +25,67 @@ class SchoolGrade(models.Model):
         'The grade level must be unique.',
     )
 
+    @api.model
+    def ensure_standard_academic_structure(self):
+        """Idempotently seed grades/streams and repair legacy class links."""
+        xmlids = self.env['ir.model.data'].sudo()
+        grades = {}
+        for level in range(1, 13):
+            key = str(level)
+            grade = self.search([('level', '=', key)], limit=1)
+            if not grade:
+                grade = self.create({
+                    'name': 'Grade %s' % level, 'code': 'G%s' % level,
+                    'level': key, 'sequence': level * 10,
+                })
+            grades[key] = grade
+            xmlid_name = 'grade_%s' % level
+            if not self.env.ref('school_management.%s' % xmlid_name,
+                                raise_if_not_found=False):
+                xmlids.create({
+                    'module': 'school_management', 'name': xmlid_name,
+                    'model': 'school.grade', 'res_id': grade.id, 'noupdate': True,
+                })
+
+        Stream = self.env['school.stream']
+        for xmlid_name, name, code, aliases in (
+                ('stream_natural_science', 'Natural Science', 'NATURAL', ('nat', 'natural')),
+                ('stream_social_science', 'Social Science', 'SOCIAL', ('soc', 'social'))):
+            stream = Stream.search([('code', 'in', (code, *aliases))], limit=1)
+            if not stream:
+                stream = Stream.create({'name': name, 'code': code})
+            else:
+                stream.write({'name': name, 'code': code})
+            if not self.env.ref('school_management.%s' % xmlid_name,
+                                raise_if_not_found=False):
+                xmlids.create({
+                    'module': 'school_management', 'name': xmlid_name,
+                    'model': 'school.stream', 'res_id': stream.id, 'noupdate': True,
+                })
+
+        Class = self.env['school.class']
+        for level, grade in grades.items():
+            Class.search([
+                ('grade_id', '=', False), ('name', '=ilike', 'Grade %s' % level),
+            ]).write({'grade_id': grade.id})
+
+        invalid_classes = Class.search([
+            ('stream_id', '!=', False),
+            '|', ('grade_id', '=', False), ('grade_id.level', 'not in', ('11', '12')),
+        ])
+        if invalid_classes:
+            self.env['school.student'].search([
+                ('class_id', 'in', invalid_classes.ids),
+            ]).write({'stream_id': False})
+            self.env['school.grade.subject'].search([
+                ('class_id', 'in', invalid_classes.ids),
+            ]).write({'stream_id': False})
+            self.env['school.enrollment.placement'].search([
+                ('class_id', 'in', invalid_classes.ids),
+            ]).write({'stream_id': False})
+            invalid_classes.write({'stream_id': False})
+        return True
+
 
 class SchoolShift(models.Model):
     _name = 'school.shift'

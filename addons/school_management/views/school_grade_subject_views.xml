@@ -6,6 +6,7 @@
             <list editable="bottom">
                 <field name="class_id"/>
                 <field name="subject_id"/>
+                <field name="stream_id" invisible="class_id.grade_id.level not in ('11', '12')"/>
                 <field name="subject_type"/>
                 <field name="academic_year_id"/>
             </list>

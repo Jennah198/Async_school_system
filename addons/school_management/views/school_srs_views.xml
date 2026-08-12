@@ -74,7 +74,7 @@
 
     <record id="view_school_class_srs_form" model="ir.ui.view">
         <field name="name">school.class.srs.form</field><field name="model">school.class</field><field name="inherit_id" ref="view_school_class_form"/>
-        <field name="arch" type="xml"><field name="section_id" position="before"><field name="grade_id"/></field><field name="capacity" position="after"><field name="shift_id"/><field name="stream_id"/><field name="campus_id"/><field name="homeroom_teacher_id"/></field></field>
+        <field name="arch" type="xml"><field name="section_id" position="before"><field name="grade_id"/></field><field name="capacity" position="after"><field name="shift_id"/><field name="stream_id" invisible="grade_id.level not in ('11', '12')" required="grade_id.level in ('11', '12')"/><field name="campus_id"/><field name="homeroom_teacher_id"/></field></field>
     </record>
     <record id="view_school_term_srs_list" model="ir.ui.view">
         <field name="name">school.term.srs.list</field><field name="model">school.term</field><field name="inherit_id" ref="view_school_term_tree"/>

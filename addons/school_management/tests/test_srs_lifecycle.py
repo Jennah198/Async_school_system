@@ -13,9 +13,7 @@ class TestSrsLifecycle(TransactionCase):
             'name': '2035/2036', 'date_start': date(2035, 9, 1),
             'date_end': date(2036, 6, 30),
         })
-        cls.grade = cls.env['school.grade'].create({
-            'name': 'Grade 1', 'code': 'G1-TEST', 'level': '1',
-        })
+        cls.grade = cls.env.ref('school_management.grade_1')
         cls.section_a = cls.env['school.section'].create({'name': 'SRS-A'})
         cls.section_b = cls.env['school.section'].create({'name': 'SRS-B'})
         cls.class_a = cls.env['school.class'].create({
@@ -98,3 +96,25 @@ class TestSrsLifecycle(TransactionCase):
         })
         with self.assertRaises(ValidationError):
             student.unlink()
+
+    def test_streams_are_only_valid_for_grades_above_ten(self):
+        grade_10 = self.env.ref('school_management.grade_10')
+        natural = self.env['school.stream'].create({
+            'name': 'Natural Science Test', 'code': 'NAT-TEST',
+        })
+        with self.assertRaisesRegex(ValidationError, 'Grades 11 and 12'):
+            self.env['school.class'].create({
+                'name': 'Grade 10 Invalid Stream', 'grade_id': grade_10.id,
+                'academic_year_id': self.year.id, 'stream_id': natural.id,
+            })
+
+    def test_grade_eleven_accepts_a_stream(self):
+        grade_11 = self.env.ref('school_management.grade_11')
+        social = self.env['school.stream'].create({
+            'name': 'Social Science Test', 'code': 'SOC-TEST',
+        })
+        school_class = self.env['school.class'].create({
+            'name': 'Grade 11 Social', 'grade_id': grade_11.id,
+            'academic_year_id': self.year.id, 'stream_id': social.id,
+        })
+        self.assertEqual(school_class.stream_id, social)

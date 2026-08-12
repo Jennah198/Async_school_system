@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class SchoolGradeSubject(models.Model):
@@ -46,6 +47,17 @@ class SchoolGradeSubject(models.Model):
         'CHECK(maximum_mark > 0 AND pass_mark >= 0 AND pass_mark <= maximum_mark)',
         'Pass mark must be between zero and the maximum mark.',
     )
+
+    @api.constrains('class_id', 'stream_id')
+    def _check_stream_grade(self):
+        for rec in self.filtered('stream_id'):
+            if not rec.class_id.grade_id \
+                    or rec.class_id.grade_id.level not in ('11', '12'):
+                raise ValidationError(
+                    'Stream-specific curriculum is only available for Grades 11 and 12.')
+            if rec.class_id.stream_id and rec.stream_id != rec.class_id.stream_id:
+                raise ValidationError(
+                    'The curriculum stream must match the selected class stream.')
 
     def name_get(self):
         return [(rec.id, '%s — %s' % (rec.class_id.display_name, rec.subject_id.name))
