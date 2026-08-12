@@ -182,7 +182,6 @@
                     </field>
                 </page>
             </notebook>
-            <xpath expr="//form" position="inside"><chatter/></xpath>
         </field>
     </record>
 

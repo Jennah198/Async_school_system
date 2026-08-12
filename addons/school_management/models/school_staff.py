@@ -73,7 +73,7 @@ class SchoolStaff(models.Model):
     ], string='Department', required=True)
     job_title_id = fields.Many2one(
         'school.job.title', string='Job Title',
-        domain="[('department', '=', department)]",
+        domain="[('department', '=', department), ('active', '=', True)]",
         ondelete='restrict',
     )
     employment_type = fields.Selection([

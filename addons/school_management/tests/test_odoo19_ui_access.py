@@ -115,3 +115,17 @@ class TestOdoo19UiAccess(TransactionCase):
         self.assertIn('<chatter', arch)
         self.assertGreater(arch.index('<chatter'), arch.index('<sheet'))
         self.assertLess(arch.index('<chatter'), arch.index('</sheet>'))
+
+    def test_staff_form_guides_job_title_and_uses_full_width(self):
+        arch = self.env.ref(
+            'school_management.view_school_staff_form').arch_db
+        self.assertIn('Select a Department first', arch)
+        self.assertIn("('active', '=', True)", arch)
+        self.assertIn('invisible="not department"', arch)
+        self.assertIn('<chatter', arch)
+        self.assertGreater(arch.index('<chatter'), arch.index('<sheet'))
+        self.assertLess(arch.index('<chatter'), arch.index('</sheet>'))
+
+        responsibility_arch = self.env.ref(
+            'school_management.view_school_staff_form_responsibility').arch_db
+        self.assertNotIn('expr="//form"', responsibility_arch)

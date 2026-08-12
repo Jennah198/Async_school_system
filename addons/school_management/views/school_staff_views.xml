@@ -45,7 +45,14 @@
                         <group>
                             <field name="staff_id" readonly="1"/>
                             <field name="department"/>
-                            <field name="job_title_id" options="{'no_quick_create': True, 'no_create_edit': True}"/>
+                            <div class="alert alert-info" role="alert"
+                                 invisible="department">
+                                Select a Department first to see its available Job Titles.
+                            </div>
+                            <field name="job_title_id"
+                                   domain="[('department', '=', department), ('active', '=', True)]"
+                                   invisible="not department"
+                                   options="{'no_quick_create': True, 'no_create_edit': True}"/>
                         </group>
                         <group>
                             <field name="employment_status"/>
@@ -91,6 +98,7 @@
                             <field name="notes" placeholder="Internal notes about this staff member..."/>
                         </page>
                     </notebook>
+                    <chatter/>
                 </sheet>
             </form>
         </field>
