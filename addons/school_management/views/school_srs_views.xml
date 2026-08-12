@@ -68,7 +68,7 @@
     </record>
     <record id="view_school_report_card_list" model="ir.ui.view">
         <field name="name">school.report.card.list</field><field name="model">school.report.card</field>
-        <field name="arch" type="xml"><list create="0" delete="0"><header><button name="%(action_school_report_card_generate)d" type="action" string="Generate Report Card" class="btn-primary" groups="school_management.group_school_admin,school_management.group_school_exam_officer"/></header><field name="name"/><field name="student_id"/><field name="term_id"/><field name="class_id"/><field name="version"/><field name="overall_average" string="Overall Average (%)"/><field name="result"/><field name="state" widget="badge"/></list></field>
+        <field name="arch" type="xml"><list create="0" delete="0"><header><button name="%(action_school_report_card_generate)d" type="action" string="Generate Report Card" class="btn-primary" display="always" groups="school_management.group_school_admin,school_management.group_school_exam_officer"/></header><field name="name"/><field name="student_id"/><field name="term_id"/><field name="class_id"/><field name="version"/><field name="overall_average" string="Overall Average (%)"/><field name="result"/><field name="state" widget="badge"/></list></field>
     </record>
     <record id="view_school_report_card_form" model="ir.ui.view">
         <field name="name">school.report.card.form</field><field name="model">school.report.card</field>

@@ -75,6 +75,7 @@ class TestOdoo19UiAccess(TransactionCase):
             'school_management.view_school_report_card_list').arch_db
         self.assertIn('create="0"', arch)
         self.assertIn('Generate Report Card', arch)
+        self.assertIn('display="always"', arch)
         self.assertIn('Overall Average (%)', arch)
         action = self.env.ref('school_management.action_school_report_card')
         self.assertIn('Generate Report Card', action.help)
