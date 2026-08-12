@@ -74,3 +74,11 @@ class TestOdoo19UiAccess(TransactionCase):
         action = self.env.ref('school_management.action_school_my_mark_tasks')
         self.assertEqual(action.res_model, 'school.assessment')
         self.assertEqual(action.view_mode, 'list,form')
+
+    def test_curriculum_uses_a_scoped_explicit_form(self):
+        action = self.env.ref('school_management.action_school_grade_subject')
+        self.assertEqual(action.view_mode, 'list,form')
+        arch = self.env.ref(
+            'school_management.view_school_grade_subject_form').arch_db
+        self.assertIn("class_grade_level not in ('11', '12')", arch)
+        self.assertIn('Maximum &amp; Pass Marks', arch)

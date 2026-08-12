@@ -61,6 +61,9 @@ class SchoolStudent(models.Model):
         required=True,
         domain="[('academic_year_id', '=', academic_year_id), '|', ('education_level', '=', False), ('education_level', '=', education_level)]"
     )
+    class_grade_level = fields.Selection(
+        related='class_id.grade_id.level', string='Grade Level', readonly=True,
+    )
 
     academic_year_id = fields.Many2one(
         'school.academic.year',

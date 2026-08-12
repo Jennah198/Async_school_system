@@ -19,6 +19,9 @@ class SchoolGradeSubject(models.Model):
     )
     grade_id = fields.Many2one(
         related='class_id.grade_id', store=True, index=True)
+    class_grade_level = fields.Selection(
+        related='class_id.grade_id.level', string='Grade Level', readonly=True,
+    )
     stream_id = fields.Many2one('school.stream', ondelete='restrict')
     subject_id = fields.Many2one(
         'school.subject', string='Subject', required=True, index=True,
