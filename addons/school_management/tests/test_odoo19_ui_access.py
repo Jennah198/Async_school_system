@@ -109,6 +109,8 @@ class TestOdoo19UiAccess(TransactionCase):
             'school_management.view_school_assessment_form').arch_db
         self.assertIn('matching_assignment_count', arch)
         self.assertIn('No active teacher assignment matches', arch)
+        self.assertIn('outside the selected term', arch)
+        self.assertIn('assessment_date_in_term', arch)
         self.assertIn("('start_date', '&lt;=', date)", arch)
         self.assertIn('<chatter', arch)
         self.assertGreater(arch.index('<chatter'), arch.index('<sheet'))

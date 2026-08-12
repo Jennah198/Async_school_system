@@ -38,6 +38,10 @@ class SchoolAssessment(models.Model):
         string='Matching Teacher Assignments',
         compute='_compute_matching_assignment_count',
     )
+    assessment_date_in_term = fields.Boolean(
+        string='Assessment Date Is Within Term',
+        compute='_compute_assessment_date_in_term',
+    )
     term_id = fields.Many2one(
         'school.term', string='Term', required=True, ondelete='restrict')
     academic_year_id = fields.Many2one(
@@ -99,6 +103,24 @@ class SchoolAssessment(models.Model):
             rec.matching_assignment_count = Assignment.search_count(
                 rec._matching_assignment_domain())
 
+    @api.depends('term_id', 'date')
+    def _compute_assessment_date_in_term(self):
+        for rec in self:
+            rec.assessment_date_in_term = bool(
+                rec.term_id and rec.date
+                and rec.term_id.date_start <= rec.date <= rec.term_id.date_end
+            )
+
+    @api.constrains('term_id', 'date')
+    def _check_assessment_date_in_term(self):
+        for rec in self.filtered(lambda item: item.term_id and item.date):
+            if not rec.term_id.date_start <= rec.date <= rec.term_id.date_end:
+                raise ValidationError(
+                    'Assessment Date must be within %s (%s to %s).'
+                    % (rec.term_id.name, rec.term_id.date_start,
+                       rec.term_id.date_end)
+                )
+
     @api.onchange('class_id')
     def _onchange_class_id(self):
         for rec in self:
@@ -139,6 +161,13 @@ class SchoolAssessment(models.Model):
         for vals in vals_list:
             assessment_date = fields.Date.to_date(
                 vals.get('date') or fields.Date.context_today(self))
+            if vals.get('term_id'):
+                term = self.env['school.term'].browse(vals['term_id'])
+                if not term.date_start <= assessment_date <= term.date_end:
+                    raise ValidationError(
+                        'Assessment Date must be within %s (%s to %s).'
+                        % (term.name, term.date_start, term.date_end)
+                    )
             if not vals.get('teacher_assignment_id') and all(
                     vals.get(field) for field in ('class_id', 'subject_id', 'term_id')):
                 assignment = self.env['school.teacher.assignment'].search([

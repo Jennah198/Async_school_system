@@ -162,6 +162,11 @@ class TestAssessment(TransactionCase):
         self.assertEqual(assessment.matching_assignment_count, 0)
         self.assertFalse(assessment.teacher_assignment_id)
 
+    def test_assessment_date_must_be_inside_selected_term(self):
+        with self.assertRaisesRegex(
+                ValidationError, 'Assessment Date must be within'):
+            self._assessment(date=self.term.date_start - timedelta(days=1))
+
     def test_assessment_rejects_assignment_from_another_class(self):
         other_assignment = self._assign(
             self._teacher('ASM Other Teacher', self._user(
