@@ -55,14 +55,11 @@ class SchoolTeacherAssignment(models.Model):
             if rec.class_id and rec.term_id.academic_year_id != rec.class_id.academic_year_id:
                 rec.term_id = False
                 continue
-            if not rec.start_date or rec.start_date < rec.term_id.date_start:
-                rec.start_date = rec.term_id.date_start
-            elif rec.start_date > rec.term_id.date_end:
-                rec.start_date = rec.term_id.date_end
-            if rec.end_date and rec.end_date > rec.term_id.date_end:
-                rec.end_date = rec.term_id.date_end
-            if rec.end_date and rec.end_date < rec.start_date:
-                rec.end_date = rec.start_date
+            # The term is the user's single source of truth for this period.
+            # Keep effective dates for history/security checks without asking
+            # users to enter the same range twice.
+            rec.start_date = rec.term_id.date_start
+            rec.end_date = rec.term_id.date_end
 
     @api.constrains('subject_id', 'class_id', 'academic_year_id', 'term_id',
                     'state', 'active', 'start_date', 'end_date')
@@ -181,8 +178,10 @@ class SchoolTeacherAssignment(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if not vals.get('start_date') and vals.get('term_id'):
-                vals['start_date'] = self.env['school.term'].browse(vals['term_id']).date_start
+            if vals.get('term_id'):
+                term = self.env['school.term'].browse(vals['term_id'])
+                vals.setdefault('start_date', term.date_start)
+                vals.setdefault('end_date', term.date_end)
         records = super().create(vals_list)
         for rec in records:
             partner = rec.teacher_id.user_id.partner_id
@@ -193,6 +192,14 @@ class SchoolTeacherAssignment(models.Model):
                     partner_ids=partner.ids,
                 )
         return records
+
+    def write(self, vals):
+        if vals.get('term_id'):
+            term = self.env['school.term'].browse(vals['term_id'])
+            vals = dict(vals)
+            vals.setdefault('start_date', term.date_start)
+            vals.setdefault('end_date', term.date_end)
+        return super().write(vals)
 
     @api.depends('teacher_id.name', 'subject_id.name', 'class_id.name', 'term_id.name')
     def _compute_name(self):

@@ -104,6 +104,16 @@ class TestOdoo19UiAccess(TransactionCase):
             with self.subTest(instruction=instruction):
                 self.assertIn(instruction, help_html)
 
+    def test_teacher_assignment_dates_come_from_term_not_user_input(self):
+        assignment_arch = self.env.ref(
+            'school_management.view_school_teacher_assignment_form').arch_db
+        teacher_arch = self.env.ref(
+            'school_management.view_school_teacher_form').arch_db
+        for arch in (assignment_arch, teacher_arch):
+            with self.subTest(view=arch[:80]):
+                self.assertNotIn('name="start_date"', arch)
+                self.assertNotIn('name="end_date"', arch)
+
     def test_assessment_form_guides_scope_and_uses_full_width(self):
         arch = self.env.ref(
             'school_management.view_school_assessment_form').arch_db

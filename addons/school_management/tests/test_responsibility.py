@@ -164,7 +164,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
                 teacher_id=other_teacher.id, subject_id=history.id, responsibility='homeroom',
             )
 
-    def test_selecting_assignment_term_clamps_dates_to_term(self):
+    def test_selecting_assignment_term_uses_term_dates(self):
         term = self._term()
         assignment = self.env['school.teacher.assignment'].new({
             'class_id': self.class_a.id,
@@ -173,6 +173,12 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'end_date': term.date_end.replace(year=term.date_end.year + 1),
         })
         assignment._onchange_term_id()
+        self.assertEqual(assignment.start_date, term.date_start)
+        self.assertEqual(assignment.end_date, term.date_end)
+
+    def test_creating_assignment_uses_term_dates(self):
+        term = self._term()
+        assignment = self._assignment()
         self.assertEqual(assignment.start_date, term.date_start)
         self.assertEqual(assignment.end_date, term.date_end)
 

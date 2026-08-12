@@ -61,8 +61,6 @@
                                     <field name="term_id"/>
                                     <field name="responsibility"/>
                                     <field name="weekly_periods"/>
-                                    <field name="start_date"/>
-                                    <field name="end_date"/>
                                 </list>
                             </field>
                         </page>

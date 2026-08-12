@@ -34,8 +34,6 @@
                                    context="{'assignment_academic_year': academic_year_id, 'assignment_term': term_id}"/>
                             <field name="responsibility"/>
                             <field name="weekly_periods"/>
-                            <field name="start_date"/>
-                            <field name="end_date"/>
                             <field name="active"/>
                         </group>
                     </group>
