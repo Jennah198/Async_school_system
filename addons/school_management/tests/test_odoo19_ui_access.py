@@ -94,3 +94,12 @@ class TestOdoo19UiAccess(TransactionCase):
         links_arch = self.env.ref(
             'school_management.view_school_teacher_form_links').arch_db
         self.assertNotIn('expr="//form"', links_arch)
+
+    def test_empty_teacher_list_explains_staff_prerequisites(self):
+        help_html = self.env.ref(
+            'school_management.action_school_teacher').help
+        for instruction in (
+            'Registrar', 'Staff', 'Academic', 'Teacher', 'Activate',
+        ):
+            with self.subTest(instruction=instruction):
+                self.assertIn(instruction, help_html)

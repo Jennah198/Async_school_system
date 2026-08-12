@@ -117,7 +117,13 @@
         <field name="search_view_id" ref="view_school_teacher_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Register a teacher profile linked to an active staff record!
+                No teacher profiles yet
+            </p>
+            <p>
+                First open <strong>Registrar → Staff</strong>. Create or open the
+                staff member, set the Department to <strong>Academic</strong>, add a
+                primary <strong>Teacher</strong> responsibility, then click
+                <strong>Activate</strong>. Return here and click New.
             </p>
         </field>
     </record>
