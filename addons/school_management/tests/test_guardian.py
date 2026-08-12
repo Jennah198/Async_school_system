@@ -26,6 +26,7 @@ class TestGuardian(TransactionCase):
             'guardian_name': guardian,
             'guardian_phone': phone,
             'class_id': self.klass.id,
+            'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
         })
 

@@ -37,6 +37,7 @@ class TestAttendanceRoster(TransactionCase):
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911440001',
             'class_id': self.class_a.id,
+            'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
             'registration_date': registration_date or self.today,
         })
@@ -84,6 +85,7 @@ class TestAttendanceRoster(TransactionCase):
             'guardian_name': 'Guardian',
             'guardian_phone': '+251911440002',
             'class_id': self.class_a.id,
+            'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
             'registration_status': 'approved',
         })

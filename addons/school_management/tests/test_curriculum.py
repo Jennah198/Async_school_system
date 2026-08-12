@@ -38,6 +38,7 @@ class TestCurriculum(TransactionCase):
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911330001',
             'class_id': self.klass.id,
+            'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
         })
         student.action_mark_submitted()
