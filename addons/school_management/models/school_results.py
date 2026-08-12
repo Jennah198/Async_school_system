@@ -14,6 +14,8 @@ class SchoolGradingScheme(models.Model):
     pass_percentage = fields.Float(default=50.0, required=True)
     band_ids = fields.One2many('school.grading.band', 'scheme_id', string='Bands')
     active = fields.Boolean(default=True)
+    is_company_scheme = fields.Boolean(
+        string='Used for Report Cards', compute='_compute_is_company_scheme')
 
     _grading_name_company_unique = models.Constraint(
         'unique(name, company_id)', 'Grading scheme names must be unique per school.')
@@ -26,6 +28,37 @@ class SchoolGradingScheme(models.Model):
         return self.band_ids.filtered(
             lambda band: band.minimum_percentage <= percentage <= band.maximum_percentage
         ).sorted('minimum_percentage', reverse=True)[:1]
+
+    @api.depends('company_id.school_grading_scheme_id')
+    def _compute_is_company_scheme(self):
+        for scheme in self:
+            scheme.is_company_scheme = (
+                scheme.company_id.school_grading_scheme_id == scheme)
+
+    def action_use_for_report_cards(self):
+        self.ensure_one()
+        if not (self.env.su or self.env.user.has_group(
+                'school_management.group_school_admin')):
+            raise AccessError(
+                'Only a School Administrator can select the active grading scheme.')
+        if not self.active:
+            raise ValidationError('Activate this grading scheme before using it.')
+        bands = self.band_ids.sorted('minimum_percentage')
+        complete = bool(bands) and bands[0].minimum_percentage == 0 \
+            and bands[-1].maximum_percentage == 100
+        for previous, current in zip(bands, bands[1:]):
+            if abs(current.minimum_percentage - previous.maximum_percentage) > 0.011:
+                complete = False
+                break
+        if not complete:
+            raise ValidationError(
+                'Grading bands must cover every percentage from 0 through 100 '
+                'without gaps before this scheme can be used for report cards.')
+        self.company_id.write({
+            'school_grading_scheme_id': self.id,
+            'school_grading_configured': True,
+        })
+        return True
 
 
 class SchoolGradingBand(models.Model):
@@ -119,7 +152,10 @@ class SchoolReportCard(models.Model):
             raise ValidationError('The student has no enrollment for this term.')
         scheme = self.env.company.school_grading_scheme_id
         if not scheme or not scheme.band_ids:
-            raise ValidationError('Configure a grading scheme and bands first.')
+            raise ValidationError(
+                'No active grading scheme is selected. Go to Administration → '
+                'Grading Schemes, complete bands covering 0–100, then click '
+                'Use for Report Cards.')
         marks = self.env['school.mark'].search([
             ('student_id', '=', student.id), ('term_id', '=', term.id),
             ('assessment_id.state', '=', 'published'),

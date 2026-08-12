@@ -54,7 +54,41 @@
 
     <record id="view_school_grading_scheme_form" model="ir.ui.view">
         <field name="name">school.grading.scheme.form</field><field name="model">school.grading.scheme</field>
-        <field name="arch" type="xml"><form><sheet><group><field name="name"/><field name="company_id"/><field name="pass_percentage"/><field name="active"/></group><field name="band_ids"><list editable="bottom"><field name="name"/><field name="minimum_percentage"/><field name="maximum_percentage"/><field name="remark"/></list></field></sheet></form></field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_use_for_report_cards" type="object"
+                            string="Use for Report Cards" class="btn-primary"
+                            invisible="is_company_scheme"
+                            groups="school_management.group_school_admin"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-success" role="alert" invisible="not is_company_scheme">This is the active grading scheme used to calculate report cards.</div>
+                    <div class="alert alert-info" role="alert">Add non-overlapping bands that cover the complete 0–100 range, save the scheme, then click <strong>Use for Report Cards</strong>.</div>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="pass_percentage" string="Pass Percentage (%)"/>
+                        </group>
+                        <group>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="is_company_scheme" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Grade Bands (Percentage)">
+                        <field name="band_ids">
+                            <list editable="bottom">
+                                <field name="name"/>
+                                <field name="minimum_percentage" string="Minimum (%)"/>
+                                <field name="maximum_percentage" string="Maximum (%)"/>
+                                <field name="remark"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
     </record>
     <record id="action_school_grading_scheme" model="ir.actions.act_window">
         <field name="name">Grading Schemes</field><field name="res_model">school.grading.scheme</field><field name="view_mode">list,form</field>

@@ -311,6 +311,29 @@ class TestAssessment(TransactionCase):
         self.assertEqual(correction.version, 2)
         self.assertEqual(card.state, 'superseded')
 
+    def test_grading_scheme_activation_requires_complete_percentage_coverage(self):
+        scheme = self.env['school.grading.scheme'].create({
+            'name': 'ASM Incomplete Scheme', 'pass_percentage': 50.0,
+            'band_ids': [
+                (0, 0, {'name': 'A', 'minimum_percentage': 90,
+                        'maximum_percentage': 100}),
+                (0, 0, {'name': 'B', 'minimum_percentage': 80,
+                        'maximum_percentage': 89}),
+            ],
+        })
+        with self.assertRaisesRegex(ValidationError, 'cover every percentage'):
+            scheme.action_use_for_report_cards()
+
+        scheme.band_ids.create({
+            'scheme_id': scheme.id, 'name': 'C',
+            'minimum_percentage': 0, 'maximum_percentage': 79.99,
+        })
+        scheme.band_ids.filtered(lambda band: band.name == 'B').maximum_percentage = 89.99
+        scheme.action_use_for_report_cards()
+        self.assertEqual(self.env.company.school_grading_scheme_id, scheme)
+        self.assertTrue(self.env.company.school_grading_configured)
+        self.assertTrue(scheme.is_company_scheme)
+
     def test_report_card_wizard_generates_and_opens_percentage_average(self):
         scheme = self.env['school.grading.scheme'].create({
             'name': 'ASM Wizard Scheme', 'pass_percentage': 50.0,

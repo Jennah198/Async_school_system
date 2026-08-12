@@ -80,6 +80,14 @@ class TestOdoo19UiAccess(TransactionCase):
         action = self.env.ref('school_management.action_school_report_card')
         self.assertIn('Generate Report Card', action.help)
 
+    def test_grading_scheme_form_has_explicit_activation_workflow(self):
+        arch = self.env.ref(
+            'school_management.view_school_grading_scheme_form').arch_db
+        self.assertIn('action_use_for_report_cards', arch)
+        self.assertIn('Use for Report Cards', arch)
+        self.assertIn('is_company_scheme', arch)
+        self.assertIn('cover the complete 0–100 range', arch)
+
     def test_mark_entry_opens_the_assessment_workflow(self):
         action = self.env.ref('school_management.action_school_my_mark_tasks')
         self.assertEqual(action.res_model, 'school.assessment')
