@@ -28,6 +28,9 @@
         <field name="priority">1</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_create_login_user" type="object" string="Create Login" class="oe_highlight" invisible="user_id"/>
+                </header>
                 <sheet>
                     <group>
                         <group>
@@ -37,6 +40,7 @@
                             <field name="department" readonly="1"/>
                             <field name="primary_responsibility" readonly="1"/>
                             <field name="teaching_status"/>
+                            <field name="user_id" string="Login User"/>
                         </group>
                         <group>
                             <field name="qualification"/>
