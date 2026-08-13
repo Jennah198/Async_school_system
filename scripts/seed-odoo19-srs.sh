@@ -2,7 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-database="${1:-school19}"
+database="${1:-school}"
 
 docker compose -f docker-compose.odoo19.yml exec -T odoo19 sh -lc \
   'odoo shell -c /etc/odoo/odoo.conf --db_password="$(cat /run/secrets/postgres_password)" -d "$1"' \
