@@ -46,6 +46,15 @@ class SchoolCampus(models.Model):
     )
 
 
+class SchoolJobTitleResponsibility(models.Model):
+    _inherit = 'school.job.title'
+
+    responsibility = fields.Selection(
+        RESPONSIBILITIES, string='Grants Responsibility',
+        help='Primary responsibility seeded on staff who hold this job title.',
+    )
+
+
 class SchoolStaffResponsibility(models.Model):
     _name = 'school.staff.responsibility'
     _description = 'Staff Responsibility Assignment'
@@ -147,6 +156,20 @@ class SchoolStaffResponsibilityLink(models.Model):
         ('inactive', 'Inactive'),
         ('archived', 'Archived'),
     ], string='Status', default='draft', required=True, tracking=True)
+    missing_to_activate = fields.Char(
+        string='Still Missing', compute='_compute_missing_to_activate',
+    )
+
+    @api.onchange('job_title_id')
+    def _onchange_job_title_id(self):
+        if not self.job_title_id.responsibility or self.responsibility_ids.filtered('active'):
+            return
+        self.responsibility_ids = [(0, 0, {
+            'responsibility': self.job_title_id.responsibility,
+            'is_primary': True,
+            'department': self.department,
+            'start_date': fields.Date.context_today(self),
+        })]
 
     @api.depends('responsibility_ids.is_primary', 'responsibility_ids.responsibility',
                  'responsibility_ids.active')
@@ -164,30 +187,34 @@ class SchoolStaffResponsibilityLink(models.Model):
                 '|', ('staff_ids', 'in', rec.ids), ('audience_type', '=', 'all_staff'),
             ])
 
+    def _missing_registration_fields(self):
+        self.ensure_one()
+        checks = (
+            (self.first_name, 'First Name'),
+            (self.last_name, 'Last Name'),
+            (self.phone, 'Primary Phone'),
+            (self.department, 'Department'),
+            (self.job_title_id, 'Job Title'),
+            (self.employment_status, 'Employment Status'),
+            (self.responsibility_ids.filtered('active'), 'at least one active Responsibility'),
+        )
+        return [label for value, label in checks if not value]
+
+    @api.depends('first_name', 'last_name', 'phone', 'department', 'job_title_id',
+                 'employment_status', 'responsibility_ids', 'responsibility_ids.active')
+    def _compute_missing_to_activate(self):
+        for rec in self:
+            rec.missing_to_activate = ', '.join(rec._missing_registration_fields())
+
     @api.constrains('first_name', 'last_name', 'phone', 'department', 'job_title_id',
                     'employment_status', 'state', 'responsibility_ids')
     def _check_required_registration_fields(self):
-        """Brief section 4 requires these. Enforced as a constraint rather than
-        required=True so the column stays nullable and the upgrade does not fail on
-        rows that predate the rule."""
+        """Enforced as a constraint rather than required=True so the column stays
+        nullable and the upgrade does not fail on rows that predate the rule."""
         for rec in self:
             if rec.state == 'draft':
                 continue
-            missing = []
-            if not rec.first_name:
-                missing.append('First Name')
-            if not rec.last_name:
-                missing.append('Last Name')
-            if not rec.phone:
-                missing.append('Primary Phone')
-            if not rec.department:
-                missing.append('Department')
-            if not rec.job_title_id:
-                missing.append('Job Title')
-            if not rec.employment_status:
-                missing.append('Employment Status')
-            if not rec.responsibility_ids.filtered('active'):
-                missing.append('at least one active Responsibility')
+            missing = rec._missing_registration_fields()
             if missing:
                 raise ValidationError(
                     'Cannot leave Draft while the following are missing: %s'
