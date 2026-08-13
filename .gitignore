@@ -4,7 +4,6 @@ __pycache__/
 config/odoo.conf
 config/odoo19.conf
 secrets/
-.kiro
 .claude/
 *.log
 filestore/

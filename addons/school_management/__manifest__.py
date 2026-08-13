@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "School Management",
+    'name': "School_Management",
 
     'summary': "Student Registration, Staff Registration, Attendance, and Mark List for Async Tech Solutions",
 
