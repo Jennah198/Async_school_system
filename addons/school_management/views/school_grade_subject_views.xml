@@ -5,10 +5,12 @@
         <field name="arch" type="xml">
             <list editable="bottom">
                 <field name="class_grade_level" column_invisible="True"/>
-                <field name="class_id"/>
+                <field name="class_id" readonly="id"/>
                 <field name="subject_id"/>
                 <field name="stream_id" invisible="class_grade_level not in ('11', '12')"/>
                 <field name="subject_type"/>
+                <field name="maximum_mark"/>
+                <field name="pass_mark"/>
                 <field name="academic_year_id"/>
             </list>
         </field>
@@ -29,7 +31,7 @@
                     <group>
                         <group string="Academic Scope">
                             <field name="class_grade_level" invisible="1"/>
-                            <field name="class_id" options="{'no_create': True}"/>
+                            <field name="class_id" readonly="id" options="{'no_create': True}"/>
                             <field name="grade_id" readonly="1"/>
                             <field name="academic_year_id" readonly="1"/>
                             <field name="stream_id"

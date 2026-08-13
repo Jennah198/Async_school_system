@@ -68,9 +68,26 @@ class SchoolGradeSubject(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        self._check_matches_context_class(vals_list)
         records = super().create(vals_list)
         records._backfill_active_enrollments()
         return records
+
+    @api.model
+    def _check_matches_context_class(self, vals_list):
+        expected_id = self.env.context.get('default_class_id')
+        if not expected_id:
+            return
+        for vals in vals_list:
+            chosen_id = vals.get('class_id')
+            if chosen_id and chosen_id != expected_id:
+                expected, chosen = self.env['school.class'].browse([expected_id, chosen_id])
+                raise ValidationError(
+                    'You are adding this subject under %s but picked %s. Add it under '
+                    '%s instead, or open %s and use its Subjects tab.'
+                    % (expected.display_name, chosen.display_name,
+                       chosen.display_name, chosen.display_name)
+                )
 
     def write(self, vals):
         res = super().write(vals)

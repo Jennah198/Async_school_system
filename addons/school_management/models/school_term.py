@@ -46,6 +46,24 @@ class SchoolSection(models.Model):
     name = fields.Char(string='Section', required=True, help='For example A, B, or C.')
     sequence = fields.Integer(string='Sequence', default=10)
     active = fields.Boolean(string='Active', default=True)
+    class_ids = fields.One2many('school.class', 'section_id', string='Classes')
+    class_count = fields.Integer(string='Classes', compute='_compute_class_count')
+
+    @api.depends('class_ids')
+    def _compute_class_count(self):
+        for rec in self:
+            rec.class_count = len(rec.class_ids)
+
+    def action_open_classes(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Section %s - Classes' % self.name,
+            'res_model': 'school.class',
+            'view_mode': 'list,form',
+            'domain': [('section_id', '=', self.id)],
+            'context': {'create': False},
+        }
 
     _name_unique = models.Constraint(
         'unique(name)',

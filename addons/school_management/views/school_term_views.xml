@@ -30,6 +30,9 @@
             <list editable="bottom">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
+                <field name="class_count" string="Used by Classes"/>
+                <button name="action_open_classes" type="object" string="Classes"
+                        icon="fa-th-large" invisible="not class_count"/>
                 <field name="active" optional="hide"/>
             </list>
         </field>
