@@ -1,16 +1,29 @@
-from odoo import api, fields, models
-from odoo.exceptions import ValidationError
+from odoo import api, fields, models # type: ignore
+from odoo.exceptions import ValidationError # type: ignore
 
 
 class SchoolAcademicYear(models.Model):
     _name = 'school.academic.year'
     _description = 'Academic Year'
+    _inherit=['mail.thread','mail.activity.mixin']
     # Newest first: the year people are working in is the one they want at the top.
     _order = 'name desc'
 
-    name = fields.Char(string='Academic Year', required=True, help="For example 2026/2027.")
-    date_start = fields.Date(string='Starts On')
-    date_end = fields.Date(string='Ends On')
+    name = fields.Char(
+        string='Academic Year',
+          required=True, 
+          help="For example 2026/2027.")
+    date_start = fields.Date(string='Starts On',required=True)
+    date_end = fields.Date(string='Ends On',required=True)
+    # Status of the academic year, per SRS Section 4.1
+    # draft = not yet in use, open = active for enrollment/attendance,
+    # closed = finished but still readable, archived = fully locked/historical
+    state=fields.Selection([
+        ('draft','Draft'),
+        ('open','Open'),
+        ('closed','Closed'),
+        ('archived','Archived'),
+    ],string='Status',default='draft',required=True,tracking=True )
     is_current = fields.Boolean(
         string='Current',
         help='The year offered by default on new classes. Only one year holds it.',
@@ -43,7 +56,14 @@ class SchoolAcademicYear(models.Model):
                 raise ValidationError(
                     '%s is already the current academic year. Clear it there first.' % clash.name
                 )
+    def action_open(self):
+        self.write({'state': 'open'})
 
+    def action_close(self):
+        self.write({'state': 'closed'})
+
+    def action_archive_year(self):
+        self.write({'state': 'archived', 'active': False})
     @api.model
     def _default_year(self):
         """The year new classes start on: whichever is flagged current, else the
