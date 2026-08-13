@@ -44,7 +44,7 @@ class SchoolTeacherLinks(models.Model):
         return self._open(
             f'{self.name} - Timetable', 'school.class.schedule',
             [('teacher_id', '=', self.id)],
-            {'default_teacher_id': self.id, 'search_default_group_day': 1},
+            {'default_teacher_id': self.id, 'group_by': ['day_of_week']},
         )
 
     def action_open_attendance(self):

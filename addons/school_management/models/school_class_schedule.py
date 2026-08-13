@@ -62,12 +62,8 @@ class SchoolClassSchedule(models.Model):
     )
 
     day_of_week = fields.Selection(
-        DAY_OF_WEEK, string='Day of Week', tracking=True,
-        help='Set for a class that repeats every week in this term.',
-    )
-    date = fields.Date(
-        string='Exact Date', tracking=True,
-        help='Set for a one-off session such as a makeup class or an examination.',
+        DAY_OF_WEEK, string='Day of Week', required=True, tracking=True,
+        help='The weekday this class repeats on for the whole term.',
     )
     start_time = fields.Float(string='Start Time', required=True, tracking=True)
     end_time = fields.Float(string='End Time', required=True, tracking=True)
@@ -109,6 +105,21 @@ class SchoolClassSchedule(models.Model):
     def _onchange_schedule_scope(self):
         self.teacher_assignment_id = False
         self.teacher_id = False
+        assignments = self._matching_assignments()
+        if len(assignments) == 1:
+            self.teacher_assignment_id = assignments
+            self.teacher_id = assignments.teacher_id
+
+    def _matching_assignments(self):
+        self.ensure_one()
+        if not (self.class_id and self.subject_id and self.term_id):
+            return self.env['school.teacher.assignment']
+        return self.env['school.teacher.assignment'].search([
+            ('class_id', '=', self.class_id.id),
+            ('subject_id', '=', self.subject_id.id),
+            ('term_id', '=', self.term_id.id),
+            ('state', '=', 'active'),
+        ])
 
     @api.onchange('teacher_assignment_id')
     def _onchange_teacher_assignment_id(self):
@@ -127,27 +138,19 @@ class SchoolClassSchedule(models.Model):
         'Times must fall between 00:00 and 24:00.',
     )
 
-    @api.depends('subject_id', 'class_id', 'day_of_week', 'date', 'start_time')
+    @api.depends('subject_id', 'class_id', 'day_of_week', 'start_time')
     def _compute_display_name(self):
         days = dict(DAY_OF_WEEK)
         for rec in self:
             if not rec.subject_id or not rec.class_id:
                 rec.display_name = _('New')
                 continue
-            when = fields.Date.to_string(rec.date) if rec.date else days.get(rec.day_of_week, '')
+            when = days.get(rec.day_of_week, '')
             hours, minutes = divmod(round(rec.start_time * 60), 60)
             rec.display_name = (
                 f'{rec.subject_id.name} - {rec.class_id.display_name} '
                 f'({when} {hours:02d}:{minutes:02d})'
             )
-
-    @api.constrains('day_of_week', 'date')
-    def _check_slot_is_set(self):
-        for rec in self:
-            if not rec.day_of_week and not rec.date:
-                raise ValidationError(
-                    'Set a day of week for a recurring class, or an exact date for a one-off session.'
-                )
 
     @api.constrains('teacher_assignment_id', 'teacher_id', 'subject_id', 'class_id',
                     'term_id', 'academic_year_id')
@@ -203,7 +206,7 @@ class SchoolClassSchedule(models.Model):
                     'Give a reschedule reason. The previous day, date, and times stay in the log.'
                 )
 
-    @api.constrains('teacher_id', 'class_id', 'room_id', 'day_of_week', 'date',
+    @api.constrains('teacher_id', 'class_id', 'room_id', 'day_of_week',
                     'start_time', 'end_time', 'state', 'term_id', 'academic_year_id')
     def _check_no_double_booking(self):
         for rec in self:
@@ -230,13 +233,7 @@ class SchoolClassSchedule(models.Model):
             ('start_time', '<', self.end_time),
             ('end_time', '>', self.start_time),
         ]
-        if self.date:
-            return domain + [('date', '=', self.date)]
-        # ponytail: recurring slots only collide with recurring slots in the same term.
-        # A dated makeup class landing on a recurring weekday is not flagged — expand
-        # recurrences into concrete dates if that case starts to matter.
         return domain + [
-            ('date', '=', False),
             ('day_of_week', '=', self.day_of_week),
             ('academic_year_id', '=', self.academic_year_id.id),
             ('term_id', '=', self.term_id.id),
