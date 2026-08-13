@@ -210,21 +210,21 @@ class SchoolDemoSeed(models.AbstractModel):
         })
 
         subject_specs = (
-            ('Mathematics', 'SRS-MATH', 'primary'),
-            ('English Language', 'SRS-ENG', 'primary'),
-            ('Environmental Science', 'SRS-ENV', 'primary'),
-            ('Advanced Mathematics', 'SRS-AMATH', 'high_school'),
-            ('Biology', 'SRS-BIO', 'high_school'),
-            ('Chemistry', 'SRS-CHEM', 'high_school'),
+            ('Mathematics', 'SRS-MATH'),
+            ('English Language', 'SRS-ENG'),
+            ('Environmental Science', 'SRS-ENV'),
+            ('Advanced Mathematics', 'SRS-AMATH'),
+            ('Biology', 'SRS-BIO'),
+            ('Chemistry', 'SRS-CHEM'),
         )
         subjects = {}
-        for name, code, level in subject_specs:
+        for name, code in subject_specs:
             full_name = f'{PREFIX} {name}'
             subjects[code] = self._one('school.subject', [
-                ('name', '=', full_name), ('education_level', '=', level),
+                ('name', '=', full_name),
             ], {
                 'name': full_name, 'code': code, 'short_name': name,
-                'subject_type': 'compulsory', 'education_level': level,
+                'subject_type': 'compulsory',
             })
         for school_class, codes in (
                 (class3, ('SRS-MATH', 'SRS-ENG', 'SRS-ENV')),

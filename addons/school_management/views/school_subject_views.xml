@@ -6,7 +6,6 @@
             <list>
                 <field name="name"/>
                 <field name="code"/>
-                <field name="education_level"/>
                 <field name="active"/>
             </list>
         </field>
@@ -21,8 +20,7 @@
                     <group>
                         <field name="name"/>
                         <field name="code"/>
-                        <field name="education_level"/>
-                        <field name="active"/>
+                                <field name="active"/>
                     </group>
                 </sheet>
             </form>
@@ -39,7 +37,6 @@
                 <filter string="Active" name="active" domain="[('active', '=', True)]"/>
                 <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
                 <group name="group_by">
-                    <filter string="Education Level" name="group_level" context="{'group_by': 'education_level'}"/>
                 </group>
             </search>
         </field>
