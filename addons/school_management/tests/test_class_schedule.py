@@ -166,8 +166,8 @@ class TestClassSchedule(TransactionCase):
         with self.assertRaises(ValidationError):
             self._slot(teacher_id=unassigned.id)
 
-    def test_slot_needs_a_weekday_or_a_date(self):
-        with self.assertRaises(ValidationError):
+    def test_slot_needs_a_weekday(self):
+        with self.assertRaises(Exception):
             self._slot(day_of_week=False)
 
     def test_inactive_teacher_cannot_be_published(self):

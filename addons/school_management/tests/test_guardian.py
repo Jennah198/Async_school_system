@@ -12,7 +12,9 @@ class TestGuardian(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.year = self.env['school.academic.year'].create({'name': '2096/2097'})
+        self.year = self.env['school.academic.year'].create({
+            'name': '2096/2097',
+            'date_start': '2096-09-01', 'date_end': '2097-06-30'})
         self.klass = self.env['school.class'].create({
             'name': 'GRD Grade 1',
             'academic_year_id': self.year.id,

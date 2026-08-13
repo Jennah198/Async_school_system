@@ -67,11 +67,12 @@ attendance tracking and mark/result entry referencing the same student record.
         'views/school_overview_views.xml',
         'report/school_student_report.xml',
         'data/school_weekday_data.xml',
-        'views/school_setup_wizard_views.xml',
-        'views/school_day_builder_views.xml',
         'views/school_menu_views.xml',
         'report/school_report_card_report.xml',
         'views/school_srs_views.xml',
+        # After school_srs_views.xml: these inherit views defined there.
+        'views/school_setup_wizard_views.xml',
+        'views/school_day_builder_views.xml',
     ],
 
     'demo': [

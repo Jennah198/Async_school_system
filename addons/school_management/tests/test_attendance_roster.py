@@ -17,7 +17,16 @@ class TestAttendanceRoster(TransactionCase):
         self.today = fields.Date.context_today(self.env['school.attendance'])
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
-        self.year = self.env['school.academic.year'].create({'name': '2092/2093'})
+        self.year = self.env['school.academic.year'].create({
+            'name': '2092/2093',
+            'date_start': self.today - timedelta(days=180),
+            'date_end': self.today + timedelta(days=180)})
+        # Attendance is only recorded on teaching days, so the year needs a term
+        # covering the dates these tests use.
+        self.env['school.term'].create({
+            'name': 'ATT Term', 'academic_year_id': self.year.id,
+            'date_start': self.today - timedelta(days=180),
+            'date_end': self.today + timedelta(days=180)})
         self.class_a = self.env['school.class'].create({
             'name': 'ATT Grade 1',
             'academic_year_id': self.year.id,
