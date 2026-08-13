@@ -97,3 +97,19 @@ class TestCurriculum(TransactionCase):
         student = self._approved('CUR Student One')
         student.enrollment_ids._derive_subject_enrollments()
         self.assertEqual(len(student.enrollment_ids.subject_ids), 1)
+
+    def test_stream_specific_curriculum_is_only_for_grades_eleven_and_twelve(self):
+        grade_10 = self.env.ref('school_management.grade_10')
+        grade_10_class = self.env['school.class'].create({
+            'name': 'CUR Grade 10 Class', 'grade_id': grade_10.id,
+            'academic_year_id': self.year.id,
+        })
+        natural = self.env['school.stream'].create({
+            'name': 'CUR Natural', 'code': 'CUR-NAT',
+        })
+        with self.assertRaisesRegex(ValidationError, 'Grades 11 and 12'):
+            self.env['school.grade.subject'].create({
+                'class_id': grade_10_class.id,
+                'subject_id': self.math.id,
+                'stream_id': natural.id,
+            })

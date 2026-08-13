@@ -106,14 +106,15 @@ class TestAttendanceRoster(TransactionCase):
             'enrollment_id': old.id,
             'new_class_id': self.class_b.id,
             'effective_date': self.today,
+            'reason': 'Balance sections',
         })
         wizard.action_confirm()
 
-        self.assertEqual(old.state, 'transferred')
-        self.assertEqual(old.end_date, self.today)
-        new = student.enrollment_ids - old
-        self.assertEqual(new.state, 'active')
-        self.assertEqual(new.class_id, self.class_b)
+        self.assertEqual(old.state, 'active')
+        self.assertFalse(old.end_date)
+        self.assertEqual(len(student.enrollment_ids), 1)
+        self.assertEqual(len(old.placement_ids), 2)
+        self.assertEqual(old.class_id, self.class_b)
         self.assertEqual(student.class_id, self.class_b)
         self.assertEqual(history.class_id, self.class_a)
 
@@ -125,7 +126,7 @@ class TestAttendanceRoster(TransactionCase):
         registrar = self.env['res.users'].create({
             'name': 'ATT Registrar',
             'login': 'att_registrar',
-            'groups_id': [
+            'group_ids': [
                 (4, self.env.ref('base.group_user').id),
                 (4, self.env.ref('school_management.group_school_registrar').id),
             ],

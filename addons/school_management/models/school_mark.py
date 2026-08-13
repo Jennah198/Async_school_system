@@ -7,8 +7,10 @@ GRADE_BANDS = [(90, 'A'), (80, 'B'), (70, 'C'), (60, 'D'), (50, 'E')]
 # BR-10: statuses that carry a countable score. Everything else renders no grade.
 SCORED_STATUSES = ('recorded', 'transfer')
 
-# Fields a teacher fills in — editable only while the assessment is open.
-ENTRY_FIELDS = {'score', 'max_score', 'mark_status', 'note', 'student_id'}
+# Fields a teacher fills in — roster identity and assessment scope are generated.
+ENTRY_FIELDS = {'score', 'mark_status', 'note'}
+SCOPE_FIELDS = {'assessment_id', 'student_id', 'student_subject_id', 'class_id',
+                'subject_id', 'term_id', 'exam_type', 'max_score'}
 
 
 class SchoolMark(models.Model):
@@ -22,7 +24,7 @@ class SchoolMark(models.Model):
     )
     student_id = fields.Many2one(
         'school.student', string='Student', required=True, ondelete='restrict',
-        domain="[('registration_status', '=', 'approved')]",
+        domain="[('registration_status', '=', 'approved'), ('enrollment_ids.subject_ids.state', '=', 'enrolled')]",
         help='Only approved student registrations can receive marks.',
     )
     # Optional link to SRS §7.4 student subject enrollment to track dropped status/electives
@@ -88,19 +90,28 @@ class SchoolMark(models.Model):
     note = fields.Text(string='Remarks')
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('assessment_student_unique', 'unique(assessment_id, student_id)',
-         'This student is already on the mark list for this assessment.'),
-        ('max_score_positive', 'CHECK(max_score > 0)', 'Out Of must be greater than zero.'),
-        ('score_not_negative', 'CHECK(score >= 0)', 'Score cannot be negative.'),
-    ]
+    _assessment_student_unique = models.Constraint(
+        'unique(assessment_id, student_id)',
+        'This student is already on the mark list for this assessment.',
+    )
+    _max_score_positive = models.Constraint(
+        'CHECK(max_score > 0)',
+        'Out Of must be greater than zero.',
+    )
+    _score_not_negative = models.Constraint(
+        'CHECK(score >= 0)',
+        'Score cannot be negative.',
+    )
 
     @api.depends('score', 'max_score', 'mark_status', 'assessment_id.weight')
     def _compute_percentage(self):
         for rec in self:
             if rec.mark_status in SCORED_STATUSES:
                 rec.percentage = (rec.score / rec.max_score * 100) if rec.max_score else 0.0
-                rec.grade = next((g for floor, g in GRADE_BANDS if rec.percentage >= floor), 'F')
+                scheme = rec.env.company.school_grading_scheme_id
+                band = scheme.grade_for(rec.percentage) if scheme else False
+                rec.grade = band.name if band else next(
+                    (g for floor, g in GRADE_BANDS if rec.percentage >= floor), 'F')
                 weight_val = rec.assessment_id.weight if rec.assessment_id else 0.0
                 rec.weighted_score = (rec.percentage * weight_val / 100.0)
             else:
@@ -134,9 +145,38 @@ class SchoolMark(models.Model):
                     f'{target_class.display_name} in {rec.term_id.name}.'
                 )
 
+    @api.constrains('assessment_id', 'student_id', 'student_subject_id',
+                    'class_id', 'subject_id', 'term_id', 'exam_type', 'max_score')
+    def _check_assessment_scope(self):
+        """Every mark is one generated roster row for one exact assessment.
+
+        UI domains are convenience only; this guard also protects imports and RPC.
+        """
+        for rec in self:
+            assessment = rec.assessment_id
+            if rec.class_id != assessment.class_id \
+                    or rec.subject_id != assessment.subject_id \
+                    or rec.term_id != assessment.term_id \
+                    or rec.exam_type != assessment.assessment_type \
+                    or rec.max_score != assessment.max_mark:
+                raise ValidationError(
+                    'The mark class, subject, term, type, and maximum must match its assessment.')
+            line = rec.student_subject_id
+            if not line or line.student_id != rec.student_id \
+                    or line.class_id != assessment.class_id \
+                    or line.subject_id != assessment.subject_id \
+                    or line.state != 'enrolled' \
+                    or line.date_start > assessment.date \
+                    or (line.date_end and line.date_end < assessment.date):
+                raise ValidationError(
+                    '%s is not enrolled in %s for %s on the assessment date.' % (
+                        rec.student_id.name, assessment.subject_id.name,
+                        assessment.class_id.display_name))
+
     @api.onchange('assessment_id')
     def _onchange_assessment_id(self):
         if self.assessment_id:
+            self.class_id = self.assessment_id.class_id
             self.subject_id = self.assessment_id.subject_id
             self.term_id = self.assessment_id.term_id
             self.exam_type = self.assessment_id.assessment_type
@@ -150,16 +190,35 @@ class SchoolMark(models.Model):
                 raise ValidationError(
                     'Mark list rows can only be added while the assessment is open.')
             if assessment:
-                vals.setdefault('subject_id', assessment.subject_id.id)
-                vals.setdefault('term_id', assessment.term_id.id)
-                vals.setdefault('exam_type', assessment.assessment_type)
-                vals.setdefault('max_score', assessment.max_mark)
-            if not vals.get('class_id') and vals.get('student_id'):
-                student = self.env['school.student'].browse(vals['student_id'])
-                vals['class_id'] = (assessment.class_id or student.class_id).id if assessment else student.class_id.id
+                expected = {
+                    'class_id': assessment.class_id.id,
+                    'subject_id': assessment.subject_id.id,
+                    'term_id': assessment.term_id.id,
+                    'exam_type': assessment.assessment_type,
+                    'max_score': assessment.max_mark,
+                }
+                for field_name, value in expected.items():
+                    if field_name in vals and vals[field_name] != value:
+                        raise ValidationError(
+                            'Mark scope is generated from the assessment and cannot be changed.')
+                    vals[field_name] = value
+                if vals.get('student_id') and not vals.get('student_subject_id'):
+                    line = self.env['school.student.subject'].search([
+                        ('student_id', '=', vals['student_id']),
+                        ('grade_subject_id.class_id', '=', assessment.class_id.id),
+                        ('subject_id', '=', assessment.subject_id.id),
+                        ('state', '=', 'enrolled'),
+                        ('date_start', '<=', assessment.date),
+                        '|', ('date_end', '=', False), ('date_end', '>=', assessment.date),
+                    ], limit=1)
+                    if line:
+                        vals['student_subject_id'] = line.id
         return super().create(vals_list)
 
     def write(self, vals):
+        if SCOPE_FIELDS & vals.keys():
+            raise ValidationError(
+                'A mark roster row cannot be reassigned. Regenerate the assessment list instead.')
         if ENTRY_FIELDS & vals.keys():
             locked = self.filtered(
                 lambda m: m.assessment_id and m.assessment_id.state not in ('draft', 'open'))
@@ -172,7 +231,26 @@ class SchoolMark(models.Model):
                 if pending:
                     super(SchoolMark, pending).write(dict(vals, mark_status='recorded'))
                     return super(SchoolMark, self - pending).write(vals)
-        return super().write(vals)
+        tracked = ENTRY_FIELDS & vals.keys()
+        before = {
+            rec.id: {field: rec[field] for field in tracked}
+            for rec in self
+        } if tracked else {}
+        result = super().write(vals)
+        for rec in self.filtered(lambda mark: mark.id in before):
+            changed = {
+                field: {'old': before[rec.id][field], 'new': rec[field]}
+                for field in tracked if before[rec.id][field] != rec[field]
+            }
+            if changed:
+                self.env['school.assessment.event'].sudo().create({
+                    'assessment_id': rec.assessment_id.id,
+                    'event_type': 'mark_correction',
+                    'actor_id': self.env.user.id,
+                    'reason': self.env.context.get('correction_reason'),
+                    'changed_values': changed,
+                })
+        return result
 
     def unlink(self):
         if any(m.assessment_id and m.assessment_id.state not in ('draft', 'open') for m in self):

@@ -6,7 +6,7 @@
         <field name="name">school.student.tree</field>
         <field name="model">school.student</field>
         <field name="arch" type="xml">
-            <tree decoration-info="registration_status == 'draft'"
+            <list decoration-info="registration_status == 'draft'"
                   decoration-warning="registration_status == 'submitted'"
                   decoration-success="registration_status == 'approved'"
                   decoration-danger="registration_status == 'rejected'">
@@ -17,7 +17,7 @@
                 <field name="guardian_name"/>
                 <field name="guardian_phone"/>
                 <field name="registration_status" widget="badge"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -59,9 +59,11 @@
                             <field name="nationality_id" options="{'no_create': True}" readonly="registration_status == 'approved'"/>
                             <field name="education_level" readonly="registration_status == 'approved'"/>
                             <field name="admission_type" readonly="registration_status == 'approved'"/>
-                            <field name="class_id" options="{'no_create': True, 'no_create_edit': True}" readonly="registration_status == 'approved'"/>
-                            <field name="academic_year_id" readonly="registration_status == 'approved'"/>
-                            <field name="section_id" readonly="registration_status == 'approved'"/>
+                            <field name="academic_year_id" options="{'no_create': True}" readonly="registration_status == 'approved'"/>
+                            <field name="class_id" domain="[('academic_year_id', '=', academic_year_id), '|', ('education_level', '=', False), ('education_level', '=', education_level)]" options="{'no_create': True, 'no_create_edit': True}" readonly="registration_status == 'approved'"/>
+                            <field name="section_id" readonly="1"/>
+                            <field name="class_grade_level" invisible="1"/>
+                            <field name="stream_id" invisible="class_grade_level not in ('11', '12')" required="class_grade_level in ('11', '12')" readonly="registration_status == 'approved'"/>
                         </group>
                         <group string="Intake Parent / Guardian">
                             <field name="guardian_name" readonly="registration_status == 'approved'"/>
@@ -94,10 +96,10 @@
 
                         <page string="Linked Guardians" name="guardians" invisible="registration_status != 'approved'">
                             <field name="guardian_ids" nolabel="1">
-                                <tree editable="bottom">
+                                <list editable="bottom">
                                     <field name="partner_id"/>
                                     <field name="is_primary"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
 
@@ -135,7 +137,7 @@
                 <filter string="Approved" name="approved" domain="[('registration_status', '=', 'approved')]"/>
                 <separator/>
                 <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter string="Status" name="group_status" context="{'group_by': 'registration_status'}"/>
                     <filter string="Education Level" name="group_education_level" context="{'group_by': 'education_level'}"/>
                     <filter string="Class" name="group_class" context="{'group_by': 'class_id'}"/>
@@ -148,7 +150,7 @@
     <record id="action_school_student" model="ir.actions.act_window">
         <field name="name">Students</field>
         <field name="res_model">school.student</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_school_student_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

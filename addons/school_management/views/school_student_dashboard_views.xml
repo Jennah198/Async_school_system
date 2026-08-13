@@ -57,13 +57,13 @@
                     <notebook>
 <page string="Enrollment History">
     <field name="enrollment_ids" readonly="1">
-        <tree>
+        <list>
             <field name="name"/>
             <field name="academic_year_id"/>
             <field name="class_id"/>
             <field name="roll_number"/>
             <field name="state"/>
-        </tree>
+        </list>
     </field>
 </page>
                     </notebook>

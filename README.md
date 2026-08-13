@@ -2,14 +2,14 @@
 
 <!-- markdownlint-disable MD013 -->
 
-An Odoo 17 add-on covering student registration, staff and teacher registration,
-assignments, program and class scheduling, targeted announcements, attendance,
-and marks.
+An Odoo 19 Community add-on covering the full school lifecycle: admissions,
+effective-dated enrollment and curriculum, staff/HR integration, assignments,
+scheduling, attendance, assessments, documents, reporting, and audit controls.
 
 ## What you need
 
 You do **not** need to install Odoo, PostgreSQL, or Python on your computer.
-Docker downloads and runs Odoo 17 and PostgreSQL 16 for this project.
+Docker downloads and runs Odoo 19 Community and PostgreSQL 16 for this project.
 
 Install these tools first:
 
@@ -85,6 +85,29 @@ Both `.env` and `config/odoo.conf` are gitignored. Never commit them.
 
 Port 8070 on the host maps to Odoo's 8069 in the container (see
 `docker-compose.yml`).
+
+For migration rehearsals or side-by-side validation, use the isolated
+`docker-compose.odoo19.yml` project described in
+[`docs/MIGRATION_RUNBOOK.md`](docs/MIGRATION_RUNBOOK.md). It has separate
+service and volume names and must not be pointed at the Odoo 17 volumes.
+
+### Load the complete Odoo 19 SRS sample workflow
+
+After the Odoo 19 module is installed or upgraded, populate the existing
+`school19` database with a connected demonstration dataset:
+
+```bash
+./scripts/seed-odoo19-srs.sh school19
+```
+
+The command is additive and idempotent: it never resets the database, preserves
+records entered through the UI, and can be run again safely. It reuses the
+existing `2026/2027` year and terms when present; the fictional business records
+start with `SRS Demo` and cover academic setup, staff and teachers, students and
+guardians, curriculum, assignments, attendance, published assessments and
+marks, report cards, documents, rooms, schedules, a program, and an
+announcement. It also installs a complete grading scheme and selects it for
+report-card calculation without changing the other school settings.
 
 The default PostgreSQL values in `.env.example` match
 `config/odoo.conf.example`. If you change `POSTGRES_USER` or

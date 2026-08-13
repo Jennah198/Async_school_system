@@ -17,10 +17,13 @@ attendance tracking and mark/result entry referencing the same student record.
     'category': 'Education',
     # Odoo convention: <odoo series>.<major>.<minor>.<patch>. The series prefix is what
     # tells a reader, and the Odoo app store, which Odoo this targets.
-    'version': '17.0.8.0.0',
+    'version': '19.0.1.1.0',
     'license': 'LGPL-3',
 
-    'depends': ['base', 'mail'],
+    'depends': [
+        'base', 'contacts', 'portal', 'mail', 'web',
+        'hr', 'hr_attendance', 'hr_holidays',
+    ],
 
     'data': [
         'security/school_security.xml',
@@ -35,6 +38,8 @@ attendance tracking and mark/result entry referencing the same student record.
         'data/school_staff_sequence.xml',
         'data/school_job_title_seed_data.xml',
         'data/school_teacher_sequence.xml',
+        'data/school_cron.xml',
+        'data/school_grade_stream_data.xml',
         'data/school_class_seed_data.xml',
         'views/school_academic_year_views.xml',
         'views/school_term_views.xml',
@@ -61,7 +66,12 @@ attendance tracking and mark/result entry referencing the same student record.
         'views/school_dashboard_views.xml',
         'views/school_overview_views.xml',
         'report/school_student_report.xml',
+        'data/school_weekday_data.xml',
+        'views/school_setup_wizard_views.xml',
+        'views/school_day_builder_views.xml',
         'views/school_menu_views.xml',
+        'report/school_report_card_report.xml',
+        'views/school_srs_views.xml',
     ],
 
     'demo': [

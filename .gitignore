@@ -2,6 +2,8 @@
 __pycache__/
 .env
 config/odoo.conf
+config/odoo19.conf
+secrets/
 .claude/
 *.log
 filestore/

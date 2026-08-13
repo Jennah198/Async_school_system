@@ -21,10 +21,10 @@ class SchoolJobTitle(models.Model):
     ], string='Department', required=True)
     active = fields.Boolean(string='Active', default=True)
 
-    _sql_constraints = [
-        ('name_department_unique', 'unique(name, department)',
-         'This job title already exists for this department.'),
-    ]
+    _name_department_unique = models.Constraint(
+        'unique(name, department)',
+        'This job title already exists for this department.',
+    )
 
 
 class SchoolStaff(models.Model):
@@ -33,8 +33,7 @@ class SchoolStaff(models.Model):
     _order = 'name'
 
     staff_id = fields.Char(
-        string='Staff ID', required=True, copy=False,
-        readonly=True, default='New',
+        string='Staff ID', copy=False, readonly=True,
     )
     first_name = fields.Char(string='First Name', required=True)
     last_name = fields.Char(string='Last Name', required=True)
@@ -74,7 +73,7 @@ class SchoolStaff(models.Model):
     ], string='Department', required=True)
     job_title_id = fields.Many2one(
         'school.job.title', string='Job Title',
-        domain="[('department', '=', department)]",
+        domain="[('department', '=', department), ('active', '=', True)]",
         ondelete='restrict',
     )
     employment_type = fields.Selection([
@@ -97,12 +96,14 @@ class SchoolStaff(models.Model):
     active = fields.Boolean(string='Active', default=True)
     user_id = fields.Many2one('res.users', string='Linked User')
 
-    _sql_constraints = [
-        ('staff_id_unique', 'unique(staff_id)',
-         'Staff ID must be unique.'),
-        ('end_date_after_hire', 'CHECK(end_date IS NULL OR hire_date IS NULL OR end_date >= hire_date)',
-         'End date cannot be before hire date.'),
-    ]
+    _staff_id_unique = models.Constraint(
+        'unique(staff_id)',
+        'Staff ID must be unique.',
+    )
+    _end_date_after_hire = models.Constraint(
+        'CHECK(end_date IS NULL OR hire_date IS NULL OR end_date >= hire_date)',
+        'End date cannot be before hire date.',
+    )
 
     def init(self):
         self.env.cr.execute("""
@@ -137,12 +138,3 @@ class SchoolStaff(models.Model):
         for rec in self:
             if rec.email and not email_normalize(rec.email):
                 raise ValidationError("Please enter a valid email address.")
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get('staff_id', 'New') == 'New':
-                vals['staff_id'] = (
-                    self.env['ir.sequence'].next_by_code('school.staff') or 'New'
-                )
-        return super().create(vals_list)

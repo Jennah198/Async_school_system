@@ -61,7 +61,22 @@ class SchoolTeacher(models.Model):
         readonly=True
     )
 
+    login_password = fields.Char(
+        string='Login Password', store=False, copy=False,
+        compute='_compute_login_password', inverse='_inverse_login_password',
+        help='Password for the teacher login. Leave empty to email a set-password '
+             'link instead. Never stored on the teacher record.',
+    )
+
     active = fields.Boolean(string='Active', default=True)
+
+    def _compute_login_password(self):
+        self.login_password = False
+
+    def _inverse_login_password(self):
+        for rec in self:
+            if rec.login_password and rec.user_id:
+                rec.user_id.sudo().password = rec.login_password
 
     # =========================================================================
     # TEACHER DASHBOARD KPI COMPUTED FIELDS
@@ -83,10 +98,14 @@ class SchoolTeacher(models.Model):
         compute='_compute_dashboard_kpis'
     )
 
-    _sql_constraints = [
-        ('teacher_id_unique', 'unique(teacher_id)', 'Teacher ID must be unique.'),
-        ('staff_id_unique', 'unique(staff_id)', 'This staff member already has a teacher profile.'),
-    ]
+    _teacher_id_unique = models.Constraint(
+        'unique(teacher_id)',
+        'Teacher ID must be unique.',
+    )
+    _staff_id_unique = models.Constraint(
+        'unique(staff_id)',
+        'This staff member already has a teacher profile.',
+    )
 
     # =========================================================================
     # COMPUTE METHODS
@@ -182,7 +201,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'My Students',
             'res_model': 'school.student',
-            'view_mode': 'tree,form,kanban',
+            'view_mode': 'list,form,kanban',
             'domain': [('class_id', 'in', class_ids)],
         }
 
@@ -192,7 +211,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'My Class Schedule',
             'res_model': 'school.class.schedule',
-            'view_mode': 'calendar,tree,form',
+            'view_mode': 'calendar,list,form',
             'domain': [('teacher_id', '=', self.id)],
         }
 
@@ -203,7 +222,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Class Attendance',
             'res_model': 'school.attendance',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'domain': [('class_id', 'in', class_ids)],
         }
 
@@ -215,7 +234,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Mark List Analysis',
             'res_model': 'school.mark',
-            'view_mode': 'tree,form,graph,pivot',
+            'view_mode': 'list,form,graph,pivot',
             'domain': [('class_id', 'in', class_ids), ('subject_id', 'in', subject_ids)],
         }
 
@@ -236,12 +255,13 @@ class SchoolTeacher(models.Model):
         for vals in vals_list:
             if vals.get('teacher_id', 'New') == 'New':
                 vals['teacher_id'] = self.env['ir.sequence'].next_by_code('school.teacher') or 'New'
+        passwords = [vals.pop('login_password', None) for vals in vals_list]
         teachers = super().create(vals_list)
-        for teacher in teachers:
-            teacher._create_teacher_user()
+        for teacher, password in zip(teachers, passwords):
+            teacher._create_teacher_user(password=password)
         return teachers
 
-    def _create_teacher_user(self):
+    def _create_teacher_user(self, password=None):
         self.ensure_one()
         if self.user_id:
             return
@@ -256,13 +276,21 @@ class SchoolTeacher(models.Model):
         groups = [(4, internal_group.id)]
         if teacher_group:
             groups.append((4, teacher_group.id))
-        user = Users.create({
+        user_vals = {
             'name': self.name,
             'login': self.staff_id.email,
             'email': self.staff_id.email,
-            'groups_id': groups,
-        })
-        user.action_reset_password()
+            'group_ids': groups,
+        }
+        if password:
+            user_vals['password'] = password
+        user = Users.create(user_vals)
+        if not password:
+            user.action_reset_password()
         self.user_id = user.id
-    def action_create_login_user(self): 
-        for teacher in self: teacher._create_teacher_user()
+        if not self.staff_id.user_id:
+            self.staff_id.user_id = user.id
+
+    def action_create_login_user(self):
+        for teacher in self:
+            teacher._create_teacher_user(password=teacher.login_password)

@@ -6,3 +6,7 @@ from . import test_attendance_roster
 from . import test_assessment
 from . import test_security
 from . import test_responsibility
+from . import test_user_validation
+from . import test_srs_lifecycle
+from . import test_odoo19_ui_access
+from . import test_demo_seed

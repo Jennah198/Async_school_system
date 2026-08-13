@@ -321,7 +321,7 @@
     <menuitem id="menu_school_frontoffice"
               name="Communication"
               parent="menu_school_root"
-              groups="school_management.group_school_frontoffice"
+              groups="school_management.group_school_frontoffice,school_management.group_school_teacher,school_management.group_school_registrar,school_management.group_school_director"
               sequence="50"/>
 
     <menuitem id="menu_school_announcement"
@@ -335,7 +335,7 @@
               name="My Announcements"
               parent="menu_school_frontoffice"
               action="action_school_announcement_feed"
-              groups="school_management.group_school_frontoffice"
+              groups="school_management.group_school_frontoffice,school_management.group_school_teacher,school_management.group_school_registrar,school_management.group_school_director"
               sequence="20"/>
 
 </odoo>
