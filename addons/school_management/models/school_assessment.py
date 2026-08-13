@@ -330,12 +330,15 @@ class SchoolAssessment(models.Model):
         self._transition('returned', 'open')
 
     def action_approve(self):
+        self._require_exam_officer()
         self._transition('submitted', 'approved')
 
     def action_lock(self):
+        self._require_exam_officer()
         self._transition('approved', 'locked')
 
     def action_publish(self):
+        self._require_exam_officer()
         if not self.env.company.school_grading_configured \
                 or not self.env.company.school_grading_scheme_id:
             raise ValidationError(

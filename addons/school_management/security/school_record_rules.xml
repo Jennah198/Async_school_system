@@ -230,7 +230,7 @@
         <field name="name">Attendance: own classes only — Teacher</field>
         <field name="model_id" ref="model_school_attendance"/>
         <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
-        <field name="domain_force">[('teacher_assignment_id.teacher_id.user_id', '=', user.id)]</field>
+        <field name="domain_force">['|', ('teacher_assignment_id.teacher_id.user_id', '=', user.id), ('class_id', 'in', user.school_taught_class_ids.ids)]</field>
     </record>
 
     <!-- ══════════════════════════════════════════════════════════════════════ -->
@@ -394,6 +394,56 @@
         <field name="model_id" ref="model_school_program"/>
         <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!--  CLASSES                                                              -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+    <record id="rule_class_own_teacher" model="ir.rule">
+        <field name="name">Classes: assigned only — Teacher</field>
+        <field name="model_id" ref="model_school_class"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('id', 'in', user.school_taught_class_ids.ids)]</field>
+    </record>
+
+    <record id="rule_class_all_admin" model="ir.rule">
+        <field name="name">Classes: all records — Administrator</field>
+        <field name="model_id" ref="model_school_class"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_admin'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_class_all_registrar" model="ir.rule">
+        <field name="name">Classes: all records — Registrar</field>
+        <field name="model_id" ref="model_school_class"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_registrar'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_class_all_director" model="ir.rule">
+        <field name="name">Classes: all records — Director</field>
+        <field name="model_id" ref="model_school_class"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_director'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_class_all_exam_officer" model="ir.rule">
+        <field name="name">Classes: all records — Exam Officer</field>
+        <field name="model_id" ref="model_school_class"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_exam_officer'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_teacher_profile_write_own" model="ir.rule">
+        <field name="name">Teacher profile: write own record only — Teacher</field>
+        <field name="model_id" ref="model_school_teacher"/>
+        <field name="groups" eval="[(4, ref('school_management.group_school_teacher'))]"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <field name="perm_read" eval="False"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
     </record>
 
 </odoo>

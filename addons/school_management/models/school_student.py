@@ -99,9 +99,13 @@ class SchoolStudent(models.Model):
     ], default='applicant', required=True, tracking=True)
     notes = fields.Text(string='Notes')
 
-    birth_certificate = fields.Binary(string='Birth Certificate', attachment=True)
+    birth_certificate = fields.Binary(
+        string='Birth Certificate', attachment=True,
+        groups='school_management.group_school_registrar')
     birth_certificate_filename = fields.Char(string='Birth Certificate Filename')
-    previous_grade_document = fields.Binary(string='Previous Grade Document', attachment=True)
+    previous_grade_document = fields.Binary(
+        string='Previous Grade Document', attachment=True,
+        groups='school_management.group_school_registrar')
     previous_grade_document_filename = fields.Char(string='Previous Grade Document Filename')
 
     active = fields.Boolean(string='Active', default=True)
