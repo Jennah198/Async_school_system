@@ -289,7 +289,9 @@ class SchoolAssessment(models.Model):
                 'mark_status': 'pending',
             })
         if vals_list:
-            self.env['school.mark'].create(vals_list)
+            # Rows are generated from subject enrollments, so they are created with
+            # elevated rights: a teacher may score a mark list, never hand-build one.
+            self.env['school.mark'].sudo().create(vals_list)
 
     def action_open(self):
         for rec in self:

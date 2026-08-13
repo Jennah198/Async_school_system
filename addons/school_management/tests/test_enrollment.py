@@ -12,7 +12,9 @@ class TestEnrollment(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.year = self.env['school.academic.year'].create({'name': '2098/2099'})
+        self.year = self.env['school.academic.year'].create({
+            'name': '2098/2099',
+            'date_start': '2098-09-01', 'date_end': '2099-06-30'})
         self.klass = self.env['school.class'].create({
             'name': 'ENR Grade 1',
             'academic_year_id': self.year.id,
@@ -51,7 +53,9 @@ class TestEnrollment(TransactionCase):
         self.assertTrue(enrollment.name.startswith('ENR-'))
 
     def test_registration_class_must_belong_to_selected_year(self):
-        other_year = self.env['school.academic.year'].create({'name': '2099/2100'})
+        other_year = self.env['school.academic.year'].create({
+            'name': '2099/2100',
+            'date_start': '2099-09-01', 'date_end': '2100-06-30'})
         with self.assertRaisesRegex(ValidationError, 'selected academic year'):
             self.env['school.student'].create({
                 'name': 'ENR Wrong Year',
