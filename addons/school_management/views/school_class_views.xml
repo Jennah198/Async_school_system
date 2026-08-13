@@ -23,9 +23,9 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="name"/>
-                            <field name="section_id"/>
-                            <field name="academic_year_id"/>
+                            <field name="section_id" options="{'no_create': True}"/>
+                            <field name="name" placeholder="Filled from Grade and Section"/>
+                            <field name="academic_year_id" options="{'no_create': True}"/>
                             <field name="education_level"/>
                         </group>
                         <group>
