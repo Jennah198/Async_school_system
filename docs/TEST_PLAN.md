@@ -3,7 +3,7 @@
 Covers the Thursday deliverables (Jul 23 and Aug 6, 2026) and the SRS areas that are
 still unverified. Suite 1, Weekly Class Schedule, is done — the seven below remain.
 
-Test database: `school19`. Two browser sessions: admin (normal window) and
+Test database: `school`. Two browser sessions: admin (normal window) and
 `dave@gmail.com` / `Teacher@123` (private window).
 
 Record the result in the Result column: `pass`, `fail`, or `n/a` with a note.
@@ -162,7 +162,7 @@ SRS sections 11.1 to 11.3. Section transfer is done; withdrawal and promotion ar
 
 ## Automated run — 2026-08-13
 
-Executed server-side against `school19`, all rolled back unless noted.
+Executed server-side against the test database, all rolled back unless noted.
 
 | Check | Result |
 |---|---|

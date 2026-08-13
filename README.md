@@ -94,10 +94,10 @@ service and volume names and must not be pointed at the Odoo 17 volumes.
 ### Load the complete Odoo 19 SRS sample workflow
 
 After the Odoo 19 module is installed or upgraded, populate the existing
-`school19` database with a connected demonstration dataset:
+`school` database with a connected demonstration dataset:
 
 ```bash
-./scripts/seed-odoo19-srs.sh school19
+./scripts/seed-odoo19-srs.sh school
 ```
 
 The command is additive and idempotent: it never resets the database, preserves
