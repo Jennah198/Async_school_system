@@ -135,11 +135,20 @@ class SchoolAnnouncement(models.Model):
                 ['|'] * 7 + [leaf for branch in rec._audience_branches(user) for leaf in branch]
             ))
 
+    @api.model
+    def _positive_search(self, operator, value):
+        """Odoo rewrites ('field', '=', True) into ('field', 'in', [True]) before it
+        reaches a search method, so both forms have to be understood."""
+        if operator in ('in', 'not in'):
+            wanted = any(value) if isinstance(value, (list, tuple, set)) else bool(value)
+            return (operator == 'in') == wanted
+        return (operator == '=') == bool(value)
+
     def _search_is_for_me(self, operator, value):
         mine = ['|'] * 7 + [
             leaf for branch in self._audience_branches(self.env.user) for leaf in branch
         ]
-        if (operator == '=') == bool(value):
+        if self._positive_search(operator, value):
             return mine
         return ['!', *mine]
 
@@ -150,7 +159,7 @@ class SchoolAnnouncement(models.Model):
             '|', ('publish_datetime', '=', False), ('publish_datetime', '<=', now),
             '|', ('expiry_datetime', '=', False), ('expiry_datetime', '>', now),
         ]
-        if (operator == '=') == bool(value):
+        if self._positive_search(operator, value):
             return live
         return ['!', *live]
 

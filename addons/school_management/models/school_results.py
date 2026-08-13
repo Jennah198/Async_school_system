@@ -1,3 +1,5 @@
+from markupsafe import Markup
+
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
@@ -124,6 +126,67 @@ class SchoolReportCard(models.Model):
     approved_at = fields.Datetime(readonly=True, copy=False)
     published_at = fields.Datetime(readonly=True, copy=False)
     correction_reason = fields.Text(copy=False)
+    class_rank = fields.Integer(string='Class Rank', compute='_compute_class_rank')
+    class_size = fields.Integer(string='Students Ranked', compute='_compute_class_rank')
+    subject_results_html = fields.Html(
+        string='Subject Results', compute='_compute_snapshot_html', sanitize=False)
+    attendance_html = fields.Html(
+        string='Attendance', compute='_compute_snapshot_html', sanitize=False)
+
+    @api.depends('overall_average', 'class_id', 'term_id', 'superseded_by_id')
+    def _compute_class_rank(self):
+        for card in self:
+            if not self.env.company.school_ranking or not card.class_id:
+                card.class_rank = 0
+                card.class_size = 0
+                continue
+            latest = {}
+            for peer in self.search([
+                    ('class_id', '=', card.class_id.id),
+                    ('term_id', '=', card.term_id.id)], order='version desc'):
+                latest.setdefault(peer.student_id.id, peer)
+            card.class_size = len(latest)
+            card.class_rank = 1 + sum(
+                1 for peer in latest.values() if peer.overall_average > card.overall_average)
+
+    @api.depends('result_snapshot', 'attendance_summary')
+    def _compute_snapshot_html(self):
+        for card in self:
+            card.subject_results_html = card._subject_results_table()
+            card.attendance_html = card._attendance_table()
+
+    def _subject_results_table(self):
+        rows = self.result_snapshot or []
+        if not rows:
+            return False
+        body = Markup('').join(
+            Markup('<tr><td>%s</td><td class="text-end">%s</td>'
+                   '<td class="text-end">%s</td><td class="text-end">%.2f%%</td>'
+                   '<td>%s</td><td>%s</td></tr>') % (
+                row.get('subject') or '', row.get('raw_total') or 0,
+                row.get('maximum_total') or 0, row.get('percentage') or 0.0,
+                row.get('grade') or '', 'Pass' if row.get('pass') else 'Fail')
+            for row in rows)
+        return Markup(
+            '<table class="table table-sm"><thead><tr>'
+            '<th>Subject</th><th class="text-end">Score</th>'
+            '<th class="text-end">Out Of</th><th class="text-end">Percentage</th>'
+            '<th>Grade</th><th>Result</th></tr></thead><tbody>%s</tbody></table>') % body
+
+    def _attendance_table(self):
+        summary = self.attendance_summary or {}
+        if not summary:
+            return False
+        labels = dict(self.env['school.attendance']._fields['status'].selection)
+        body = Markup('').join(
+            Markup('<tr><td>%s</td><td class="text-end">%s</td></tr>') % (
+                labels.get(status, status), count)
+            for status, count in sorted(summary.items()))
+        return Markup(
+            '<table class="table table-sm"><thead><tr><th>Status</th>'
+            '<th class="text-end">Days</th></tr></thead><tbody>%s</tbody>'
+            '<tfoot><tr><th>Total</th><th class="text-end">%s</th></tr></tfoot>'
+            '</table>') % (body, sum(summary.values()))
 
     _report_card_version_unique = models.Constraint(
         'unique(student_id, term_id, version)',

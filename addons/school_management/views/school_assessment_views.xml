@@ -86,10 +86,10 @@
                     </div>
                     <group>
                         <group string="Scope">
-                            <field name="assessment_type"/>
-                            <field name="class_id" options="{'no_create': True}"/>
-                            <field name="subject_id" domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]" options="{'no_create': True}"/>
-                            <field name="term_id" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
+                            <field name="assessment_type" readonly="state != 'draft'"/>
+                            <field name="class_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                            <field name="subject_id" readonly="state != 'draft'" domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]" options="{'no_create': True}"/>
+                            <field name="term_id" readonly="state != 'draft'" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
                             <field name="academic_year_id"/>
                             <field name="matching_assignment_count" invisible="1"/>
                             <field name="assessment_date_in_term" invisible="1"/>
@@ -116,8 +116,8 @@
                                    options="{'no_create': True}"/>
                         </group>
                         <group string="Marking">
-                            <field name="date"/>
-                            <field name="max_mark"/>
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="max_mark" readonly="state != 'draft'"/>
                             <field name="weight"/>
                         </group>
                     </group>
@@ -130,7 +130,7 @@
                                 <field name="score"/>
                                 <field name="max_score" readonly="1" force_save="1"/>
                                 <field name="mark_status"/>
-                                <field name="percentage" widget="percentage" readonly="1"/>
+                                <field name="percentage" readonly="1"/>
                                 <field name="grade" readonly="1"/>
                                 <field name="note" optional="show"/>
                             </list>

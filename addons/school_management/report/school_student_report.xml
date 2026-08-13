@@ -67,10 +67,10 @@
                             <tbody>
                                 <tr t-foreach="doc.enrollment_ids" t-as="enr">
                                     <td t-esc="enr.academic_year_id.name"/>
-                                    <td t-esc="enr.grade_id.name"/>
-                                    <td t-esc="enr.section_id.name"/>
+                                    <td t-esc="enr.class_id.grade_id.name"/>
+                                    <td t-esc="enr.class_id.section_id.name"/>
                                     <td t-esc="enr.roll_number"/>
-                                    <td t-esc="enr.status"/>
+                                    <td t-esc="enr.state"/>
                                 </tr>
                             </tbody>
                         </table>
