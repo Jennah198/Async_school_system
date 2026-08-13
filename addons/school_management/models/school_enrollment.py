@@ -113,15 +113,17 @@ class SchoolEnrollment(models.Model):
         if 'class_id' in vals:
             for rec in self:
                 if previous_classes[rec.id] != rec.class_id:
-                    rec.subject_ids.filtered(
-                        lambda line: line.state == 'enrolled'
-                        and line.grade_subject_id.class_id == previous_classes[rec.id]
-                    ).write({
-                        'state': 'dropped',
-                        'date_end': self.env.context.get('placement_effective_date')
-                                    or fields.Date.context_today(rec),
-                        'drop_reason': 'Placement changed to %s' % rec.class_id.display_name,
-                    })
+                    drop_date = fields.Date.to_date(
+                        self.env.context.get('placement_effective_date')
+                        or fields.Date.context_today(rec))
+                    for line in rec.subject_ids.filtered(
+                            lambda line: line.state == 'enrolled'
+                            and line.grade_subject_id.class_id == previous_classes[rec.id]):
+                        line.write({
+                            'state': 'dropped',
+                            'date_end': max(drop_date, line.date_start),
+                            'drop_reason': 'Placement changed to %s' % rec.class_id.display_name,
+                        })
         return res
 
     def _sync_student_class(self):

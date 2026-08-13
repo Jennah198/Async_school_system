@@ -154,6 +154,33 @@ class SchoolAttendance(models.Model):
             if assignment.start_date > date or (assignment.end_date and assignment.end_date < date):
                 raise ValidationError('The teacher assignment is not effective on this date.')
 
+    @api.onchange('student_id', 'date')
+    def _onchange_student_id(self):
+        if not self.student_id:
+            return
+        vals = {'student_id': self.student_id.id, 'date': self.date}
+        self._complete_from_enrollment(vals)
+        self.enrollment_id = vals['enrollment_id']
+        self.placement_id = vals['placement_id']
+        self.class_id = vals['class_id']
+
+    @api.constrains('date', 'class_id')
+    def _check_date_within_term(self):
+        for rec in self:
+            year = rec.class_id.academic_year_id
+            terms = self.env['school.term'].search([('academic_year_id', '=', year.id)])
+            if not terms:
+                raise ValidationError(
+                    '%s has no terms, so attendance cannot be recorded for %s.'
+                    % (year.display_name, rec.class_id.display_name))
+            if not terms.filtered(lambda t: t.date_start <= rec.date <= t.date_end):
+                raise ValidationError(
+                    '%s is outside every term of %s (%s). Attendance is only '
+                    'recorded on teaching days.'
+                    % (rec.date, year.display_name,
+                       ', '.join('%s %s to %s' % (t.name, t.date_start, t.date_end)
+                                 for t in terms)))
+
     @api.constrains('enrollment_id', 'placement_id', 'student_id', 'class_id', 'date')
     def _check_date_within_enrollment(self):
         for rec in self:
@@ -208,8 +235,22 @@ class SchoolAttendanceRoster(models.TransientModel):
     class_id = fields.Many2one('school.class', string='Grade / Class', required=True)
     date = fields.Date(
         string='Date', required=True,
-        default=lambda self: fields.Date.context_today(self),
+        default=lambda self: self._default_date(),
     )
+
+    @api.model
+    def _default_date(self):
+        """Today when school is in session, otherwise the start of the nearest term,
+        so the roster never opens on a date attendance cannot be recorded for."""
+        today = fields.Date.context_today(self)
+        Term = self.env['school.term']
+        if Term.search_count([('date_start', '<=', today), ('date_end', '>=', today)]):
+            return today
+        upcoming = Term.search([('date_start', '>', today)], order='date_start', limit=1)
+        if upcoming:
+            return upcoming.date_start
+        previous = Term.search([('date_end', '<', today)], order='date_end desc', limit=1)
+        return previous.date_end or today
 
     def action_generate(self):
         self.ensure_one()

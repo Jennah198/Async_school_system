@@ -51,21 +51,31 @@ class SchoolEnrollmentTransfer(models.TransientModel):
                 raise ValidationError(
                     '%s is full on the transfer date.' % self.new_class_id.display_name)
         previous = old.placement_ids.filtered(lambda p: not p.date_end)
-        if previous:
-            previous.write({'date_end': fields.Date.subtract(self.effective_date, days=1)})
+        if previous and self.effective_date < previous.date_start:
+            raise ValidationError(
+                'The transfer cannot take effect before the current placement in '
+                '%s started (%s).' % (previous.class_id.display_name, previous.date_start))
         last_placement = self.env['school.enrollment.placement'].search([
             ('class_id', '=', self.new_class_id.id),
         ], order='roll_number desc', limit=1)
         roll = (last_placement.roll_number or 0) + 1
-        self.env['school.enrollment.placement'].create({
-            'enrollment_id': old.id,
+        values = {
             'class_id': self.new_class_id.id,
             'shift_id': self.new_class_id.shift_id.id,
             'stream_id': self.new_class_id.stream_id.id,
             'roll_number': roll,
-            'date_start': self.effective_date,
             'transfer_reason': self.reason,
-        })
+        }
+        if previous and self.effective_date == previous.date_start:
+            # Same-day move: the student never attended the old class, so correct
+            # the placement instead of leaving a zero-length one behind.
+            previous.write(values)
+        else:
+            if previous:
+                previous.write({
+                    'date_end': fields.Date.subtract(self.effective_date, days=1)})
+            self.env['school.enrollment.placement'].create(
+                dict(values, enrollment_id=old.id, date_start=self.effective_date))
         old.invalidate_recordset(['placement_ids'])
         old.with_context(placement_effective_date=fields.Date.subtract(
             self.effective_date, days=1)).write({
