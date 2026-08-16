@@ -15,11 +15,14 @@ class TestStaffEmailUniqueness(TransactionCase):
             'name': 'EMAIL Classroom Teacher', 'department': 'academic',
         })
 
-    def _staff(self, first_name, email):
+    def _staff(self, first_name, email, phone=None):
+        # Phone numbers are unique too, so every record gets one of its own
+        # unless the test is deliberately reusing a number.
+        seq = self.env['school.staff'].search_count([])
         return self.env['school.staff'].create({
             'first_name': first_name, 'last_name': 'Tester',
             'department': 'academic', 'job_title_id': self.job_title.id,
-            'phone': '+251911000000', 'email': email,
+            'phone': phone or '+2519118%05d' % seq, 'email': email,
         })
 
     def test_duplicate_email_is_rejected(self):
@@ -72,4 +75,67 @@ class TestStaffEmailUniqueness(TransactionCase):
     def test_staff_without_an_address_do_not_collide(self):
         self._staff('EMAIL Sixteen', False)
         second = self._staff('EMAIL Seventeen', False)
+        self.assertTrue(second.id)
+
+
+class TestStaffPhoneUniqueness(TransactionCase):
+    """A number reaches one person, so two staff records sharing one is a
+    data-entry mistake that makes the school's own contact list unusable.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.job_title = self.env['school.job.title'].create({
+            'name': 'PHONE Classroom Teacher', 'department': 'academic',
+        })
+
+    def _staff(self, first_name, phone):
+        # Keyed on the name, not a record count: an archived staff member still
+        # holds its email address, so a count would hand the address of an
+        # archived record straight to the next one.
+        return self.env['school.staff'].create({
+            'first_name': first_name, 'last_name': 'Tester',
+            'department': 'academic', 'job_title_id': self.job_title.id,
+            'phone': phone,
+            'email': '%s@school.example' % first_name.lower().replace(' ', '.'),
+        })
+
+    def test_duplicate_number_is_rejected(self):
+        self._staff('PHONE One', '+251911223344')
+        with self.assertRaises(ValidationError):
+            self._staff('PHONE Two', '+251911223344')
+
+    def test_the_same_number_typed_differently_is_still_a_duplicate(self):
+        self._staff('PHONE Three', '+251911223355')
+        for variant in ('0911223355', '251911223355', '+251 91 122 33 55'):
+            with self.subTest(variant=variant), self.assertRaises(ValidationError):
+                self._staff('PHONE Four', variant)
+
+    def test_a_different_number_is_accepted(self):
+        self._staff('PHONE Five', '+251911223366')
+        other = self._staff('PHONE Six', '+251911223367')
+        self.assertTrue(other.id)
+
+    def test_moving_a_number_onto_a_taken_one_is_rejected(self):
+        self._staff('PHONE Seven', '+251911223377')
+        eight = self._staff('PHONE Eight', '+251911223388')
+        with self.assertRaises(ValidationError):
+            eight.phone = '+251911223377'
+
+    def test_a_record_does_not_collide_with_itself(self):
+        staff = self._staff('PHONE Nine', '+251911223399')
+        staff.write({'phone': '0911223399'})
+        self.assertEqual(staff.phone, '0911223399')
+
+    def test_an_archived_staff_member_releases_its_number(self):
+        """Unlike an email address, which stays taken as an Odoo login, a phone
+        line is handed on when someone leaves."""
+        first = self._staff('PHONE Ten', '+251911224400')
+        first.active = False
+        reused = self._staff('PHONE Eleven', '+251911224400')
+        self.assertTrue(reused.id)
+
+    def test_staff_without_a_number_do_not_collide(self):
+        self._staff('PHONE Twelve', False)
+        second = self._staff('PHONE Thirteen', False)
         self.assertTrue(second.id)

@@ -62,13 +62,16 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         parts = name.split(' ', 1)
         first_name = parts[0]
         last_name = parts[1] if len(parts) > 1 else 'Staff'
+        # Staff email addresses and phone numbers are both unique, so a test that
+        # builds a second staff member has to hand it contact details of its own.
+        seq = self.env['school.staff'].search_count([])
         return self.env['school.staff'].create({
             'first_name': first_name, 'last_name': last_name,
             'department': department, 'job_title_id': title.id,
-            'employment_status': 'active', 'phone': '+251911000000', 'campus_id': campus.id,
+            'employment_status': 'active', 'phone': '+2519117%05d' % seq,
+            'campus_id': campus.id,
             # school.teacher.create auto-provisions a login from this address.
-            'email': '%s.%s@test.invalid' % (
-                name.lower().replace(' ', '.'), self.env['school.staff'].search_count([])),
+            'email': '%s.%s@test.invalid' % (name.lower().replace(' ', '.'), seq),
         })
 
     def _responsibility(self, staff, code, **overrides):

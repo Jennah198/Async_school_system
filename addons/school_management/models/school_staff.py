@@ -8,6 +8,11 @@ from odoo.tools import email_normalize
 # =ilike, so they are escaped before any address is used as a search pattern.
 LIKE_WILDCARDS = re.compile(r'([\\%_])')
 
+NON_DIGITS = re.compile(r'\D')
+# Length of the national significant number, the part that identifies the
+# subscriber once a country code or a trunk '0' is taken off.
+PHONE_KEY_DIGITS = 9
+
 
 class SchoolJobTitle(models.Model):
     _name = 'school.job.title'
@@ -128,6 +133,42 @@ class SchoolStaff(models.Model):
         for rec in self:
             if rec.job_title_id and rec.department and rec.job_title_id.department != rec.department:
                 raise ValidationError("Job title does not belong to the selected department.")
+
+    @api.model
+    def _phone_key(self, phone):
+        """Reduce a number to the digits that identify the subscriber, so the way
+        it was typed cannot disguise a duplicate: '+251 91 100 0000', '0911000000'
+        and '251911000000' are one number and all key to '911000000'.
+
+        Unlike an email address the stored value is left exactly as typed, since
+        the spacing a school uses to write its own numbers is worth keeping.
+        """
+        digits = NON_DIGITS.sub('', phone or '')
+        return digits[-PHONE_KEY_DIGITS:] if len(digits) > PHONE_KEY_DIGITS else digits
+
+    @api.constrains('phone')
+    def _check_phone(self):
+        for rec in self:
+            key = rec._phone_key(rec.phone)
+            if not key:
+                continue
+            # Archived staff, unlike their email address, do not keep holding a
+            # number: an address stays taken as an Odoo login, whereas a phone
+            # line is handed on when someone leaves.
+            others = self.sudo().with_context(active_test=True).search([
+                ('id', '!=', rec.id),
+                ('phone', '!=', False),
+            ])
+            clash = others.filtered(lambda staff: staff._phone_key(staff.phone) == key)[:1]
+            if clash:
+                raise ValidationError(
+                    '%s is already the phone number of %s (%s). Two staff members '
+                    'cannot share a number.' % (
+                        rec.phone,
+                        clash.name or 'another staff record',
+                        clash.staff_id or 'not yet activated',
+                    )
+                )
 
     @api.constrains('date_of_birth')
     def _check_date_of_birth(self):
