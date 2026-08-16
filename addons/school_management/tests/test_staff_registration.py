@@ -1,3 +1,6 @@
+from dateutil.relativedelta import relativedelta
+
+from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
@@ -139,3 +142,107 @@ class TestStaffPhoneUniqueness(TransactionCase):
         self._staff('PHONE Twelve', False)
         second = self._staff('PHONE Thirteen', False)
         self.assertTrue(second.id)
+
+
+class TestStaffAge(TransactionCase):
+    """A school cannot employ a child, so registration has to say so rather than
+    accept any date in the past.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.job_title = self.env['school.job.title'].create({
+            'name': 'AGE Classroom Teacher', 'department': 'academic',
+        })
+        self.today = fields.Date.context_today(self.env['school.staff'])
+
+    def _staff(self, first_name, date_of_birth):
+        seq = self.env['school.staff'].search_count([])
+        return self.env['school.staff'].create({
+            'first_name': first_name, 'last_name': 'Tester',
+            'department': 'academic', 'job_title_id': self.job_title.id,
+            'phone': '+2519119%05d' % seq, 'date_of_birth': date_of_birth,
+            'email': '%s@school.example' % first_name.lower().replace(' ', '.'),
+        })
+
+    def test_a_child_cannot_be_registered_as_staff(self):
+        with self.assertRaises(ValidationError):
+            self._staff('AGE One', self.today - relativedelta(years=1))
+
+    def test_someone_just_under_eighteen_is_rejected(self):
+        almost = self.today - relativedelta(years=18) + relativedelta(days=1)
+        with self.assertRaises(ValidationError):
+            self._staff('AGE Two', almost)
+
+    def test_someone_who_turns_eighteen_today_is_accepted(self):
+        staff = self._staff('AGE Three', self.today - relativedelta(years=18))
+        self.assertEqual(staff.age, 18)
+
+    def test_an_adult_is_accepted_and_their_age_is_shown(self):
+        staff = self._staff('AGE Four', self.today - relativedelta(years=34))
+        self.assertEqual(staff.age, 34)
+
+    def test_the_age_follows_a_corrected_birth_date(self):
+        staff = self._staff('AGE Five', self.today - relativedelta(years=40))
+        staff.date_of_birth = self.today - relativedelta(years=25)
+        self.assertEqual(staff.age, 25)
+
+    def test_staff_without_a_birth_date_keep_working(self):
+        staff = self._staff('AGE Six', False)
+        self.assertEqual(staff.age, 0)
+
+    def test_a_birth_date_in_the_future_is_still_rejected(self):
+        with self.assertRaises(ValidationError):
+            self._staff('AGE Seven', self.today + relativedelta(years=1))
+
+
+class TestTeacherHireDate(TransactionCase):
+    """The hire date is entered once, on the staff record, and the teacher profile
+    starts from it instead of asking for the same date a second time.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.job_title = self.env['school.job.title'].create({
+            'name': 'HIRE Classroom Teacher', 'department': 'academic',
+        })
+
+    def _active_staff(self, first_name, hire_date):
+        seq = self.env['school.staff'].search_count([])
+        staff = self.env['school.staff'].create({
+            'first_name': first_name, 'last_name': 'Tester',
+            'department': 'academic', 'job_title_id': self.job_title.id,
+            'employment_status': 'active', 'date_of_birth': '1990-01-15',
+            'hire_date': hire_date, 'phone': '+2519120%05d' % seq,
+            'email': '%s@school.example' % first_name.lower().replace(' ', '.'),
+        })
+        self.env['school.staff.responsibility'].create({
+            'staff_id': staff.id, 'responsibility': 'teacher',
+            'is_primary': True, 'start_date': '2026-07-01', 'department': 'academic',
+        })
+        staff.action_activate()
+        return staff
+
+    def test_the_teacher_profile_starts_from_the_staff_hire_date(self):
+        staff = self._active_staff('HIRE One', '2026-08-01')
+        teacher = self.env['school.teacher'].create({'staff_id': staff.id})
+        self.assertEqual(str(teacher.hire_date), '2026-08-01')
+
+    def test_a_teacher_who_started_teaching_later_keeps_their_own_date(self):
+        staff = self._active_staff('HIRE Two', '2026-08-01')
+        teacher = self.env['school.teacher'].create({
+            'staff_id': staff.id, 'hire_date': '2026-09-15',
+        })
+        self.assertEqual(str(teacher.hire_date), '2026-09-15')
+
+    def test_an_edited_teaching_start_date_is_not_overwritten(self):
+        staff = self._active_staff('HIRE Three', '2026-08-01')
+        teacher = self.env['school.teacher'].create({'staff_id': staff.id})
+        teacher.hire_date = '2027-01-10'
+        teacher.invalidate_recordset()
+        self.assertEqual(str(teacher.hire_date), '2027-01-10')
+
+    def test_a_staff_record_with_no_hire_date_leaves_the_teacher_empty(self):
+        staff = self._active_staff('HIRE Four', False)
+        teacher = self.env['school.teacher'].create({'staff_id': staff.id})
+        self.assertFalse(teacher.hire_date)

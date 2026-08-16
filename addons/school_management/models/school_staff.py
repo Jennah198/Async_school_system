@@ -1,5 +1,7 @@
 import re
 
+from dateutil.relativedelta import relativedelta
+
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools import email_normalize
@@ -12,6 +14,15 @@ NON_DIGITS = re.compile(r'\D')
 # Length of the national significant number, the part that identifies the
 # subscriber once a country code or a trunk '0' is taken off.
 PHONE_KEY_DIGITS = 9
+
+MINIMUM_STAFF_AGE = 18
+# Date of birth is personal data, so it stays restricted — but the roles that
+# register staff have to see it, or the age rule guards a field they cannot fill.
+PERSONAL_DATA_GROUPS = (
+    'base.group_system,'
+    'school_management.group_school_registrar,'
+    'school_management.group_school_hr'
+)
 
 
 class SchoolJobTitle(models.Model):
@@ -63,7 +74,17 @@ class SchoolStaff(models.Model):
         for rec in self:
             parts = [p for p in [rec.first_name, rec.last_name] if p]
             rec.name = ' '.join(parts) if parts else ''
-    date_of_birth = fields.Date(string='Date of Birth', groups='base.group_system')
+    date_of_birth = fields.Date(string='Date of Birth', groups=PERSONAL_DATA_GROUPS)
+    age = fields.Integer(
+        string='Age', compute='_compute_age', store=True, groups=PERSONAL_DATA_GROUPS,
+        help='Age today, from the date of birth.',
+    )
+
+    @api.depends('date_of_birth')
+    def _compute_age(self):
+        today = fields.Date.context_today(self)
+        for rec in self:
+            rec.age = relativedelta(today, rec.date_of_birth).years if rec.date_of_birth else 0
 
     phone = fields.Char(string='Phone')
     mobile = fields.Char(string='Mobile')
@@ -179,6 +200,12 @@ class SchoolStaff(models.Model):
                     raise ValidationError("Date of birth must be in the past.")
                 if rec.date_of_birth.year < 1900:
                     raise ValidationError("Date of birth cannot be before 1900.")
+                age = relativedelta(today, rec.date_of_birth).years
+                if age < MINIMUM_STAFF_AGE:
+                    raise ValidationError(
+                        'A staff member must be at least %s years old. %s is %s.'
+                        % (MINIMUM_STAFF_AGE, rec.name or 'This person', age)
+                    )
 
     @api.model_create_multi
     def create(self, vals_list):

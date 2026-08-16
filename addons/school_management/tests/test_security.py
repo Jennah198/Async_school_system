@@ -75,7 +75,7 @@ class TestSchoolSecurity(TransactionCase):
         staff = self.env['school.staff'].create({
             'first_name': first_name, 'last_name': last_name or 'Staff', 'department': 'academic',
             'job_title_id': job_title.id, 'employment_status': 'active',
-            'user_id': user.id,
+            'user_id': user.id, 'date_of_birth': '1990-01-15',
             # Staff phone numbers are unique, so each teacher gets one of its own.
             'phone': '+2519114%05d' % self.env['school.staff'].search_count([]),
         })
@@ -234,3 +234,46 @@ class TestSchoolSecurity(TransactionCase):
         visible = self.env['school.class.schedule'].with_user(self.teacher_user).search([])
         self.assertIn(mine, visible)
         self.assertNotIn(theirs, visible)
+
+    # ---------- the registrar can do the job the role exists for ----------
+
+    def test_registrar_can_carry_a_staff_member_from_new_to_active(self):
+        """Registering staff is the registrar's job, so every model activation
+        touches has to be reachable with registrar rights alone. Creating the
+        staff record was allowed while the responsibility line it cannot be
+        activated without was not, which stopped the role at the last step.
+        """
+        registrar = self._user('sec_registrar', 'group_school_registrar')
+        job_title = self.env['school.job.title'].with_user(registrar).search([
+            ('department', '=', 'administration'),
+        ], limit=1) or self.env['school.job.title'].sudo().create({
+            'name': 'SEC Registrar Title', 'department': 'administration',
+        })
+
+        staff = self.env['school.staff'].with_user(registrar).create({
+            'first_name': 'SEC', 'last_name': 'Registered By Registrar',
+            'department': 'administration', 'job_title_id': job_title.id,
+            'employment_status': 'active', 'phone': '+251911660000',
+            'email': 'sec.registered@school.example', 'date_of_birth': '1990-01-15',
+        })
+        self.env['school.staff.responsibility'].with_user(registrar).create({
+            'staff_id': staff.id, 'responsibility': 'registrar',
+            'is_primary': True, 'start_date': '2026-07-01',
+            'department': 'administration',
+        })
+
+        staff.action_activate()
+        self.assertEqual(staff.state, 'active')
+
+    def test_registrar_can_read_the_master_data_the_staff_form_shows(self):
+        registrar = self._user('sec_registrar_read', 'group_school_registrar')
+        self.env['school.campus'].with_user(registrar).search([])
+        self.env['school.job.title'].with_user(registrar).search([])
+
+    def test_a_teacher_can_open_a_staff_record_without_an_access_error(self):
+        """The staff form shows responsibilities and job titles, so read access to
+        school.staff alone is not enough to open it."""
+        staff = self.env['school.staff'].with_user(self.teacher_user).search([], limit=1)
+        if staff:
+            staff.read(['name', 'job_title_id', 'primary_responsibility'])
+            staff.responsibility_ids.read(['responsibility'])

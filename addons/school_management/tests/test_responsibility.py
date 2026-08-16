@@ -1,3 +1,6 @@
+from dateutil.relativedelta import relativedelta
+
+from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
@@ -69,7 +72,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'first_name': first_name, 'last_name': last_name,
             'department': department, 'job_title_id': title.id,
             'employment_status': 'active', 'phone': '+2519117%05d' % seq,
-            'campus_id': campus.id,
+            'campus_id': campus.id, 'date_of_birth': '1990-01-15',
             # school.teacher.create auto-provisions a login from this address.
             'email': '%s.%s@test.invalid' % (name.lower().replace(' ', '.'), seq),
         })
@@ -109,6 +112,15 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         with self.assertRaises(ValidationError):
             self.staff.action_activate()
 
+    def test_staff_cannot_leave_draft_without_a_birth_date(self):
+        """Otherwise the minimum-age rule only applies to whoever chooses to fill
+        the field, and staff reach Active with no age ever checked."""
+        self._responsibility(self.staff, 'teacher', is_primary=True)
+        self.staff.date_of_birth = False
+        with self.assertRaises(ValidationError) as caught:
+            self.staff.action_activate()
+        self.assertIn('Date of Birth', str(caught.exception))
+
     def test_staff_cannot_leave_draft_without_a_phone(self):
         self._responsibility(self.staff, 'teacher', is_primary=True)
         self.staff.phone = False
@@ -127,6 +139,44 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         self.staff.action_suspend()
         with self.assertRaises(ValidationError):
             self._assignment()
+
+    def _current_period(self):
+        """A year, term and class that contain today. Every other fixture here sits
+        in 2049, which means its assignments are future-dated and are refused by the
+        future-dated rule — so a suspension test built on them passes without the
+        suspension ever being consulted."""
+        today = fields.Date.context_today(self.env['school.staff'])
+        year = self.env['school.academic.year'].create({
+            'name': 'RESP Current Year',
+            'date_start': today - relativedelta(months=6),
+            'date_end': today + relativedelta(months=6),
+        })
+        term = self.env['school.term'].create({
+            'name': 'RESP Current Term', 'academic_year_id': year.id,
+            'date_start': year.date_start, 'date_end': year.date_end, 'sequence': 10,
+        })
+        school_class = self.env['school.class'].create({
+            'name': 'RESP Current Grade', 'section_id': self._section().id,
+            'academic_year_id': year.id, 'is_entry_level': True,
+        })
+        return term, school_class
+
+    def test_suspension_is_what_blocks_an_assignment_running_today(self):
+        self._responsibility(self.staff, 'teacher', is_primary=True)
+        self.staff.action_activate()
+        self.teacher_profile()
+        term, school_class = self._current_period()
+        other_subject = self.env['school.subject'].create({'name': 'RESP Physics'})
+
+        # Positive control: accepted while the staff member is active, which proves
+        # the refusal below is about the suspension and not about the dates.
+        self._assignment(class_id=school_class.id, term_id=term.id)
+
+        self.staff.action_suspend()
+        with self.assertRaises(ValidationError) as caught:
+            self._assignment(
+                class_id=school_class.id, term_id=term.id, subject_id=other_subject.id)
+        self.assertIn('Suspended', str(caught.exception))
 
     def test_deactivating_staff_disables_the_linked_login(self):
         user = self.env['res.users'].create({'name': 'RESP User', 'login': 'resp_user'})

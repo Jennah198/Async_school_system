@@ -34,6 +34,9 @@ class SchoolDemoSeed(models.AbstractModel):
                 'first_name': first_name, 'last_name': last_name,
                 'department': department, 'job_title_id': title.id,
                 'employment_type': 'full_time', 'employment_status': 'active',
+                # Required to activate, so that no staff member reaches Active
+                # without their age having been checked.
+                'date_of_birth': '1990-01-15',
                 'hire_date': '2026-08-01', 'phone': phone, 'email': email,
                 'campus_id': campus.id, 'manager_id': manager.id if manager else False,
             })

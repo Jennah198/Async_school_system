@@ -59,6 +59,7 @@ class TestClassSchedule(TransactionCase):
             'department': 'academic',
             'job_title_id': job_title.id,
             'employment_status': 'active',
+            'date_of_birth': '1990-01-15',
             # Staff phone numbers are unique, so each teacher gets one of its own.
             'phone': '+2519113%05d' % self.env['school.staff'].search_count([]),
             # school.teacher.create auto-provisions a login from this address.
