@@ -196,6 +196,11 @@ class SchoolStaffResponsibilityLink(models.Model):
         checks = (
             (self.first_name, 'First Name'),
             (self.last_name, 'Last Name'),
+            # Without this, the minimum-age rule only applies to whoever chooses to
+            # fill the field, and a staff member can be activated with no age ever
+            # checked. Only the roles that may read a birth date can activate staff,
+            # so requiring it here does not ask anyone for a field they cannot see.
+            (self.date_of_birth, 'Date of Birth'),
             (self.phone, 'Primary Phone'),
             (self.department, 'Department'),
             (self.job_title_id, 'Job Title'),
@@ -204,14 +209,15 @@ class SchoolStaffResponsibilityLink(models.Model):
         )
         return [label for value, label in checks if not value]
 
-    @api.depends('first_name', 'last_name', 'phone', 'department', 'job_title_id',
-                 'employment_status', 'responsibility_ids', 'responsibility_ids.active')
+    @api.depends('first_name', 'last_name', 'date_of_birth', 'phone', 'department',
+                 'job_title_id', 'employment_status', 'responsibility_ids',
+                 'responsibility_ids.active')
     def _compute_missing_to_activate(self):
         for rec in self:
             rec.missing_to_activate = ', '.join(rec._missing_registration_fields())
 
-    @api.constrains('first_name', 'last_name', 'phone', 'department', 'job_title_id',
-                    'employment_status', 'state', 'responsibility_ids')
+    @api.constrains('first_name', 'last_name', 'date_of_birth', 'phone', 'department',
+                    'job_title_id', 'employment_status', 'state', 'responsibility_ids')
     def _check_required_registration_fields(self):
         """Enforced as a constraint rather than required=True so the column stays
         nullable and the upgrade does not fail on rows that predate the rule."""

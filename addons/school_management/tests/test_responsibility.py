@@ -72,7 +72,7 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'first_name': first_name, 'last_name': last_name,
             'department': department, 'job_title_id': title.id,
             'employment_status': 'active', 'phone': '+2519117%05d' % seq,
-            'campus_id': campus.id,
+            'campus_id': campus.id, 'date_of_birth': '1990-01-15',
             # school.teacher.create auto-provisions a login from this address.
             'email': '%s.%s@test.invalid' % (name.lower().replace(' ', '.'), seq),
         })
@@ -111,6 +111,15 @@ class TestResponsibilityAndStaffControl(TransactionCase):
     def test_staff_cannot_leave_draft_without_a_responsibility(self):
         with self.assertRaises(ValidationError):
             self.staff.action_activate()
+
+    def test_staff_cannot_leave_draft_without_a_birth_date(self):
+        """Otherwise the minimum-age rule only applies to whoever chooses to fill
+        the field, and staff reach Active with no age ever checked."""
+        self._responsibility(self.staff, 'teacher', is_primary=True)
+        self.staff.date_of_birth = False
+        with self.assertRaises(ValidationError) as caught:
+            self.staff.action_activate()
+        self.assertIn('Date of Birth', str(caught.exception))
 
     def test_staff_cannot_leave_draft_without_a_phone(self):
         self._responsibility(self.staff, 'teacher', is_primary=True)

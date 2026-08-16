@@ -75,7 +75,7 @@ class TestSchoolSecurity(TransactionCase):
         staff = self.env['school.staff'].create({
             'first_name': first_name, 'last_name': last_name or 'Staff', 'department': 'academic',
             'job_title_id': job_title.id, 'employment_status': 'active',
-            'user_id': user.id,
+            'user_id': user.id, 'date_of_birth': '1990-01-15',
             # Staff phone numbers are unique, so each teacher gets one of its own.
             'phone': '+2519114%05d' % self.env['school.staff'].search_count([]),
         })
@@ -254,7 +254,7 @@ class TestSchoolSecurity(TransactionCase):
             'first_name': 'SEC', 'last_name': 'Registered By Registrar',
             'department': 'administration', 'job_title_id': job_title.id,
             'employment_status': 'active', 'phone': '+251911660000',
-            'email': 'sec.registered@school.example',
+            'email': 'sec.registered@school.example', 'date_of_birth': '1990-01-15',
         })
         self.env['school.staff.responsibility'].with_user(registrar).create({
             'staff_id': staff.id, 'responsibility': 'registrar',

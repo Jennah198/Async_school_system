@@ -73,6 +73,7 @@ class TestAssessment(TransactionCase):
             'first_name': first_name, 'last_name': last_name or 'Staff',
             'department': 'academic', 'job_title_id': job_title.id,
             'employment_status': 'active', 'user_id': user.id,
+            'date_of_birth': '1990-01-15',
             # Staff phone numbers are unique, so each teacher gets one of its own.
             'phone': '+2519115%05d' % self.env['school.staff'].search_count([]),
         })
