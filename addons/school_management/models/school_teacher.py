@@ -36,7 +36,22 @@ class SchoolTeacher(models.Model):
     qualification = fields.Char(string='Highest Qualification')
     specialization = fields.Char(string='Specialization')
     years_of_experience = fields.Integer(string='Years of Experience')
-    hire_date = fields.Date(string='Hire / Start Date')
+    hire_date = fields.Date(
+        string='Hire / Start Date', compute='_compute_hire_date',
+        store=True, readonly=False,
+        help='Taken from the staff record when the profile is created. It can be '
+             'changed here for a teacher who started teaching later than they were '
+             'hired.',
+    )
+
+    @api.depends('staff_id')
+    def _compute_hire_date(self):
+        """The date is already on the staff record, so asking for it again is a
+        second chance to disagree. It stays editable rather than related, because
+        a teacher can start teaching later than the date they were employed — and
+        because an existing profile must keep the date it already carries."""
+        for rec in self:
+            rec.hire_date = rec.hire_date or rec.staff_id.hire_date
 
     teaching_status = fields.Selection([
         ('active', 'Active'),
