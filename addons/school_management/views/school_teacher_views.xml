@@ -56,11 +56,20 @@
                     </group>
                     <notebook>
                         <page string="Assignments">
+                            <!-- Same domains as the standalone Teacher Assignments form:
+                                 assignments created from here used to offer every subject
+                                 and every term, so a curriculum or academic-year mismatch
+                                 only surfaced as an error after saving. -->
                             <field name="assignment_ids">
                                 <list editable="bottom">
-                                    <field name="subject_id"/>
                                     <field name="class_id"/>
-                                    <field name="term_id"/>
+                                    <field name="academic_year_id" readonly="1" optional="show"/>
+                                    <field name="subject_id"
+                                           domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]"
+                                           options="{'no_create': True}"/>
+                                    <field name="term_id"
+                                           domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]"
+                                           options="{'no_create': True}"/>
                                     <field name="responsibility"/>
                                     <field name="weekly_periods"/>
                                 </list>
