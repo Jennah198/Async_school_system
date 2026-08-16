@@ -1,6 +1,12 @@
+import re
+
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools import email_normalize
+
+# '_' and '%' are legal in the local part of an address but are wildcards to
+# =ilike, so they are escaped before any address is used as a search pattern.
+LIKE_WILDCARDS = re.compile(r'([\\%_])')
 
 
 class SchoolJobTitle(models.Model):
@@ -133,8 +139,51 @@ class SchoolStaff(models.Model):
                 if rec.date_of_birth.year < 1900:
                     raise ValidationError("Date of birth cannot be before 1900.")
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('email'):
+                vals['email'] = self._normalize_email(vals['email'])
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('email'):
+            vals = dict(vals, email=self._normalize_email(vals['email']))
+        return super().write(vals)
+
+    @api.model
+    def _normalize_email(self, email):
+        """Store one canonical form of the address. A teacher profile turns this
+        address into an Odoo login, so 'Almaz <Almaz@S.com> ' and 'almaz@s.com'
+        must not be able to reach the database as two different values.
+
+        An unusable address is stored as typed and left to _check_email, which
+        reports it better than a silent rewrite would.
+        """
+        return email_normalize(email) or email
+
     @api.constrains('email')
     def _check_email(self):
         for rec in self:
-            if rec.email and not email_normalize(rec.email):
+            if not rec.email:
+                continue
+            normalized = email_normalize(rec.email)
+            if not normalized:
                 raise ValidationError("Please enter a valid email address.")
+            # sudo: the address becomes a login, and logins are unique across the
+            # whole database, so a duplicate the current user cannot see is still
+            # a duplicate. Archived staff keep their address for the same reason.
+            duplicate = self.sudo().with_context(active_test=False).search([
+                ('id', '!=', rec.id),
+                ('email', '=ilike', LIKE_WILDCARDS.sub(r'\\\1', normalized)),
+            ], limit=1)
+            if duplicate:
+                raise ValidationError(
+                    '%s is already the email address of %s (%s). Staff email '
+                    'addresses must be unique because a teacher profile turns '
+                    'this address into their Odoo login.' % (
+                        normalized,
+                        duplicate.name or 'another staff record',
+                        duplicate.staff_id or 'not yet activated',
+                    )
+                )
