@@ -1,4 +1,6 @@
 import re
+import math
+import os
 from dateutil.relativedelta import relativedelta
 
 from odoo import api, fields, models  # type: ignore
@@ -64,12 +66,12 @@ class SchoolStudent(models.Model):
     class_grade_level = fields.Selection(
         related='class_id.grade_id.level', string='Grade Level', readonly=True,
     )
-
     academic_year_id = fields.Many2one(
-        'school.academic.year',
-        string="Academic Year",
-        required=True
-    )
+            'school.academic.year',
+            string="Academic Year",
+            required=True,
+            default=lambda self: self.env['school.academic.year'].search([('is_current', '=', True)], limit=1)
+        )
     section_id = fields.Many2one(
         'school.section',
         string="Section",
@@ -167,6 +169,47 @@ class SchoolStudent(models.Model):
                     'Academic streams are only available for Grades 11 and 12.')
             if rec.class_id.stream_id and rec.stream_id != rec.class_id.stream_id:
                 raise ValidationError('The student stream must match the selected class stream.')
+    BASE_GRADE1_AGE = 6
+    ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
+
+    @api.constrains('date_of_birth')
+    def _check_date_of_birth(self):
+        today = fields.Date.context_today(self)
+        for rec in self:
+            if rec.date_of_birth:
+                if rec.date_of_birth >= today:
+                    raise ValidationError("Date of birth must be in the past.")
+                if rec.date_of_birth.year < 1900:
+                    raise ValidationError("Date of birth cannot be before 1900.")
+
+    @api.constrains('date_of_birth', 'class_id')
+    def _check_min_age_for_grade(self):
+        today = fields.Date.context_today(self)
+        for rec in self:
+            if rec.date_of_birth and rec.class_id and rec.class_id.grade_id:
+                grade_level = int(rec.class_id.grade_id.level or 0)
+                if grade_level:
+                    age = relativedelta(today, rec.date_of_birth).years
+                    min_age = self.BASE_GRADE1_AGE + math.ceil((grade_level - 1) / 2)
+                    if age < min_age:
+                        raise ValidationError(
+                            f"Student registering for Grade {grade_level} must be at least "
+                            f"{min_age} years old (age given: {age})."
+                        )
+
+    @api.constrains('birth_certificate_filename', 'previous_grade_document_filename')
+    def _check_file_extensions(self):
+        for rec in self:
+            for field_name in ('birth_certificate_filename', 'previous_grade_document_filename'):
+                filename = getattr(rec, field_name)
+                if filename:
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext not in self.ALLOWED_EXTENSIONS:
+                        label = field_name.replace('_filename', '').replace('_', ' ').title()
+                        raise ValidationError(
+                            f"Invalid file type for {label}: '{ext}'. "
+                            f"Allowed types: {', '.join(self.ALLOWED_EXTENSIONS)}"
+                        )
 
     @api.depends('enrollment_ids')
     def _compute_enrollment_count(self):
