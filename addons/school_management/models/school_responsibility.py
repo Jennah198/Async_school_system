@@ -178,7 +178,11 @@ class SchoolStaffResponsibilityLink(models.Model):
             primary = rec.responsibility_ids.filtered(lambda r: r.is_primary and r.active)
             rec.primary_responsibility = primary[:1].responsibility or False
 
+    @api.depends('responsibility_ids')
     def _compute_related_counts(self):
+        """Only the responsibility count can be tracked by a dependency; the other
+        three are searches on models that do not point back here, so they are
+        recomputed whenever the form is reloaded."""
         for rec in self:
             rec.responsibility_count = len(rec.responsibility_ids)
             rec.teacher_count = self.env['school.teacher'].search_count([('staff_id', '=', rec.id)])
