@@ -103,9 +103,10 @@ class SchoolStaffHrLink(models.Model):
     employee_id = fields.Many2one('hr.employee', string='Employee', ondelete='restrict', copy=False)
     employment_ids = fields.One2many(
         'school.staff.employment', 'staff_id', string='Employment History')
-    qualification = fields.Char()
-    specialization = fields.Char()
-    years_of_experience = fields.Integer()
+    # Teaching credentials (qualification, specialization, years of experience) live
+    # on school.teacher, which is where demo data, the seed and the form all put
+    # them. The duplicates that used to sit here were never written or displayed,
+    # so they only offered a second place for the same answer to disagree.
 
     def _ensure_employee(self):
         for rec in self:
