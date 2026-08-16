@@ -74,9 +74,18 @@ class SchoolTeacher(models.Model):
         self.login_password = False
 
     def _inverse_login_password(self):
+        """The field is not stored, so the typed value only exists during this save.
+        A teacher who has no login yet must therefore get one here — reading the
+        field back from action_create_login_user returns the computed False, which
+        is how a typed password used to be dropped in favour of a reset email.
+        """
         for rec in self:
-            if rec.login_password and rec.user_id:
+            if not rec.login_password:
+                continue
+            if rec.user_id:
                 rec.user_id.sudo().password = rec.login_password
+            else:
+                rec._create_teacher_user(password=rec.login_password)
 
     # =========================================================================
     # TEACHER DASHBOARD KPI COMPUTED FIELDS
@@ -292,5 +301,8 @@ class SchoolTeacher(models.Model):
             self.staff_id.user_id = user.id
 
     def action_create_login_user(self):
+        """Clicking the button saves the form first, so a typed password has already
+        been applied by _inverse_login_password and the login already exists. Reading
+        login_password here would only ever return the computed False."""
         for teacher in self:
-            teacher._create_teacher_user(password=teacher.login_password)
+            teacher._create_teacher_user()

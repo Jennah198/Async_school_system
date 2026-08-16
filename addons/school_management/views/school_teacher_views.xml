@@ -41,7 +41,10 @@
                             <field name="primary_responsibility" readonly="1"/>
                             <field name="teaching_status"/>
                             <field name="user_id" string="Login User"/>
-                            <field name="login_password" password="True"
+                            <!-- widget="password", not password="True": the legacy
+                                 attribute only masks the input, while the widget adds
+                                 the reveal toggle needed to check a typed password. -->
+                            <field name="login_password" widget="password"
                                    placeholder="8+ chars, upper, lower, number, symbol"/>
                         </group>
                         <group>
