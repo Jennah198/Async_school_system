@@ -72,8 +72,9 @@ class TestAssessment(TransactionCase):
         staff = self.env['school.staff'].create({
             'first_name': first_name, 'last_name': last_name or 'Staff',
             'department': 'academic', 'job_title_id': job_title.id,
-            'employment_status': 'active', 'phone': '+251911550000',
-            'user_id': user.id,
+            'employment_status': 'active', 'user_id': user.id,
+            # Staff phone numbers are unique, so each teacher gets one of its own.
+            'phone': '+2519115%05d' % self.env['school.staff'].search_count([]),
         })
         self.env['school.staff.responsibility'].create({
             'staff_id': staff.id, 'responsibility': 'teacher',
