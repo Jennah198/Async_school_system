@@ -96,9 +96,9 @@ class SchoolDemoSeed(models.AbstractModel):
                 'education_level': school_class.education_level,
                 'stream_id': school_class.stream_id.id,
                 'birth_certificate': DEMO_FILE,
-                'birth_certificate_filename': 'fictional-birth-certificate.txt',
+                'birth_certificate_filename': 'fictional-birth-certificate.pdf',
                 'previous_grade_document': DEMO_FILE,
-                'previous_grade_document_filename': 'fictional-previous-grade.txt',
+                'previous_grade_document_filename': 'fictional-previous-grade.pdf',
                 'registration_date': registration_date,
             }
             if candidate_number:

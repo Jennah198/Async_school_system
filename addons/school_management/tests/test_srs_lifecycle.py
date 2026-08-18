@@ -30,7 +30,7 @@ class TestSrsLifecycle(TransactionCase):
     def _student(self, name='Lifecycle Student'):
         return self.env['school.student'].with_context(
             skip_registration_completeness=True).create({
-                'name': name, 'date_of_birth': date(2029, 1, 1),
+                'name': name, 'date_of_birth': date(2010, 1, 1),
                 'guardian_name': 'Guardian', 'guardian_phone': '+251911000001',
                 'class_id': self.class_a.id, 'academic_year_id': self.year.id,
             })
