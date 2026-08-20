@@ -40,8 +40,10 @@ class SchoolGradeSubject(models.Model):
     maximum_mark = fields.Float(default=100.0, required=True)
     pass_mark = fields.Float(default=50.0, required=True)
     optional_selection_limit = fields.Integer(default=0)
-    active = fields.Boolean(string='Active', default=True)
-
+    grading_policy_id = fields.Many2one(
+        'school.grading.policy', string='Grading Policy', ondelete='restrict',
+        help='Optional subject-specific grading policy. The default policy is used when empty.',
+    )
     _class_subject_unique = models.Constraint(
         'unique(class_id, subject_id)',
         'This subject is already on the curriculum of this class.',

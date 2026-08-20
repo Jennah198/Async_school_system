@@ -83,3 +83,21 @@ class ResUsers(models.Model):
         if 'email' in vals:
             self._check_valid_email_format(vals.get('email'))
         return super().write(vals)
+
+    def _school_teacher_pair_domain(self):
+        """Return the exact class/subject pairs assigned to this user."""
+        self.ensure_one()
+        assignments = self.env['school.teacher.assignment'].sudo().search([
+            ('teacher_id.user_id', '=', self.id),
+            ('active', '=', True),
+        ])
+        pairs = {(assignment.class_id.id, assignment.subject_id.id)
+                 for assignment in assignments}
+        if not pairs:
+            return [('id', '=', 0)]
+        domain = ['|'] * (len(pairs) - 1)
+        for class_id, subject_id in sorted(pairs):
+            domain += [
+                '&', ('class_id', '=', class_id), ('subject_id', '=', subject_id),
+            ]
+        return domain

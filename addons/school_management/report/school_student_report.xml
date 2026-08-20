@@ -11,7 +11,6 @@
         <field name="binding_model_id" ref="model_school_student"/>
         <field name="binding_type">report</field>
     </record>
-
     <!-- Print template -->
     <template id="report_school_student_document">
         <t t-call="web.html_container">
@@ -20,7 +19,6 @@
                     <div class="page">
                         <h2 t-esc="doc.name"/>
                         <p>Registration No: <span t-esc="doc.regno"/></p>
-
                         <h4>Identity</h4>
                         <table class="table table-sm">
                             <tr><td>Date of Birth</td><td t-esc="doc.date_of_birth"/></tr>
@@ -30,7 +28,6 @@
                             <tr><td>Education Level</td><td t-esc="doc.education_level"/></tr>
                             <tr><td>Admission Type</td><td t-esc="doc.admission_type"/></tr>
                         </table>
-
                         <h4>Placement</h4>
                         <table class="table table-sm">
                             <tr><td>Grade / Class</td><td t-esc="doc.class_id.name"/></tr>
@@ -38,7 +35,6 @@
                             <tr><td>Section</td><td t-esc="doc.section_id.name"/></tr>
                             <tr><td>Registration Status</td><td t-esc="doc.registration_status"/></tr>
                         </table>
-
                         <h4>Parent / Guardian</h4>
                         <table class="table table-sm">
                             <tr><td>Name</td><td t-esc="doc.guardian_name"/></tr>
@@ -46,13 +42,11 @@
                             <tr><td>Address</td><td t-esc="doc.address"/></tr>
                             <tr><td>Previous School</td><td t-esc="doc.previous_school"/></tr>
                         </table>
-
                         <h4>Emergency Contact</h4>
                         <table class="table table-sm">
                             <tr><td>Name</td><td t-esc="doc.emergency_contact_name"/></tr>
                             <tr><td>Phone</td><td t-esc="doc.emergency_contact_phone"/></tr>
                         </table>
-
                         <h4>Enrollment History</h4>
                         <table class="table table-sm">
                             <thead>
