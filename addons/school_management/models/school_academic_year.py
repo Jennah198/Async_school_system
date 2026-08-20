@@ -1,3 +1,5 @@
+import re
+
 from odoo import api, fields, models
 from odoo.exceptions import AccessError, ValidationError
 
@@ -6,14 +8,11 @@ class SchoolAcademicYear(models.Model):
     _name = 'school.academic.year'
     _description = 'Academic Year'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    # Newest first: the year people are working in is the one they want at the top.
     _order = 'name desc'
 
     name = fields.Char(string='Academic Year', required=True, help="For example 2026/2027.")
     date_start = fields.Date(string='Starts On', required=True)
     date_end = fields.Date(string='Ends On', required=True)
-    # SRS 4.1: draft = not yet in use, open = active for enrollment and attendance,
-    # closed = finished but still readable, archived = locked history.
     state = fields.Selection([
         ('draft', 'Draft'),
         ('open', 'Open'),
@@ -37,6 +36,17 @@ class SchoolAcademicYear(models.Model):
         'The end date must be after the start date.',
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            date_start = vals.get('date_start')
+            if date_start and fields.Date.from_string(date_start) < fields.Date.today():
+                raise ValidationError(
+                    "Cannot create an academic year starting in the past. "
+                    "Please choose today's date or a future date."
+                )
+        return super().create(vals_list)
+
     @api.depends('class_ids')
     def _compute_class_count(self):
         counts = dict(self.env['school.class']._read_group(
@@ -55,14 +65,28 @@ class SchoolAcademicYear(models.Model):
                 raise ValidationError(
                     '%s is already the current academic year. Clear it there first.' % clash.name
                 )
-    def action_open(self):
-        self.write({'state': 'open'})
 
-    def action_close(self):
-        self.write({'state': 'closed'})
+    @api.constrains('name', 'date_start', 'date_end')
+    def _check_name_matches_start_year(self):
+        for rec in self.filtered(lambda r: r.name and r.date_start and r.date_end):
+            match = re.match(r'^(\d{4})/(\d{4})$', rec.name)
+            if not match:
+                raise ValidationError(
+                    "Academic year name must be in the format YYYY/YYYY, "
+                    "for example 2026/2027."
+                )
+            start_year, end_year = int(match.group(1)), int(match.group(2))
+            if start_year != rec.date_start.year:
+                raise ValidationError(
+                    "The starting year in the name (%s) doesn't match the actual "
+                    "start date (%s)." % (rec.name, rec.date_start)
+                )
+            if end_year != rec.date_end.year:
+                raise ValidationError(
+                    "The ending year in the name (%s) doesn't match the actual "
+                    "end date (%s)." % (rec.name, rec.date_end)
+                )
 
-    def action_archive_year(self):
-        self.write({'state': 'archived', 'active': False})
     @api.model
     def _default_year(self):
         """The year new classes start on: whichever is flagged current, else the
@@ -92,9 +116,16 @@ class SchoolAcademicYear(models.Model):
         return super().write(vals)
 
     def action_open(self):
+        today = fields.Date.today()
         for year in self:
             if year.state != 'draft':
                 raise ValidationError('Only a draft academic year can be opened.')
+            if year.date_end and year.date_end < today:
+                raise ValidationError(
+                    '%s ended on %s and cannot be opened. '
+                    'Only the current or a future academic year can be opened.'
+                    % (year.name, year.date_end)
+                )
             year.write({'state': 'open'})
 
     def action_close(self):
