@@ -110,7 +110,6 @@ class SchoolTeacherAssignment(models.Model):
     @api.constrains('teacher_id')
     def _check_staff_can_take_work(self):
         """Brief section 4: suspended or inactive staff take no new assignments.
-
         Control status and employment status are separate fields on purpose, and
         each blocks work on its own: Suspend sets state, while a resignation is
         recorded as an employment_status. Checking only one of them let a
@@ -124,6 +123,14 @@ class SchoolTeacherAssignment(models.Model):
                     '%s is %s as a staff member and cannot receive new assignments.'
                     % (rec.teacher_id.name, label)
                 )
+            employment_status = staff.employment_status
+            if employment_status not in ('active', 'on_leave'):
+                raise ValidationError(
+                    '%s is %s as a staff member and cannot receive new assignments.'
+                    % (rec.teacher_id.name, employment_status)
+                )
+            if not staff.active:
+                raise ValidationError('Inactive staff cannot receive assignments.')
             employment_status = staff.employment_status
             if employment_status not in ('active', 'on_leave'):
                 raise ValidationError(
