@@ -36,7 +36,7 @@ class TestCurriculum(TransactionCase):
     def _approved(self, name):
         student = self.env['school.student'].create({
             'name': name,
-            'date_of_birth': '2089-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911330001',
             'class_id': self.klass.id,

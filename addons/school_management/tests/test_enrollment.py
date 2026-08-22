@@ -25,7 +25,7 @@ class TestEnrollment(TransactionCase):
     def _student(self, name):
         return self.env['school.student'].create({
             'name': name,
-            'date_of_birth': '2091-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911223344',
             'class_id': self.klass.id,
@@ -59,7 +59,7 @@ class TestEnrollment(TransactionCase):
         with self.assertRaisesRegex(ValidationError, 'selected academic year'):
             self.env['school.student'].create({
                 'name': 'ENR Wrong Year',
-                'date_of_birth': '2091-01-01',
+                'date_of_birth': '2010-01-01',
                 'guardian_name': 'Guardian',
                 'guardian_phone': '+251911223399',
                 'class_id': self.klass.id,

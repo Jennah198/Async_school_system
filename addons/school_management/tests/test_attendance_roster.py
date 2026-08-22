@@ -42,7 +42,7 @@ class TestAttendanceRoster(TransactionCase):
     def _approved(self, name, registration_date=None):
         student = self.env['school.student'].create({
             'name': name,
-            'date_of_birth': '2087-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911440001',
             'class_id': self.class_a.id,
@@ -90,7 +90,7 @@ class TestAttendanceRoster(TransactionCase):
     def test_attendance_requires_active_enrollment(self):
         loner = self.env['school.student'].create({
             'name': 'ATT No Enrollment',
-            'date_of_birth': '2087-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian',
             'guardian_phone': '+251911440002',
             'class_id': self.class_a.id,

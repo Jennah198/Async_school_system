@@ -24,7 +24,7 @@ class TestGuardian(TransactionCase):
     def _student(self, name, guardian='GRD Guardian One', phone='+251911000001'):
         return self.env['school.student'].create({
             'name': name,
-            'date_of_birth': '2091-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': guardian,
             'guardian_phone': phone,
             'class_id': self.klass.id,

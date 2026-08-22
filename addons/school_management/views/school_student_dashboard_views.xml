@@ -49,11 +49,18 @@
                         <field name="emergency_contact_phone" readonly="1"/>
                     </group>
                     <group string="Documents">
-                        <field name="birth_certificate" filename="birth_certificate_filename" readonly="1"/>
-                        <field name="birth_certificate_filename" invisible="1"/>
-                        <field name="previous_grade_document" filename="previous_grade_document_filename" readonly="1"/>
-                        <field name="previous_grade_document_filename" invisible="1"/>
-                    </group>
+        <field name="birth_certificate"
+            filename="birth_certificate_filename"
+            widget="binary"
+            options="{'accepted_file_extensions': '.pdf,.jpg,.jpeg,.png'}"/>
+        <field name="birth_certificate_filename" invisible="1"/>
+
+        <field name="previous_grade_document"
+            filename="previous_grade_document_filename"
+            widget="binary"
+            options="{'accepted_file_extensions': '.pdf,.jpg,.jpeg,.png'}"/>
+        <field name="previous_grade_document_filename" invisible="1"/>
+    </group>
                     <notebook>
 <page string="Enrollment History">
     <field name="enrollment_ids" readonly="1">

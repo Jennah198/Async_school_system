@@ -93,7 +93,7 @@ class TestAssessment(TransactionCase):
     def _approved(self, name, registration_date):
         student = self.env['school.student'].create({
             'name': name,
-            'date_of_birth': '2090-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911550001',
             'academic_year_id': self.year.id,
@@ -215,7 +215,7 @@ class TestAssessment(TransactionCase):
         """A mark row must belong to the assessment's generated roster."""
         other_student = self.env['school.student'].create({
             'name': 'ASM Grade Two Student',
-            'date_of_birth': '2090-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of Grade Two Student',
             'guardian_phone': '+251911550099',
             'academic_year_id': self.year.id,
