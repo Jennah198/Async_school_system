@@ -36,17 +36,6 @@ class SchoolAcademicYear(models.Model):
         'The end date must be after the start date.',
     )
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            date_start = vals.get('date_start')
-            if date_start and fields.Date.from_string(date_start) < fields.Date.today():
-                raise ValidationError(
-                    "Cannot create an academic year starting in the past. "
-                    "Please choose today's date or a future date."
-                )
-        return super().create(vals_list)
-
     @api.depends('class_ids')
     def _compute_class_count(self):
         counts = dict(self.env['school.class']._read_group(
@@ -116,6 +105,13 @@ class SchoolAcademicYear(models.Model):
         return super().write(vals)
 
     def action_open(self):
+        """A year is recorded in Draft and only becomes usable here, which is why
+        the date rule belongs on this transition and not on create(): a school has
+        to be able to record the year it is currently in — which by definition
+        started in the past — and the historical years its reports and migrations
+        refer to. What must not happen is a finished year being opened for
+        enrolment and attendance, and that is what is checked below.
+        """
         today = fields.Date.today()
         for year in self:
             if year.state != 'draft':
