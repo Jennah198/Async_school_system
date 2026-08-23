@@ -146,16 +146,23 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         future-dated rule — so a suspension test built on them passes without the
         suspension ever being consulted."""
         today = fields.Date.context_today(self.env['school.staff'])
-        year = self.env['school.academic.year'].create({
-            'name': 'RESP Current Year',
-            'date_start': today - relativedelta(months=6),
+        year_name = '%d/%d' % (today.year, today.year + 1)
+        year = self.env['school.academic.year'].search([
+            ('name', '=', year_name),
+        ], limit=1) or self.env['school.academic.year'].create({
+            'name': year_name,
+            'date_start': today,
             'date_end': today + relativedelta(months=6),
         })
-        term = self.env['school.term'].create({
+        term = self.env['school.term'].search([
+            ('academic_year_id', '=', year.id), ('name', '=', 'RESP Current Term'),
+        ], limit=1) or self.env['school.term'].create({
             'name': 'RESP Current Term', 'academic_year_id': year.id,
             'date_start': year.date_start, 'date_end': year.date_end, 'sequence': 10,
         })
-        school_class = self.env['school.class'].create({
+        school_class = self.env['school.class'].search([
+            ('academic_year_id', '=', year.id), ('name', '=', 'RESP Current Grade'),
+        ], limit=1) or self.env['school.class'].create({
             'name': 'RESP Current Grade', 'section_id': self._section().id,
             'academic_year_id': year.id, 'is_entry_level': True,
         })

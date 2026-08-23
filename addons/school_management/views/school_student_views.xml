@@ -57,6 +57,7 @@
                             <field name="age" readonly="1"/>
                             <field name="gender" readonly="registration_status == 'approved'"/>
                             <field name="nationality_id" options="{'no_create': True}" readonly="registration_status == 'approved'"/>
+                            <field name="fan_number" placeholder="16-digit FAN" readonly="registration_status == 'approved'"/>
                             <field name="education_level" readonly="registration_status == 'approved'"/>
                             <field name="admission_type" readonly="registration_status == 'approved'"/>
                             <field name="academic_year_id" options="{'no_create': True}" readonly="registration_status == 'approved'"/>

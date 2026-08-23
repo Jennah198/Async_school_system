@@ -15,11 +15,14 @@ class TestAssessment(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.today = fields.Date.context_today(self.env['school.assessment'])
-        self.yesterday = self.today - timedelta(days=1)
+        real_today = fields.Date.context_today(self.env['school.attendance'])
         self.year = self.env['school.academic.year'].create({
-            'name': '2096/2097', 'date_start': self.today - timedelta(days=365),
-            'date_end': self.today + timedelta(days=365)})
+            'name': '%d/%d' % (real_today.year + 20, real_today.year + 21),
+            'date_start': real_today.replace(year=real_today.year + 20),
+            'date_end': real_today.replace(year=real_today.year + 21)})
+        self.today = self.year.date_start + timedelta(days=10)
+        self.yesterday = self.today - timedelta(days=1)
+        self.tomorrow = self.today + timedelta(days=1)
         self.klass = self.env['school.class'].create({
             'name': 'ASM Grade 1',
             'academic_year_id': self.year.id,
@@ -33,8 +36,8 @@ class TestAssessment(TransactionCase):
         self.art = self.env['school.subject'].create({'name': 'ASM Art'})
         self.term = self.env['school.term'].create({
             'name': 'ASM Term', 'academic_year_id': self.year.id,
-            'date_start': self.today - timedelta(days=365),
-            'date_end': self.today + timedelta(days=365)})
+            'date_start': self.year.date_start,
+            'date_end': self.year.date_end})
         self.env['school.grade.subject'].create({
             'class_id': self.klass.id, 'subject_id': self.math.id,
         })
@@ -92,15 +95,18 @@ class TestAssessment(TransactionCase):
 
     def _approved(self, name, registration_date):
         student = self.env['school.student'].create({
-            'name': name,
-            'date_of_birth': '2010-01-01',
-            'guardian_name': 'Guardian of %s' % name,
-            'guardian_phone': '+251911550001',
-            'academic_year_id': self.year.id,
-            'class_id': self.klass.id,
-            'birth_certificate': DUMMY_FILE,
-            'registration_date': registration_date,
-        })
+        'name': name,
+        'date_of_birth': '2010-01-01',
+        'guardian_name': 'Guardian of %s' % name,
+        'guardian_phone': '+251911550001',
+        'emergency_contact_name': 'Emergency Contact for %s' % name,
+        'emergency_contact_phone': '+251911550002',
+        'fan_number': '10%014d' % self.env['school.student'].search_count([]),
+        'academic_year_id': self.year.id,
+        'class_id': self.klass.id,
+        'birth_certificate': DUMMY_FILE,
+        'registration_date': registration_date,
+    })
         student.action_mark_submitted()
         student.action_mark_approved()
         return student
@@ -218,6 +224,9 @@ class TestAssessment(TransactionCase):
             'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of Grade Two Student',
             'guardian_phone': '+251911550099',
+            'emergency_contact_name': 'Emergency Contact for Grade Two Student',
+            'emergency_contact_phone': '+251911999004',
+            'fan_number': '11%014d' % self.env['school.student'].search_count([]),
             'academic_year_id': self.year.id,
             'class_id': self.other_class.id,
             'birth_certificate': DUMMY_FILE,

@@ -14,19 +14,20 @@ class TestAttendanceRoster(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.today = fields.Date.context_today(self.env['school.attendance'])
+        real_today = fields.Date.context_today(self.env['school.attendance'])
+        self.year = self.env['school.academic.year'].create({
+            'name': '%d/%d' % (real_today.year + 20, real_today.year + 21),
+            'date_start': real_today.replace(year=real_today.year + 20),
+            'date_end': real_today.replace(year=real_today.year + 21)})
+        self.today = self.year.date_start + timedelta(days=10)
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
-        self.year = self.env['school.academic.year'].create({
-            'name': '2092/2093',
-            'date_start': self.today - timedelta(days=180),
-            'date_end': self.today + timedelta(days=180)})
         # Attendance is only recorded on teaching days, so the year needs a term
         # covering the dates these tests use.
         self.env['school.term'].create({
             'name': 'ATT Term', 'academic_year_id': self.year.id,
-            'date_start': self.today - timedelta(days=180),
-            'date_end': self.today + timedelta(days=180)})
+            'date_start': self.year.date_start,
+            'date_end': self.year.date_end})
         self.class_a = self.env['school.class'].create({
             'name': 'ATT Grade 1',
             'academic_year_id': self.year.id,
@@ -39,16 +40,19 @@ class TestAttendanceRoster(TransactionCase):
             'academic_year_id': self.year.id,
         })
 
-    def _approved(self, name, registration_date=None):
+    def _approved(self, name, registration_date=None, class_id=None, academic_year_id=None):
         student = self.env['school.student'].create({
-            'name': name,
-            'date_of_birth': '2010-01-01',
-            'guardian_name': 'Guardian of %s' % name,
-            'guardian_phone': '+251911440001',
-            'class_id': self.class_a.id,
-            'academic_year_id': self.year.id,
-            'birth_certificate': DUMMY_FILE,
-            'registration_date': registration_date or self.today,
+                'name': name,
+                'date_of_birth': '2010-01-01',
+                'guardian_name': 'Guardian of %s' % name,
+                'guardian_phone': '+251911440001',
+                'emergency_contact_name': 'Emergency Contact for %s' % name,
+                'emergency_contact_phone': '+251911440003',
+                'fan_number': '12%014d' % self.env['school.student'].search_count([]),
+                'class_id': (class_id or self.class_a).id,
+                'academic_year_id': (academic_year_id or self.year).id,
+                'birth_certificate': DUMMY_FILE,
+                'registration_date': registration_date or self.today,
         })
         student.action_mark_submitted()
         student.action_mark_approved()
@@ -93,6 +97,9 @@ class TestAttendanceRoster(TransactionCase):
             'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian',
             'guardian_phone': '+251911440002',
+            'emergency_contact_name': 'Emergency Contact',
+            'emergency_contact_phone': '+251911440009',
+            'fan_number': '13%014d' % self.env['school.student'].search_count([]),
             'class_id': self.class_a.id,
             'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
@@ -140,15 +147,43 @@ class TestAttendanceRoster(TransactionCase):
                 (4, self.env.ref('school_management.group_school_registrar').id),
             ],
         })
-        student = self._approved('ATT Student One',
-                                 registration_date=self.yesterday)
-        old_row = self.env['school.attendance'].create({
-            'student_id': student.id, 'date': self.yesterday,
+        real_today = fields.Date.context_today(self.env['school.attendance'])
+        year_name = '%d/%d' % (real_today.year, real_today.year + 1)
+        real_year = self.env['school.academic.year'].search([('name', '=', year_name)], limit=1)
+        if not real_year:
+            real_year = self.env['school.academic.year'].create({
+                'name': year_name,
+                'date_start': real_today,
+                'date_end': real_today + timedelta(days=60),
+            })
+        real_term = self.env['school.term'].search([
+            ('academic_year_id', '=', real_year.id),
+            ('date_start', '<=', real_today),
+            ('date_end', '>=', real_today + timedelta(days=1)),
+        ], limit=1)
+        if not real_term:
+            real_term = self.env['school.term'].create({
+                'name': 'ATT Real Term', 'academic_year_id': real_year.id,
+                'date_start': real_today, 'date_end': real_today + timedelta(days=60),
+            })
+        real_class = self.env['school.class'].create({
+            'name': 'ATT Real Class',
+            'academic_year_id': real_year.id,
+            'is_entry_level': True,
+        })
+        student = self._approved(
+            'ATT Student One',
+            registration_date=real_today,
+            class_id=real_class,
+            academic_year_id=real_year,
+        )
+        other_row = self.env['school.attendance'].create({
+            'student_id': student.id, 'date': real_today + timedelta(days=1),
         })
         today_row = self.env['school.attendance'].create({
-            'student_id': student.id, 'date': self.today,
+            'student_id': student.id, 'date': real_today,
         })
         with self.assertRaises(ValidationError):
-            old_row.with_user(registrar).unlink()
+            other_row.with_user(registrar).unlink()
         today_row.with_user(registrar).unlink()
-        self.assertTrue(old_row.exists())
+        self.assertTrue(other_row.exists())

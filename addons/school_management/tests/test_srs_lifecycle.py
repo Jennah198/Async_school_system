@@ -28,10 +28,15 @@ class TestSrsLifecycle(TransactionCase):
         })
 
     def _student(self, name='Lifecycle Student'):
+        seq = self.env['school.student'].search_count([])
         return self.env['school.student'].with_context(
             skip_registration_completeness=True).create({
                 'name': name, 'date_of_birth': date(2010, 1, 1),
-                'guardian_name': 'Guardian', 'guardian_phone': '+251911000001',
+                'guardian_name': 'Guardian',
+                'guardian_phone': '+25191100%04d' % seq,
+                'emergency_contact_name': 'Guardian Emergency Contact',
+                'emergency_contact_phone': '+25191101%04d' % seq,
+                'fan_number': '2000000000%06d' % seq,
                 'class_id': self.class_a.id, 'academic_year_id': self.year.id,
             })
 
@@ -72,7 +77,7 @@ class TestSrsLifecycle(TransactionCase):
         self.year.write({'state': 'closed'})
         with self.assertRaises(ValidationError):
             self.year.name = 'Changed'
-        self.year.with_context(authorized_academic_correction=True).name = '2035/36 corrected'
+            self.year.with_context(authorized_academic_correction=True).name = '2035/2036'
 
     def test_one_enrollment_per_student_and_year_including_drafts(self):
         student = self._student('One Yearly Enrollment')

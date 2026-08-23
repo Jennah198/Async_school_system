@@ -31,6 +31,7 @@ class SchoolStudent(models.Model):
     nationality_id = fields.Many2one('res.country', string='Nationality')
     primary_language = fields.Char()
     national_id = fields.Char(groups='school_management.group_school_registrar')
+    fan_number = fields.Char(string='FAN (National ID)', groups='school_management.group_school_registrar')
     regional_id = fields.Char(groups='school_management.group_school_registrar')
     email = fields.Char()
 
@@ -124,6 +125,10 @@ class SchoolStudent(models.Model):
         'unique(admission_number)',
         'Admission number must be unique.',
     )
+    _fan_number_unique = models.Constraint(
+    'unique(fan_number)',
+    'This FAN (National ID) is already registered to another student.',
+)
 
     @api.onchange('academic_year_id', 'education_level')
     def _onchange_registration_scope(self):
@@ -167,6 +172,14 @@ class SchoolStudent(models.Model):
                     'Academic streams are only available for Grades 11 and 12.')
             if rec.class_id.stream_id and rec.stream_id != rec.class_id.stream_id:
                 raise ValidationError('The student stream must match the selected class stream.')
+
+    _FAN_RE = re.compile(r'^\d{16}$')
+
+    @api.constrains('fan_number')
+    def _check_fan_format(self):
+        for rec in self.filtered('fan_number'):
+            if not self._FAN_RE.match(rec.fan_number):
+                raise ValidationError("FAN (National ID) must be exactly 16 digits.")
     BASE_GRADE1_AGE = 6
     ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
 
@@ -253,6 +266,8 @@ class SchoolStudent(models.Model):
             missing.append('Grade / Class')
         if not self.academic_year_id:
             missing.append('Academic Year')
+        if not self.fan_number:
+            missing.append('FAN (National ID)')
         if not self.emergency_contact_name:
             missing.append('Emergency Contact Name')
         if not self.emergency_contact_phone:

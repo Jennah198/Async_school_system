@@ -54,7 +54,13 @@ class SchoolEnrollmentPlacement(models.Model):
         active_domain = [('date_start', '<=', today), '|', ('date_end', '=', False),
                          ('date_end', '>=', today)]
         return active_domain if is_active else ['!', *active_domain]
-
+    def placement_on(self, date):
+        """Return the placement in this recordset effective on the given date,
+        or an empty recordset if none applies. Assumes at most one placement
+        is effective on any given date within an enrollment's history."""
+        return self.filtered(
+            lambda p: p.date_start <= date and (not p.date_end or p.date_end >= date)
+        )
     
 
 class SchoolEnrollmentOverride(models.Model):
