@@ -17,9 +17,14 @@ class TestAssessment(TransactionCase):
         super().setUp()
         self.today = fields.Date.context_today(self.env['school.assessment'])
         self.yesterday = self.today - timedelta(days=1)
+        year_start = self.today - timedelta(days=365)
+        year_end = self.today + timedelta(days=365)
         self.year = self.env['school.academic.year'].create({
-            'name': '2096/2097', 'date_start': self.today - timedelta(days=365),
-            'date_end': self.today + timedelta(days=365)})
+            # Name derived from the dates: school.academic.year requires the two to
+            # agree. Spanning a year either side of today also keeps the name clear
+            # of the seeded consecutive years.
+            'name': '%s/%s' % (year_start.year, year_end.year),
+            'date_start': year_start, 'date_end': year_end})
         self.klass = self.env['school.class'].create({
             'name': 'ASM Grade 1',
             'academic_year_id': self.year.id,
