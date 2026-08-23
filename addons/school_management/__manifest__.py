@@ -45,7 +45,6 @@ attendance tracking and mark/result entry referencing the same student record.
         'data/school_cron.xml',
         'data/school_grade_stream_data.xml',
         'data/school_class_seed_data.xml',
-        'data/school_grading_data.xml',
         'views/school_academic_year_views.xml',
         'views/school_term_views.xml',
         'views/school_class_views.xml',
