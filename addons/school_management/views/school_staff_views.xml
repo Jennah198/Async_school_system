@@ -65,6 +65,8 @@
                             <group>
                                 <group string="Identity">
                                     <field name="gender"/>
+                                    <field name="fayda_id"
+                                           placeholder="16 digits, e.g. 1234567890123456"/>
                                     <field name="date_of_birth"/>
                                     <field name="age" readonly="1"
                                            invisible="not date_of_birth"/>
