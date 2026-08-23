@@ -8,6 +8,7 @@ from . import test_security
 from . import test_responsibility
 from . import test_staff_registration
 from . import test_staff_fayda_id
+from . import test_staff_import
 from . import test_user_validation
 from . import test_srs_lifecycle
 from . import test_odoo19_ui_access
