@@ -18,9 +18,14 @@ class TestAttendanceRoster(TransactionCase):
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
         self.year = self.env['school.academic.year'].create({
-            'name': '2092/2093',
-            'date_start': self.today - timedelta(days=180),
-            'date_end': self.today + timedelta(days=180)})
+            # Name derived from the dates, which the model requires to agree.
+            # A year either side of today keeps the two calendar years apart, so
+            # the name can never collide with the seeded consecutive years
+            # whatever date the suite runs on.
+            'name': '%s/%s' % ((self.today - timedelta(days=365)).year,
+                               (self.today + timedelta(days=365)).year),
+            'date_start': self.today - timedelta(days=365),
+            'date_end': self.today + timedelta(days=365)})
         # Attendance is only recorded on teaching days, so the year needs a term
         # covering the dates these tests use.
         self.env['school.term'].create({

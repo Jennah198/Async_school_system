@@ -147,9 +147,13 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         suspension ever being consulted."""
         today = fields.Date.context_today(self.env['school.staff'])
         year = self.env['school.academic.year'].create({
-            'name': 'RESP Current Year',
-            'date_start': today - relativedelta(months=6),
-            'date_end': today + relativedelta(months=6),
+            # school.academic.year requires a YYYY/YYYY name matching its dates.
+            # A year either side of today satisfies that and keeps the name clear
+            # of the seeded consecutive years.
+            'name': '%s/%s' % ((today - relativedelta(years=1)).year,
+                               (today + relativedelta(years=1)).year),
+            'date_start': today - relativedelta(years=1),
+            'date_end': today + relativedelta(years=1),
         })
         term = self.env['school.term'].create({
             'name': 'RESP Current Term', 'academic_year_id': year.id,

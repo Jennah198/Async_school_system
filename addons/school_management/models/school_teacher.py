@@ -1,6 +1,8 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
 
+from .school_staff import PERSONAL_DATA_GROUPS
+
 
 class SchoolTeacher(models.Model):
     _name = 'school.teacher'
@@ -31,6 +33,15 @@ class SchoolTeacher(models.Model):
     )
     primary_responsibility = fields.Selection(
         related='staff_id.primary_responsibility', string='Primary Responsibility', store=True, readonly=True,
+    )
+    # Related and unstored, so the teacher profile reads the staff record rather
+    # than holding a second copy that could be edited into disagreeing with it.
+    # Unlike hire_date there is no case for the two differing: a person has one
+    # Fayda number, and the staff record is where it is registered.
+    fayda_id = fields.Char(
+        related='staff_id.fayda_id', string='Fayda ID', readonly=True,
+        groups=PERSONAL_DATA_GROUPS,
+        help='Registered on the staff record, which is the source of truth for it.',
     )
 
     qualification = fields.Char(string='Highest Qualification')
