@@ -2,6 +2,7 @@ from . import test_class_schedule
 from . import test_enrollment
 from . import test_guardian
 from . import test_curriculum
+from . import test_academic_year
 from . import test_attendance_roster
 from . import test_assessment
 from . import test_security
