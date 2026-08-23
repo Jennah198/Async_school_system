@@ -38,11 +38,9 @@ class SchoolStudent(models.Model):
     guardian_phone = fields.Char(string='Guardian Phone', required=True,
                                   help='Enter local number or include + with country code.')
     address = fields.Text(string='Address')
-
-    emergency_contact_name = fields.Char(string='Emergency Contact Name')
-    emergency_contact_phone = fields.Char(string='Emergency Contact Phone',
-                                           help='Enter local number or include + with country code.')
-
+    emergency_contact_name = fields.Char(string='Emergency Contact Name', required=True)
+    emergency_contact_phone = fields.Char(string='Emergency Contact Phone', required=True,
+                                       help='Enter local number or include + with country code.')
     education_level = fields.Selection([
         ('kindergarten', 'Kindergarten'),
         ('primary', 'Primary'),
@@ -255,6 +253,10 @@ class SchoolStudent(models.Model):
             missing.append('Grade / Class')
         if not self.academic_year_id:
             missing.append('Academic Year')
+        if not self.emergency_contact_name:
+            missing.append('Emergency Contact Name')
+        if not self.emergency_contact_phone:
+            missing.append('Emergency Contact Phone')
         if not self.birth_certificate:
             missing.append('Birth Certificate')
         if self.class_id and not self.class_id.is_entry_level and not self.previous_grade_document:
@@ -267,11 +269,6 @@ class SchoolStudent(models.Model):
         grade_level = int(self.class_id.grade_id.level or 0) if self.class_id.grade_id else 0
         if grade_level in (11, 12) and not (self.stream_id or self.class_id.stream_id):
             missing.append('Academic Stream (required for Grade 11/12)')
-        if grade_level == 12:
-            if not self.candidate_number:
-                missing.append('Grade 12 Candidate Number')
-            if not self.candidate_registration_date:
-                missing.append('Candidate Registration Date')
         questions = self.env['school.registration.question'].search([
             ('active', '=', True), ('required', '=', True),
             ('grade_from', '<=', grade_level or 12), ('grade_to', '>=', grade_level or 1),

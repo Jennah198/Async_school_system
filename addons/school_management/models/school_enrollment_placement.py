@@ -55,45 +55,7 @@ class SchoolEnrollmentPlacement(models.Model):
                          ('date_end', '>=', today)]
         return active_domain if is_active else ['!', *active_domain]
 
-    @api.constrains('enrollment_id', 'class_id', 'date_start', 'date_end', 'roll_number')
-    def _check_effective_placement(self):
-        for rec in self:
-            if rec.class_id.academic_year_id != rec.enrollment_id.academic_year_id:
-                raise ValidationError('The placement class must belong to the enrollment year.')
-            if rec.date_start < rec.enrollment_id.enrollment_date:
-                raise ValidationError('A placement cannot predate its enrollment.')
-            if rec.enrollment_id.end_date and (
-                    not rec.date_end or rec.date_end > rec.enrollment_id.end_date):
-                raise ValidationError('A placement cannot extend beyond its enrollment.')
-            overlap = self.search([
-                ('id', '!=', rec.id), ('enrollment_id', '=', rec.enrollment_id.id),
-                ('date_start', '<=', rec.date_end or fields.Date.to_date('9999-12-31')),
-                '|', ('date_end', '=', False), ('date_end', '>=', rec.date_start),
-            ], limit=1)
-            if overlap:
-                override = rec.enrollment_id.override_ids.filtered(
-                    lambda item: item.active and item.operation == 'placement')
-                if not override:
-                    raise ValidationError('Enrollment placements cannot overlap.')
-            roll_clash = self.search([
-                ('id', '!=', rec.id), ('class_id', '=', rec.class_id.id),
-                ('roll_number', '=', rec.roll_number),
-                ('date_start', '<=', rec.date_end or fields.Date.to_date('9999-12-31')),
-                '|', ('date_end', '=', False), ('date_end', '>=', rec.date_start),
-            ], limit=1)
-            if roll_clash:
-                override = rec.enrollment_id.override_ids.filtered(
-                    lambda item: item.active and item.operation == 'roll_number')
-                if not override:
-                    raise ValidationError('That roll number is already used during this period.')
-
-    def placement_on(self, date):
-        return self.filtered(
-            lambda p: p.date_start <= date and (not p.date_end or p.date_end >= date))[:1]
-
-    def unlink(self):
-        raise ValidationError('Placement history cannot be deleted. Correct it with effective dates.')
-
+    
 
 class SchoolEnrollmentOverride(models.Model):
     _name = 'school.enrollment.override'

@@ -4,7 +4,6 @@ from odoo.exceptions import ValidationError
 
 class SchoolEnrollment(models.Model):
     """A student's academic placement for one year (SRS §5.4).
-
     The student record stays the permanent identity; this row is the thing
     rosters, attendance, and mark lists will hang off. One active row per
     student per academic year.
@@ -31,7 +30,8 @@ class SchoolEnrollment(models.Model):
     )
     roll_number = fields.Integer(
         string='Roll Number', copy=False,
-        help='Assigned automatically on activation when left at 0.',
+        help='Assigned automatically on activation, ordered alphabetically '
+             'by student name within the class.',
     )
     admission_type = fields.Selection([
         ('new', 'New'),
@@ -141,13 +141,23 @@ class SchoolEnrollment(models.Model):
                 skip_registration_completeness=True
             ).write(values)
 
-    def _next_roll_number(self):
-        self.ensure_one()
-        last = self.search([
-            ('class_id', '=', self.class_id.id),
-            ('state', '!=', 'draft'),
-        ], order='roll_number desc', limit=1)
-        return (last.roll_number or 0) + 1
+    def _resequence_roll_numbers(self):
+        """Recompute contiguous roll numbers for every active enrollment in
+        each class touched by self, ordered alphabetically by student name.
+        """
+        for klass in self.mapped('class_id'):
+            active_enrollments = self.search([
+                ('class_id', '=', klass.id),
+                ('state', '=', 'active'),
+            ])
+            ordered = active_enrollments.sorted(
+                key=lambda rec: (rec.student_id.name or '').lower()
+            )
+            # Clear first so the unique-roll constraint never sees a
+            # transient clash while numbers are being reassigned.
+            ordered.write({'roll_number': 0})
+            for index, rec in enumerate(ordered, start=1):
+                rec.roll_number = index
 
     def _check_capacity(self):
         for rec in self:
@@ -180,9 +190,11 @@ class SchoolEnrollment(models.Model):
                     % rec.student_id.name
                 )
             rec._check_capacity()
-            if not rec.roll_number:
-                rec.roll_number = rec._next_roll_number()
             rec.state = 'active'
+
+        self._resequence_roll_numbers()
+
+        for rec in self:
             if not rec.placement_ids:
                 self.env['school.enrollment.placement'].create({
                     'enrollment_id': rec.id,
@@ -193,8 +205,16 @@ class SchoolEnrollment(models.Model):
                     'date_start': rec.enrollment_date,
                 })
                 rec.invalidate_recordset(['placement_ids'])
+
         self._sync_student_class()
         self._derive_subject_enrollments()
+
+    def action_discard(self):
+        self.ensure_one()
+        if self.state != 'draft':
+            raise ValidationError('Only draft enrollments can be discarded.')
+        self.unlink()
+        return {'type': 'ir.actions.act_window_close'}
 
     def _derive_subject_enrollments(self):
         StudentSubject = self.env['school.student.subject']
@@ -236,6 +256,7 @@ class SchoolEnrollment(models.Model):
                 'date_end': rec.end_date,
             })
             rec.student_id.lifecycle_status = 'withdrawn'
+        self._resequence_roll_numbers()
 
     def action_complete(self):
         for rec in self:
@@ -244,6 +265,7 @@ class SchoolEnrollment(models.Model):
             end_date = rec.end_date or rec.academic_year_id.date_end or fields.Date.context_today(rec)
             rec.write({'state': 'completed', 'end_date': end_date})
             rec.placement_ids.filtered(lambda p: not p.date_end).write({'date_end': end_date})
+        self._resequence_roll_numbers()
 
     def action_graduate(self):
         self.action_complete()
@@ -267,3 +289,40 @@ class SchoolEnrollment(models.Model):
             'view_id': self.env.ref('school_management.view_school_student_dashboard_form').id,
             'target': 'current',
         }
+
+    @api.constrains('class_id', 'roll_number', 'state')
+    def _check_roll_unique(self):
+        for rec in self:
+            if not rec.roll_number or rec.state != 'active':
+                continue
+            clash = self.search([
+                ('id', '!=', rec.id),
+                ('class_id', '=', rec.class_id.id),
+                ('roll_number', '=', rec.roll_number),
+                ('state', '=', 'active'),
+            ], limit=1)
+            if clash:
+                raise ValidationError(
+                    'Roll number %s is already taken in %s by %s.'
+                    % (rec.roll_number, rec.class_id.display_name, clash.student_id.name)
+                )
+
+    def _resequence_roll_numbers(self):
+        """Recompute contiguous roll numbers for every active enrollment in
+        each class touched by self, ordered alphabetically by student name,
+        falling back to guardian name when two students share a name.
+        """
+        for klass in self.mapped('class_id'):
+            active_enrollments = self.search([
+                ('class_id', '=', klass.id),
+                ('state', '=', 'active'),
+            ])
+            ordered = active_enrollments.sorted(
+                key=lambda rec: (
+                    (rec.student_id.name or '').lower(),
+                    (rec.student_id.guardian_name or '').lower(),
+                )
+            )
+            ordered.write({'roll_number': 0})
+            for index, rec in enumerate(ordered, start=1):
+                rec.roll_number = index

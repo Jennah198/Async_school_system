@@ -64,7 +64,9 @@
                             <field name="section_id" readonly="1"/>
                             <field name="class_grade_level" invisible="1"/>
                             <field name="stream_id" invisible="class_grade_level not in ('11', '12')" required="class_grade_level in ('11', '12')" readonly="registration_status == 'approved'"/>
-                        </group>
+                            <field name="candidate_number" invisible="class_grade_level != '12'"/>
+                            <field name="candidate_registration_date" invisible="class_grade_level != '12'"/>
+                            </group>
                         <group string="Intake Parent / Guardian">
                             <field name="guardian_name" readonly="registration_status == 'approved'"/>
                             <field name="guardian_phone" placeholder="e.g. 912345678" readonly="registration_status == 'approved'"/>
