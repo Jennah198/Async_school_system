@@ -11,4 +11,9 @@ RUN pip install --break-system-packages ethiopian-date
 # shadows the copy, so `docker compose up` behaves exactly as before.
 COPY --chown=odoo:odoo addons/ /mnt/extra-addons/
 
+# The Render start script writes the generated config here, and /etc/odoo is
+# root-owned in the base image while Odoo runs as the unprivileged odoo user.
+COPY --chown=odoo:odoo scripts/render-start.sh /usr/local/bin/render-start.sh
+RUN chmod +x /usr/local/bin/render-start.sh && chown odoo:odoo /etc/odoo
+
 USER odoo
