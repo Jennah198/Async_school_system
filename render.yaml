@@ -1,0 +1,48 @@
+# Render Blueprint for the shared staging environment.
+#
+# Staging only — not production. See docs/STAGING.md for first-time setup and
+# for the free-tier limitations this deliberately accepts.
+#
+# No secret values live in this file. Everything marked `sync: false` is entered
+# once in the Render dashboard and never committed.
+services:
+  - type: web
+    name: async-school-staging
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    # Staging tracks main. Feature branches are tested locally and reviewed in a
+    # PR; they never deploy here.
+    autoDeploy: true
+
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Bypasses the base image's entrypoint, which would otherwise read Render's
+    # PORT as the PostgreSQL port. See the header of scripts/render-start.sh.
+    dockerCommand: /usr/local/bin/render-start.sh
+
+    # Server-level endpoint: returns 200 {"status": "pass"} without a session
+    # and without touching the database.
+    healthCheckPath: /web/health
+
+    envVars:
+      # ---- Neon PostgreSQL -------------------------------------------------
+      # Use the DIRECT / UNPOOLED host, i.e. NOT the "-pooler" one. Odoo keeps
+      # session state and the demo seeder takes a pg_advisory_xact_lock, which
+      # transaction pooling breaks.
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: school
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # ---- Odoo ------------------------------------------------------------
+      # Master password guarding database create/drop/duplicate. Not the login.
+      - key: ODOO_ADMIN_PASSWD
+        sync: false
