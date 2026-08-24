@@ -136,10 +136,11 @@ class TestSchoolSecurity(TransactionCase):
         })
 
     def _assessment(self, school_class, subject, name):
+        term = self._term()
         return self.env['school.assessment'].create({
             'name': name, 'assessment_type': 'test',
             'class_id': school_class.id, 'subject_id': subject.id,
-            'term_id': self._term().id, 'state': 'open',
+            'term_id': term.id, 'date': term.date_start, 'state': 'open',
         })
 
     def _attendance(self, student):
@@ -315,3 +316,12 @@ class TestSchoolSecurity(TransactionCase):
         if staff:
             staff.read(['name', 'job_title_id', 'primary_responsibility'])
             staff.responsibility_ids.read(['responsibility'])
+
+    def test_teacher_sees_marks_only_for_assigned_class_and_subject(self):
+        self._mark(self.student_a, self.math)
+        self._mark(self.student_b, self.history)
+        all_marks = self.env['school.mark'].search([])
+        for m in all_marks:
+            print("MARK:", m.student_id.name, m.assessment_id.name, m.assessment_id.teacher_assignment_id, m.assessment_id.teacher_assignment_id.teacher_id.user_id)
+        visible = self.env['school.mark'].with_user(self.teacher_user).search([])
+        self.assertEqual(visible.student_id, self.student_a)
