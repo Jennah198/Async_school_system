@@ -36,6 +36,7 @@ class TestAssessment(TransactionCase):
         })
         self.math = self.env['school.subject'].create({'name': 'ASM Mathematics'})
         self.art = self.env['school.subject'].create({'name': 'ASM Art'})
+        # A term has to sit inside its academic year, so it takes the year's span.
         self.term = self.env['school.term'].create({
             'name': 'ASM Term', 'academic_year_id': self.year.id,
             'date_start': self.year.date_start,
