@@ -148,24 +148,34 @@ class TestAttendanceRoster(TransactionCase):
             ],
         })
         real_today = fields.Date.context_today(self.env['school.attendance'])
-        year_name = '%d/%d' % (real_today.year, real_today.year + 1)
-        real_year = self.env['school.academic.year'].search([('name', '=', year_name)], limit=1)
+        
+        # Search for a current academic year, or create one if none exists
+        real_year = self.env['school.academic.year'].search([
+            ('date_start', '<=', real_today),
+            ('date_end', '>=', real_today),
+        ], limit=1)
+        
         if not real_year:
             real_year = self.env['school.academic.year'].create({
-                'name': year_name,
-                'date_start': real_today,
-                'date_end': real_today + timedelta(days=60),
-            })
+            'name': '%d/%d' % (real_today.year, real_today.year + 1),
+            'date_start': real_today,
+            'date_end': real_today.replace(year=real_today.year + 1),
+        })
+
         real_term = self.env['school.term'].search([
             ('academic_year_id', '=', real_year.id),
             ('date_start', '<=', real_today),
             ('date_end', '>=', real_today + timedelta(days=1)),
         ], limit=1)
+        
         if not real_term:
             real_term = self.env['school.term'].create({
-                'name': 'ATT Real Term', 'academic_year_id': real_year.id,
-                'date_start': real_today, 'date_end': real_today + timedelta(days=60),
+                'name': 'ATT Real Term', 
+                'academic_year_id': real_year.id,
+                'date_start': real_today, 
+                'date_end': real_today + timedelta(days=60),
             })
+            
         real_class = self.env['school.class'].create({
             'name': 'ATT Real Class',
             'academic_year_id': real_year.id,
