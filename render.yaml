@@ -10,7 +10,9 @@ services:
     name: async-school-staging
     runtime: docker
     plan: free
-    region: frankfurt
+    # Match the Neon region. Odoo issues many queries per page, so putting the
+    # app and the database on different continents is felt on every click.
+    region: ohio
     branch: main
     # Staging tracks main. Feature branches are tested locally and reviewed in a
     # PR; they never deploy here.
