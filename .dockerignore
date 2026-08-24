@@ -4,3 +4,14 @@
 postgres_data/
 *.log
 README.md
+
+# Secrets must never reach an image layer, even by accident.
+.env
+config/odoo.conf
+config/odoo19.conf
+secrets/
+
+# Build noise that would otherwise be copied into /mnt/extra-addons.
+__pycache__/
+**/__pycache__/
+*.pyc
