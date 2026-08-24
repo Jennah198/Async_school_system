@@ -164,6 +164,8 @@ class SchoolDemoSeed(models.AbstractModel):
         self.env['school.grade'].ensure_standard_academic_structure()
         company = self.env.company
         et_year_name = str(EthiopianDateConverter.date_to_ethiopian(date(2026, 9, 1)).year)
+        # The academic year is named by the Ethiopian year of its start date; this
+        # is computed rather than hardcoded so it can't drift from seed_sample_test_data.
         year = self._one('school.academic.year', [('name', '=', et_year_name)], {
             'name': et_year_name, 'date_start': '2026-09-01',
             'date_end': '2027-06-30', 'state': 'open', 'is_current': True,

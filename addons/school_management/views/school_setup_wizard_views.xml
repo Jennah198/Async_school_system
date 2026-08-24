@@ -103,7 +103,7 @@
             <form string="School Setup">
                 <group>
                     <group string="Academic Year">
-                        <field name="year_name" placeholder="2026/2027"/>
+                        <field name="year_name" placeholder="2018"/>
                         <field name="date_start"/>
                         <field name="date_end"/>
                         <field name="is_current"/>
