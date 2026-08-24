@@ -31,6 +31,7 @@
                             class="oe_highlight" invisible="state != 'open'"/>
                     <button name="action_archive_year" type="object" string="Archive"
                             class="oe_highlight" invisible="state != 'closed'"/>
+                    <button name="action_create_next_year" type="object" string="Create Next Year"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,open,closed,archived"/>
                 </header>
