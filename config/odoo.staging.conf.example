@@ -1,0 +1,28 @@
+; Reference copy of the configuration scripts/render-start.sh generates inside
+; the Render container at startup. Nothing reads this file — it is here so the
+; staging settings are reviewable in the repository without credentials ever
+; being committed.
+;
+; The real values arrive as Render environment variables:
+;   DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD ODOO_ADMIN_PASSWD
+[options]
+addons_path = /mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons
+data_dir = /var/lib/odoo
+
+admin_passwd = ${ODOO_ADMIN_PASSWD}
+list_db = False
+
+; Neon direct/unpooled endpoint. Not the -pooler host: Odoo holds session state
+; and the demo seeder takes a pg_advisory_xact_lock, which transaction pooling
+; breaks.
+db_host = ${DB_HOST}
+db_port = 5432
+db_user = ${DB_USER}
+db_password = ${DB_PASSWORD}
+db_name = school
+dbfilter = ^school$
+db_sslmode = require
+
+proxy_mode = True
+workers = 0
+max_cron_threads = 1
