@@ -55,12 +55,22 @@ export NEON_PASSWORD=...
 # Install the module with demo data. Demo records are fictional, which is
 # exactly what staging should contain.
 docker compose run --rm --no-deps \
-  -e HOST="$NEON_HOST" -e PORT=5432 -e USER="$NEON_USER" -e PASSWORD="$NEON_PASSWORD" \
   odoo odoo -d school -i school_management \
+  --db_host="$NEON_HOST" --db_port=5432 \
+  --db_user="$NEON_USER" --db_password="$NEON_PASSWORD" \
   --db_sslmode=require --no-http --stop-after-init
 ```
 
 Expect `Modules loaded.` and exit code 0. This takes a few minutes.
+
+> **Pass the database on the command line, not as `HOST`/`USER`/`PASSWORD`
+> environment variables.** `docker compose run` mounts `./config`, and the image
+> entrypoint only fills in parameters that are *absent* from the config file.
+> `config/odoo.conf` already sets `db_host = db`, so those environment variables
+> are ignored and the command quietly initializes your **local** database
+> instead of Neon. Command-line flags override the config file, so they win.
+> Confirm the log line `odoo: database: <user>@<host>:5432` names the Neon host
+> before walking away.
 
 ## 3. Switch staging to database-backed attachments
 
@@ -76,8 +86,9 @@ Setting the location to `db` puts the payloads in PostgreSQL, which persists.
 
 ```bash
 docker compose run --rm --no-deps -T \
-  -e HOST="$NEON_HOST" -e PORT=5432 -e USER="$NEON_USER" -e PASSWORD="$NEON_PASSWORD" \
-  odoo odoo shell -d school --db_sslmode=require --no-http <<'EOF'
+  odoo odoo shell -d school --db_host="$NEON_HOST" --db_port=5432 \
+  --db_user="$NEON_USER" --db_password="$NEON_PASSWORD" \
+  --db_sslmode=require --no-http <<'EOF'
 env['ir.config_parameter'].sudo().set_param('ir_attachment.location', 'db')
 env.cr.commit()
 # Odoo's own supported migration for anything written during the install above.
@@ -133,8 +144,9 @@ Optional synthetic dataset (20 fictional staff, no Fayda IDs):
 
 ```bash
 docker compose run --rm --no-deps -T \
-  -e HOST="$NEON_HOST" -e PORT=5432 -e USER="$NEON_USER" -e PASSWORD="$NEON_PASSWORD" \
-  odoo odoo shell -d school --db_sslmode=require --no-http <<'EOF'
+  odoo odoo shell -d school --db_host="$NEON_HOST" --db_port=5432 \
+  --db_user="$NEON_USER" --db_password="$NEON_PASSWORD" \
+  --db_sslmode=require --no-http <<'EOF'
 print(env['school.staff.import'].dry_run())
 print(env['school.staff.import'].run_import())
 env.cr.commit()
@@ -159,8 +171,9 @@ Neon from your machine:
 
 ```bash
 docker compose run --rm --no-deps \
-  -e HOST="$NEON_HOST" -e PORT=5432 -e USER="$NEON_USER" -e PASSWORD="$NEON_PASSWORD" \
   odoo odoo -d school -u school_management \
+  --db_host="$NEON_HOST" --db_port=5432 \
+  --db_user="$NEON_USER" --db_password="$NEON_PASSWORD" \
   --db_sslmode=require --no-http --stop-after-init
 ```
 
