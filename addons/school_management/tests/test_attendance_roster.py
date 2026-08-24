@@ -148,34 +148,36 @@ class TestAttendanceRoster(TransactionCase):
             ],
         })
         real_today = fields.Date.context_today(self.env['school.attendance'])
-        
-        # Search for a current academic year, or create one if none exists
+        year_name = '%d/%d' % (real_today.year, real_today.year + 1)
         real_year = self.env['school.academic.year'].search([
-            ('date_start', '<=', real_today),
-            ('date_end', '>=', real_today),
+            ('name', '=', year_name),
         ], limit=1)
-        
+
         if not real_year:
             real_year = self.env['school.academic.year'].create({
-            'name': '%d/%d' % (real_today.year, real_today.year + 1),
-            'date_start': real_today,
-            'date_end': real_today.replace(year=real_today.year + 1),
-        })
+                'name': year_name,
+                'date_start': real_today,
+                'date_end': real_today.replace(year=real_today.year + 1),
+            })
+        elif real_year.date_start > real_today:
+            # Reused a seeded year that starts later than today; widen it so
+            # a term covering today can exist inside it.
+            real_year.write({'date_start': real_today})
 
         real_term = self.env['school.term'].search([
             ('academic_year_id', '=', real_year.id),
             ('date_start', '<=', real_today),
             ('date_end', '>=', real_today + timedelta(days=1)),
         ], limit=1)
-        
+
         if not real_term:
             real_term = self.env['school.term'].create({
-                'name': 'ATT Real Term', 
+                'name': 'ATT Real Term',
                 'academic_year_id': real_year.id,
-                'date_start': real_today, 
+                'date_start': real_today,
                 'date_end': real_today + timedelta(days=60),
             })
-            
+
         real_class = self.env['school.class'].create({
             'name': 'ATT Real Class',
             'academic_year_id': real_year.id,
