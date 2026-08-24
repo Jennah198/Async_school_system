@@ -1,0 +1,21 @@
+staff_id,first_name,last_name,gender,qualification,department,employment_status,hire_date
+STF001,Abraham,Bekele,Male,BSc Mathematics,Mathematics,Active,2019-10-21
+STF002,Hana,Tesfaye,Female,BA English,Languages,Active,2019-10-01
+STF003,Mohammed,Seid,Male,BSc Physics,Science,Active,2018-04-10
+STF004,Mariam,Hassan,Female,BSc Chemistry,Science,Active,2018-12-23
+STF005,Daniel,Alemu,Male,BSc Biology,Science,Active,2020-04-23
+STF006,Selam,Girma,Female,BA Amharic,Languages,Active,2017-10-22
+STF007,Yonas,Tadesse,Male,BA History,Social Studies,Active,2020-10-24
+STF008,Rahel,Kebede,Female,BA Geography,Social Studies,Active,2019-07-04
+STF009,Khalid,Ahmed,Male,BSc Computer Science,ICT,Active,2018-11-28
+STF010,Meron,Haile,Female,BA Civics,Social Studies,Active,2018-01-08
+STF011,Dawit,Assefa,Male,BEd Physical Education,Physical Education,Active,2020-04-08
+STF012,Fatuma,Abdisa,Female,MA Educational Leadership,Administration,Active,2019-05-12
+STF013,Samuel,Yohannes,Male,MSc Education,Administration,Active,2019-12-16
+STF014,Eden,Tesfaye,Female,BA Accounting,Administration,Active,2018-04-27
+STF015,Biruk,Getachew,Male,BSc ICT,ICT,Active,2018-06-14
+STF016,Aster,Mulugeta,Female,BEd English,Languages,Active,2017-12-02
+STF017,Robel,Fekadu,Male,BSc Mathematics,Mathematics,Active,2017-11-16
+STF018,Marta,Teshome,Female,BSc Chemistry,Science,Active,2019-05-17
+STF019,Ibrahim,Hassan,Male,BA History,Social Studies,Active,2020-06-05
+STF020,Liya,Bekele,Female,BSc Biology,Science,Active,2018-04-26

@@ -15,6 +15,11 @@ NON_DIGITS = re.compile(r'\D')
 # subscriber once a country code or a trunk '0' is taken off.
 PHONE_KEY_DIGITS = 9
 
+# A Fayda number is exactly sixteen digits. [0-9] rather than \d on purpose:
+# \d also matches non-ASCII digits, which are not a valid national identifier.
+FAYDA_ID_DIGITS = 16
+FAYDA_ID_PATTERN = re.compile(r'[0-9]{%d}' % FAYDA_ID_DIGITS)
+
 MINIMUM_STAFF_AGE = 18
 # Date of birth is personal data, so it stays restricted — but the roles that
 # register staff have to see it, or the age rule guards a field they cannot fill.
@@ -75,6 +80,13 @@ class SchoolStaff(models.Model):
             parts = [p for p in [rec.first_name, rec.last_name] if p]
             rec.name = ' '.join(parts) if parts else ''
     date_of_birth = fields.Date(string='Date of Birth', groups=PERSONAL_DATA_GROUPS)
+    # Char, never Integer: a leading zero is part of the identifier, the value is
+    # 16 digits wide, and no arithmetic is ever done on it. No size= either, so an
+    # over-long entry reaches _check_fayda_id and is reported instead of trimmed.
+    fayda_id = fields.Char(
+        string='Fayda ID', copy=False, groups=PERSONAL_DATA_GROUPS,
+        help='Ethiopian Fayda identification number. Exactly 16 digits.',
+    )
     age = fields.Integer(
         string='Age', compute='_compute_age', store=True, groups=PERSONAL_DATA_GROUPS,
         help='Age today, from the date of birth.',
@@ -131,6 +143,15 @@ class SchoolStaff(models.Model):
     _staff_id_unique = models.Constraint(
         'unique(staff_id)',
         'Staff ID must be unique.',
+    )
+    # Database-level, and deliberately not filtered to active rows: a Fayda number
+    # identifies a person for life, so a rehire must reuse the archived record
+    # rather than register the same human being twice. This matches _staff_id_unique
+    # and the email rule; the phone rule is active-only because a line is reassigned
+    # when someone leaves, which is not true of a national identifier.
+    _fayda_id_unique = models.Constraint(
+        'unique(fayda_id)',
+        'This Fayda ID is already registered to another staff member.',
     )
     _end_date_after_hire = models.Constraint(
         'CHECK(end_date IS NULL OR hire_date IS NULL OR end_date >= hire_date)',
@@ -212,12 +233,77 @@ class SchoolStaff(models.Model):
         for vals in vals_list:
             if vals.get('email'):
                 vals['email'] = self._normalize_email(vals['email'])
+            if 'fayda_id' in vals:
+                vals['fayda_id'] = self._normalize_fayda_id(vals['fayda_id'])
+        self._assert_fayda_ids_available(
+            [vals.get('fayda_id') for vals in vals_list])
         return super().create(vals_list)
 
     def write(self, vals):
         if vals.get('email'):
             vals = dict(vals, email=self._normalize_email(vals['email']))
+        if 'fayda_id' in vals:
+            vals = dict(vals, fayda_id=self._normalize_fayda_id(vals['fayda_id']))
+            self._assert_fayda_ids_available([vals['fayda_id']], exclude=self)
         return super().write(vals)
+
+    @api.model
+    def _assert_fayda_ids_available(self, fayda_ids, exclude=None):
+        """Checked before the values reach the database, so a duplicate is
+        reported by the name of whoever already holds it. The unique index is
+        still the guarantee — it covers a race between two sessions and anything
+        written outside the ORM — but on its own it would surface as a raw
+        constraint violation naming a table, not a person.
+        """
+        wanted = [f for f in fayda_ids if f]
+        if not wanted:
+            return
+        seen = set()
+        for fayda_id in wanted:
+            if fayda_id in seen:
+                raise ValidationError(
+                    'Fayda ID %s appears twice in the same batch. A Fayda number '
+                    'identifies one person, so it cannot be used twice.' % fayda_id
+                )
+            seen.add(fayda_id)
+        domain = [('fayda_id', 'in', wanted)]
+        if exclude:
+            domain.append(('id', 'not in', exclude.ids))
+        # sudo and active_test=False: a Fayda number is unique across every staff
+        # record, including archived ones and ones this user cannot see.
+        holder = self.sudo().with_context(active_test=False).search(domain, limit=1)
+        if holder:
+            raise ValidationError(
+                'Fayda ID %s is already registered to %s (%s). A Fayda number '
+                'identifies one person, so it cannot be used twice.'
+                % (holder.fayda_id, holder.name or 'another staff record',
+                   holder.staff_id or 'not yet activated')
+            )
+
+    @api.model
+    def _normalize_fayda_id(self, fayda_id):
+        """Surrounding whitespace, which a copy-paste carries in, is dropped.
+        Nothing else is touched: an inner space or a separator is left exactly as
+        typed so _check_fayda_id can reject the value and name it back to the user.
+        Silently stripping those would turn a mistyped national identifier into a
+        plausible-looking one belonging to somebody else.
+
+        A blank entry is stored as NULL rather than '', so that staff without a
+        Fayda number do not collide with each other under the unique index.
+        """
+        return (fayda_id or '').strip() or False
+
+    @api.constrains('fayda_id')
+    def _check_fayda_id(self):
+        for rec in self:
+            if not rec.fayda_id:
+                continue
+            if not FAYDA_ID_PATTERN.fullmatch(rec.fayda_id):
+                raise ValidationError(
+                    'Fayda ID must be exactly %s digits with nothing else in it — '
+                    'no letters, spaces or separators. "%s" has %s character(s).'
+                    % (FAYDA_ID_DIGITS, rec.fayda_id, len(rec.fayda_id))
+                )
 
     @api.model
     def _normalize_email(self, email):

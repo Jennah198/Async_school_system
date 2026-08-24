@@ -12,6 +12,7 @@ from . import school_student_subject
 from . import school_student
 from . import school_student_guardian
 from . import school_staff
+from . import school_staff_import
 from . import school_hr
 from . import school_attendance
 from . import school_assessment

@@ -39,6 +39,7 @@
                             <field name="staff_id"/>
                             <field name="department" readonly="1"/>
                             <field name="primary_responsibility" readonly="1"/>
+                            <field name="fayda_id" readonly="1"/>
                             <field name="teaching_status"/>
                             <field name="user_id" string="Login User"/>
                             <!-- widget="password", not password="True": the legacy
