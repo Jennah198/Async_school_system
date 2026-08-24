@@ -74,32 +74,54 @@ Expect `Modules loaded.` and exit code 0. This takes a few minutes.
 
 ## 3. Switch staging to database-backed attachments
 
-**Do this before anyone uploads anything.**
+**Do this immediately after step 2, before anyone uploads anything.**
 
 Render's filesystem is ephemeral: it is wiped on every redeploy, restart and
 wake-from-sleep. Odoo stores attachment payloads on disk by default
-(`ir_attachment.location = file`), so on Render every uploaded document,
-photo and birth certificate would be destroyed on the next deploy — the
-database would keep the record and lose the bytes.
+(`ir_attachment.location = file`), so on Render every uploaded document, photo
+and birth certificate would be destroyed on the next deploy — the database
+would keep the record and lose the bytes.
 
-Setting the location to `db` puts the payloads in PostgreSQL, which persists.
+Two statements, both in the Neon console → **SQL Editor**, with the database
+dropdown set to **`school`** (not `neondb`):
 
-```bash
-docker compose run --rm --no-deps -T \
-  odoo odoo shell -d school --db_host="$NEON_HOST" --db_port=5432 \
-  --db_user="$NEON_USER" --db_password="$NEON_PASSWORD" \
-  --db_sslmode=require --no-http <<'EOF'
-env['ir.config_parameter'].sudo().set_param('ir_attachment.location', 'db')
-env.cr.commit()
-# Odoo's own supported migration for anything written during the install above.
-env['ir.attachment'].sudo().force_storage()
-env.cr.commit()
-env.cr.execute("SELECT count(*) FILTER (WHERE store_fname IS NOT NULL) FROM ir_attachment")
-print('attachments still on disk (must be 0):', env.cr.fetchone()[0])
-EOF
+```sql
+-- 1. Store new attachment payloads in PostgreSQL instead of on disk.
+INSERT INTO ir_config_parameter (key, value, create_uid, write_uid, create_date, write_date)
+VALUES ('ir_attachment.location', 'db', 1, 1, now(), now())
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, write_date = now();
+
+-- 2. Drop the compiled asset bundles so Odoo rebuilds them into the database.
+DELETE FROM ir_attachment WHERE url LIKE '/web/assets/%';
 ```
 
-It must print `0`.
+Then load the site once. The first request is slow while Odoo regenerates the
+bundles; after that everything is served from PostgreSQL.
+
+Confirm it worked:
+
+```sql
+SELECT
+  count(*) FILTER (WHERE store_fname IS NOT NULL)                       AS on_disk_bad,
+  count(*) FILTER (WHERE db_datas IS NOT NULL AND length(db_datas) > 0) AS in_db_good
+FROM ir_attachment WHERE url LIKE '/web/assets/%';
+```
+
+`on_disk_bad` must be **0**.
+
+> **Why the second statement matters.** The container that ran the install wrote
+> its asset bundles to that container's disk. The moment Render replaces the
+> container — a redeploy, a restart, or waking from sleep — those files are gone
+> while the database rows still point at them. An attachment row with no file,
+> no database content and a `url` is answered by Odoo with a redirect *to that
+> same url*, so the browser loops and the site fails to load with
+> `ERR_TOO_MANY_REDIRECTS`. Deleting the bundles makes Odoo rebuild them, this
+> time into the database. Asset bundles are derived data — deleting them is
+> always safe.
+>
+> For the same reason, do **not** run `ir.attachment.force_storage()` in a
+> container that was started after the install. It reads the missing files as
+> empty and clears their pointers, which is what produces the broken rows above.
 
 > This is a **staging-only** setting. It lives in the staging database, not in
 > the repository, so local development and any future production deployment are
@@ -113,7 +135,14 @@ It must print `0`.
    (`DB_PORT=5432` and `DB_NAME=school` are already in the blueprint.)
    `ODOO_ADMIN_PASSWD` is Odoo's **master password**, which guards database
    create/drop/duplicate — not the login password. Make it a long random string.
-3. Deploy. The first build takes several minutes.
+3. **For the very first deploy only**, also set `ODOO_INIT` = `school_management`.
+   Render's free plan has no shell, and initializing across the internet from a
+   laptop is impractically slow — an Odoo install issues tens of thousands of
+   small queries and each pays the round trip. The container sits in the same
+   region as the database and does the same work in minutes.
+4. Deploy. The first build takes several minutes. Watch the log for
+   `Modules loaded.`, then the health check turns green.
+5. **Remove `ODOO_INIT` and deploy again.** Left set, it reinstalls on every boot.
 
 Render's health check hits `/web/health`, which returns `200 {"status":"pass"}`.
 
