@@ -37,7 +37,7 @@
                 </header>
                 <sheet>
                     <div class="oe_title">
-                        <h1><field name="name" placeholder="2026/2027"/></h1>
+                        <h1><field name="name" placeholder="2018"/></h1>
                     </div>
                     <group>
                         <group>
