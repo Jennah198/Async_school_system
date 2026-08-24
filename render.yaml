@@ -24,8 +24,9 @@ services:
     # PORT as the PostgreSQL port. See the header of scripts/render-start.sh.
     dockerCommand: /usr/local/bin/render-start.sh
 
-    # Server-level endpoint: returns 200 {"status": "pass"} without a session
-    # and without touching the database.
+    # Returns 200 {"status": "pass"} without a session. It does reach the
+    # database, so it stays 500 until the database has been initialized — see
+    # ODOO_INIT below and docs/STAGING.md.
     healthCheckPath: /web/health
 
     envVars:
@@ -48,3 +49,7 @@ services:
       # Master password guarding database create/drop/duplicate. Not the login.
       - key: ODOO_ADMIN_PASSWD
         sync: false
+
+      # ODOO_INIT is deliberately not declared here. It is set by hand in the
+      # dashboard for a single deploy to initialize an empty database, then
+      # removed. See docs/STAGING.md.

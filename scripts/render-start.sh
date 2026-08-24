@@ -68,9 +68,27 @@ workers = 0
 max_cron_threads = 1
 CONF_EOF
 
+# One-off database initialization.
+#
+# Render's free plan gives no shell, and initializing over the internet from a
+# developer laptop is impractically slow: an Odoo install issues tens of
+# thousands of small queries and each one pays the round trip, so a
+# cross-continent install takes hours. This container runs in the same region
+# as the database, where the same work takes minutes.
+#
+# Set ODOO_INIT=school_management in the Render dashboard, deploy once, then
+# REMOVE the variable and deploy again. Left set, it re-runs the install on
+# every boot.
+INIT_ARGS=()
+if [ -n "${ODOO_INIT:-}" ]; then
+    echo "render-start: ODOO_INIT=${ODOO_INIT} — installing on this boot. Remove the variable once it succeeds."
+    INIT_ARGS+=(-i "${ODOO_INIT}")
+fi
+
 echo "render-start: HTTP on 0.0.0.0:${HTTP_PORT}; PostgreSQL ${DB_HOST}:${DB_PORT}/${DB_NAME} (sslmode=require)"
 
 exec odoo \
     --config="${CONF}" \
     --http-interface=0.0.0.0 \
-    --http-port="${HTTP_PORT}"
+    --http-port="${HTTP_PORT}" \
+    "${INIT_ARGS[@]}"
