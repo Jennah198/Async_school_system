@@ -19,7 +19,14 @@ services:
     restart: unless-stopped
 
   odoo19:
-    image: odoo:19
+    # Same reason as the main stack: the module imports ethiopian_date, which the
+    # stock image does not ship, so a migration rehearsal on the pulled image
+    # cannot even load school_management.
+    build:
+      context: .
+      args:
+        ODOO_VERSION: "19"
+    image: school-odoo:19
     depends_on:
       db19:
         condition: service_healthy

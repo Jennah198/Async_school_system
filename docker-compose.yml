@@ -16,7 +16,14 @@ services:
     restart: unless-stopped
 
   odoo:
-    image: odoo:${ODOO_VERSION}
+    # Built, not pulled: the module imports ethiopian_date, which the stock
+    # odoo image does not ship. Pulling the image straight left every page
+    # returning 500 because school_management could not be imported at all.
+    build:
+      context: .
+      args:
+        ODOO_VERSION: ${ODOO_VERSION}
+    image: school-odoo:${ODOO_VERSION}
     depends_on:
       db:
         condition: service_healthy

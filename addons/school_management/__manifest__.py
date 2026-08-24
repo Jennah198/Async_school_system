@@ -20,6 +20,10 @@ attendance tracking and mark/result entry referencing the same student record.
     'version': '19.0.1.1.0',
     'license': 'LGPL-3',
 
+    # Declared so Odoo reports a missing package by name at install time instead
+    # of failing to import the module and taking the whole registry down.
+    'external_dependencies': {'python': ['ethiopian_date']},
+
     'depends': [
         'base', 'contacts', 'portal', 'mail', 'web',
         'hr', 'hr_attendance', 'hr_holidays',
