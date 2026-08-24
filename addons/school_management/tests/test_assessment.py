@@ -5,6 +5,8 @@ from odoo import fields
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests.common import TransactionCase
 
+from .common import year_spanning_today
+
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 
@@ -17,14 +19,11 @@ class TestAssessment(TransactionCase):
         super().setUp()
         self.today = fields.Date.context_today(self.env['school.assessment'])
         self.yesterday = self.today - timedelta(days=1)
-        year_start = self.today - timedelta(days=365)
-        year_end = self.today + timedelta(days=365)
-        self.year = self.env['school.academic.year'].create({
-            # Name derived from the dates: school.academic.year requires the two to
-            # agree. Spanning a year either side of today also keeps the name clear
-            # of the seeded consecutive years.
-            'name': '%s/%s' % (year_start.year, year_end.year),
-            'date_start': year_start, 'date_end': year_end})
+        # A year is named after the Ethiopian year of its start date and that name
+        # is unique, so only one academic year can exist per Ethiopian year. The
+        # seeded years already hold the ones around today, so this widens the
+        # seeded current year instead of creating a second one.
+        self.year = year_spanning_today(self.env)
         self.klass = self.env['school.class'].create({
             'name': 'ASM Grade 1',
             'academic_year_id': self.year.id,
@@ -36,10 +35,11 @@ class TestAssessment(TransactionCase):
         })
         self.math = self.env['school.subject'].create({'name': 'ASM Mathematics'})
         self.art = self.env['school.subject'].create({'name': 'ASM Art'})
+        # A term has to sit inside its academic year, so it takes the year's span.
         self.term = self.env['school.term'].create({
             'name': 'ASM Term', 'academic_year_id': self.year.id,
-            'date_start': self.today - timedelta(days=365),
-            'date_end': self.today + timedelta(days=365)})
+            'date_start': self.year.date_start,
+            'date_end': self.year.date_end})
         self.env['school.grade.subject'].create({
             'class_id': self.klass.id, 'subject_id': self.math.id,
         })

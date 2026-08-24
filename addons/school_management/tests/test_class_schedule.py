@@ -1,8 +1,9 @@
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-# A year distinct from seeded/demo records (2026/2027) so the fixture never collides.
-YEAR = '2048/2049'
+# The Ethiopian year of 2048-01-01, which is how school.academic.year is named.
+# Far from the seeded years, so the unique name never collides.
+YEAR = '2040'
 
 
 class TestClassSchedule(TransactionCase):

@@ -5,6 +5,8 @@ from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
+from .common import year_spanning_today
+
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 
@@ -17,21 +19,16 @@ class TestAttendanceRoster(TransactionCase):
         self.today = fields.Date.context_today(self.env['school.attendance'])
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
-        self.year = self.env['school.academic.year'].create({
-            # Name derived from the dates, which the model requires to agree.
-            # A year either side of today keeps the two calendar years apart, so
-            # the name can never collide with the seeded consecutive years
-            # whatever date the suite runs on.
-            'name': '%s/%s' % ((self.today - timedelta(days=365)).year,
-                               (self.today + timedelta(days=365)).year),
-            'date_start': self.today - timedelta(days=365),
-            'date_end': self.today + timedelta(days=365)})
+        # Only one academic year can exist per Ethiopian year, and the seeded
+        # years hold the ones around today, so the seeded current year is widened
+        # rather than duplicated.
+        self.year = year_spanning_today(self.env)
         # Attendance is only recorded on teaching days, so the year needs a term
         # covering the dates these tests use.
         self.env['school.term'].create({
             'name': 'ATT Term', 'academic_year_id': self.year.id,
-            'date_start': self.today - timedelta(days=180),
-            'date_end': self.today + timedelta(days=180)})
+            'date_start': self.year.date_start,
+            'date_end': self.year.date_end})
         self.class_a = self.env['school.class'].create({
             'name': 'ATT Grade 1',
             'academic_year_id': self.year.id,

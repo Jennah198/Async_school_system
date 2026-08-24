@@ -4,7 +4,10 @@ from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-YEAR = '2049/2050'
+from .common import year_spanning_today
+
+# The Ethiopian year of 2049-01-01, which is how school.academic.year is named.
+YEAR = '2041'
 
 
 class TestResponsibilityAndStaffControl(TransactionCase):
@@ -145,16 +148,10 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         in 2049, which means its assignments are future-dated and are refused by the
         future-dated rule — so a suspension test built on them passes without the
         suspension ever being consulted."""
-        today = fields.Date.context_today(self.env['school.staff'])
-        year = self.env['school.academic.year'].create({
-            # school.academic.year requires a YYYY/YYYY name matching its dates.
-            # A year either side of today satisfies that and keeps the name clear
-            # of the seeded consecutive years.
-            'name': '%s/%s' % ((today - relativedelta(years=1)).year,
-                               (today + relativedelta(years=1)).year),
-            'date_start': today - relativedelta(years=1),
-            'date_end': today + relativedelta(years=1),
-        })
+        # Only one academic year can exist per Ethiopian year and the seeded years
+        # hold the ones around today, so the seeded current year is widened rather
+        # than duplicated.
+        year = year_spanning_today(self.env)
         term = self.env['school.term'].create({
             'name': 'RESP Current Term', 'academic_year_id': year.id,
             'date_start': year.date_start, 'date_end': year.date_end, 'sequence': 10,
