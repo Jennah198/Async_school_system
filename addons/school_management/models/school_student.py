@@ -31,7 +31,7 @@ class SchoolStudent(models.Model):
     nationality_id = fields.Many2one('res.country', string='Nationality')
     primary_language = fields.Char()
     national_id = fields.Char(groups='school_management.group_school_registrar')
-    fan_number = fields.Char(string='FAN (National ID)', groups='school_management.group_school_registrar')
+    fan_number = fields.Char(string='FAN (National ID)', groups='school_management.group_school_registrar,school_management.group_school_admin')
     regional_id = fields.Char(groups='school_management.group_school_registrar')
     email = fields.Char()
 

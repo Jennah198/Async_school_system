@@ -1,7 +1,9 @@
 import re
 
-from odoo import api, fields, models
-from odoo.exceptions import AccessError, ValidationError
+from odoo import api, fields, models  # type: ignore
+from odoo.exceptions import AccessError, ValidationError  # type: ignore
+from dateutil.relativedelta import relativedelta
+from ethiopian_date import EthiopianDateConverter
 
 
 class SchoolAcademicYear(models.Model):
@@ -10,7 +12,7 @@ class SchoolAcademicYear(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'name desc'
 
-    name = fields.Char(string='Academic Year', required=True, help="For example 2026/2027.")
+    name = fields.Char(string='Academic Year', required=True, help="For example 2018.")
     date_start = fields.Date(string='Starts On', required=True)
     date_end = fields.Date(string='Ends On', required=True)
     state = fields.Selection([
@@ -55,25 +57,23 @@ class SchoolAcademicYear(models.Model):
                     '%s is already the current academic year. Clear it there first.' % clash.name
                 )
 
-    @api.constrains('name', 'date_start', 'date_end')
+    @api.constrains('name', 'date_start')
     def _check_name_matches_start_year(self):
-        for rec in self.filtered(lambda r: r.name and r.date_start and r.date_end):
-            match = re.match(r'^(\d{4})/(\d{4})$', rec.name)
-            if not match:
+        # Name is a single Ethiopian year (e.g. "2018"). It must match the
+        # Ethiopian-calendar year of the Gregorian date_start actually stored,
+        # since Odoo/Postgres only store Gregorian dates internally.
+        for rec in self.filtered(lambda r: r.name and r.date_start):
+            if not re.match(r'^\d{4}$', rec.name):
                 raise ValidationError(
-                    "Academic year name must be in the format YYYY/YYYY, "
-                    "for example 2026/2027."
+                    "Academic year name must be a 4-digit Ethiopian year, "
+                    "for example 2018."
                 )
-            start_year, end_year = int(match.group(1)), int(match.group(2))
-            if start_year != rec.date_start.year:
+            ethiopian_date = EthiopianDateConverter.date_to_ethiopian(rec.date_start)
+            if int(rec.name) != ethiopian_date.year:
                 raise ValidationError(
-                    "The starting year in the name (%s) doesn't match the actual "
-                    "start date (%s)." % (rec.name, rec.date_start)
-                )
-            if end_year != rec.date_end.year:
-                raise ValidationError(
-                    "The ending year in the name (%s) doesn't match the actual "
-                    "end date (%s)." % (rec.name, rec.date_end)
+                    "The name (%s) doesn't match the Ethiopian year for the start "
+                    "date you entered (%s), which is %s in the Ethiopian calendar."
+                    % (rec.name, rec.date_start, ethiopian_date.year)
                 )
 
     @api.model
@@ -93,13 +93,6 @@ class SchoolAcademicYear(models.Model):
             if not authorized:
                 raise ValidationError(
                     'Closed academic years are read-only. Use an authorized correction workflow.')
-        if vals.get('state') == 'open':
-            other_current = self.search([
-                ('is_current', '=', True), ('id', 'not in', self.ids),
-            ])
-            if other_current:
-                other_current.write({'is_current': False})
-            vals.setdefault('is_current', True)
         if vals.get('state') in ('closed', 'archived'):
             vals.setdefault('is_current', False)
         return super().write(vals)
@@ -111,18 +104,29 @@ class SchoolAcademicYear(models.Model):
         started in the past — and the historical years its reports and migrations
         refer to. What must not happen is a finished year being opened for
         enrolment and attendance, and that is what is checked below.
+
+        Opening a year always makes it Current, even if an earlier year is
+        still Open and running its own attendance/marks. Current means
+        "where new registrations default to," not "which year is actively
+        in session" — those are tracked independently via each year's state.
         """
         today = fields.Date.today()
         for year in self:
             if year.state != 'draft':
                 raise ValidationError('Only a draft academic year can be opened.')
             if year.date_end and year.date_end < today:
+                et_end = EthiopianDateConverter.date_to_ethiopian(year.date_end)
                 raise ValidationError(
-                    '%s ended on %s and cannot be opened. '
+                    '%s ended on %s (%s in the Ethiopian calendar) and cannot be opened. '
                     'Only the current or a future academic year can be opened.'
-                    % (year.name, year.date_end)
+                    % (year.name, year.date_end, et_end.year)
                 )
-            year.write({'state': 'open'})
+            other_current = self.search([
+                ('is_current', '=', True), ('id', '!=', year.id),
+            ])
+            if other_current:
+                other_current.write({'is_current': False})
+            year.write({'state': 'open', 'is_current': True})
 
     def action_close(self):
         for year in self:
@@ -145,6 +149,38 @@ class SchoolAcademicYear(models.Model):
             'view_mode': 'list,form',
             'domain': [('academic_year_id', '=', self.id)],
             'context': {'default_academic_year_id': self.id},
+        }
+
+    def action_create_next_year(self):
+        """Generate the following academic year from this one: name + 1,
+        both dates shifted forward exactly one year. Goes through create(),
+        so every existing validation (future-date, Ethiopian name match,
+        unique name) still applies automatically.
+        """
+        self.ensure_one()
+        next_name = str(int(self.name) + 1)
+        next_date_start = self.date_start + relativedelta(years=1)
+        next_date_end = self.date_end + relativedelta(years=1)
+
+        existing = self.search([('name', '=', next_name)], limit=1)
+        if existing:
+            raise ValidationError(
+                "%s already exists. Open it directly instead of creating it again."
+                % next_name
+            )
+
+        new_year = self.create({
+            'name': next_name,
+            'date_start': next_date_start,
+            'date_end': next_date_end,
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Academic Year',
+            'res_model': 'school.academic.year',
+            'view_mode': 'form',
+            'res_id': new_year.id,
+            'target': 'current',
         }
 
 

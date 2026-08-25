@@ -9,7 +9,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -36,11 +35,10 @@ jobs:
         # port 8069, so a second Odoo inside it cannot start.
         run: |
           docker compose run --rm --no-deps -T odoo \
-            bash -c "pip3 install --break-system-packages ethiopian-date && \
             odoo -c /etc/odoo/odoo.conf -d ci_test_db \
             -i school_management \
             --test-enable --test-tags /school_management \
-            --no-http --stop-after-init"
+            --no-http --stop-after-init
 
       - name: Show logs on failure
         if: failure()
