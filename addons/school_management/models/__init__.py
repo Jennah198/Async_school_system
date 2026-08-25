@@ -1,13 +1,23 @@
 # -*- coding: utf-8 -*-
-
 #from . import models
 from . import school_academic_year
+from . import school_configuration
 from . import school_term
 from . import school_class
+from . import school_enrollment
+from . import school_enrollment_placement
+from . import school_enrollment_transfer
+from . import school_grade_subject
+from . import school_student_subject
 from . import school_student
+from . import school_student_guardian
 from . import school_staff
+from . import school_staff_import
+from . import school_hr
 from . import school_attendance
+from . import school_assessment
 from . import school_mark
+from . import school_results
 from . import school_subject
 from . import school_teacher
 from . import school_teacher_assignment
@@ -20,3 +30,7 @@ from . import school_documents
 from . import res_users
 from . import school_teacher_links
 from . import school_dashboard
+from . import school_admission_wizard
+from . import school_setup_wizard
+from . import school_day_builder
+from . import school_demo_seed

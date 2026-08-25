@@ -4,14 +4,16 @@
         <field name="name">school.attendance.tree</field>
         <field name="model">school.attendance</field>
         <field name="arch" type="xml">
-            <tree editable="bottom" decoration-danger="status == 'absent'"
-                  decoration-warning="status == 'late'">
+            <list editable="bottom" decoration-danger="status == 'absent'"
+                  decoration-warning="status == 'late'"
+                  decoration-muted="status == 'not_recorded'">
                 <field name="date"/>
                 <field name="student_id"/>
                 <field name="class_id" readonly="1"/>
+                <field name="enrollment_id" readonly="1" optional="hide"/>
                 <field name="status"/>
                 <field name="note" optional="show"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -23,8 +25,9 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="student_id"/>
+                            <field name="student_id" options="{'no_create': True}"/>
                             <field name="class_id" readonly="1"/>
+                            <field name="enrollment_id" readonly="1"/>
                         </group>
                         <group>
                             <field name="date"/>
@@ -53,7 +56,7 @@
                 <filter string="Present" name="present" domain="[('status', '=', 'present')]"/>
                 <filter string="Absent" name="absent" domain="[('status', '=', 'absent')]"/>
                 <filter string="Late" name="late" domain="[('status', '=', 'late')]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter string="Class" name="group_class" context="{'group_by': 'class_id'}"/>
                     <filter string="Student" name="group_student" context="{'group_by': 'student_id'}"/>
                     <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
@@ -63,10 +66,34 @@
         </field>
     </record>
 
+    <record id="view_school_attendance_roster_form" model="ir.ui.view">
+        <field name="name">school.attendance.roster.form</field>
+        <field name="model">school.attendance.roster</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="class_id" options="{'no_create': True}"/>
+                    <field name="date"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Take Attendance" class="oe_highlight"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_school_attendance_roster" model="ir.actions.act_window">
+        <field name="name">Take Attendance</field>
+        <field name="res_model">school.attendance.roster</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
     <record id="action_school_attendance" model="ir.actions.act_window">
         <field name="name">Attendance</field>
         <field name="res_model">school.attendance</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="context">{'search_default_today': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

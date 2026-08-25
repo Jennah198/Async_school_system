@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The assessment form button references this action, so it loads first. -->
+    <record id="view_school_assessment_unlock_form" model="ir.ui.view">
+        <field name="name">school.assessment.unlock.form</field>
+        <field name="model">school.assessment.unlock</field>
+        <field name="arch" type="xml">
+            <form>
+                <group>
+                    <field name="assessment_id" options="{'no_create': True}"/>
+                    <field name="reason" placeholder="Why these marks must be corrected. This is recorded on the audit trail."/>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object" string="Unlock" class="oe_highlight"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_school_assessment_unlock" model="ir.actions.act_window">
+        <field name="name">Unlock for Correction</field>
+        <field name="res_model">school.assessment.unlock</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="view_school_assessment_tree" model="ir.ui.view">
+        <field name="name">school.assessment.tree</field>
+        <field name="model">school.assessment</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state == 'open'" decoration-muted="state == 'draft'">
+                <field name="name"/>
+                <field name="assessment_type"/>
+                <field name="class_id"/>
+                <field name="subject_id"/>
+                <field name="term_id"/>
+                <field name="date"/>
+                <field name="max_mark" optional="hide"/>
+                <field name="weight" optional="hide"/>
+                <field name="mark_count" string="Students"/>
+                <field name="state" widget="badge"
+                       decoration-success="state in ('approved', 'published')"
+                       decoration-warning="state == 'submitted'"
+                       decoration-danger="state == 'locked'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_school_assessment_form" model="ir.ui.view">
+        <field name="name">school.assessment.form</field>
+        <field name="model">school.assessment</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_open" type="object" string="Open &amp; Generate List"
+                            class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_regenerate" type="object" string="Regenerate List"
+                            invisible="state != 'open'"/>
+                    <button name="action_submit" type="object" string="Submit"
+                            class="oe_highlight" invisible="state != 'open'"/>
+                    <button name="action_return" type="object" string="Return for Correction"
+                            invisible="state != 'submitted'"
+                            groups="school_management.group_school_exam_officer"/>
+                    <button name="action_reopen" type="object" string="Reopen Returned List"
+                            invisible="state != 'returned'"/>
+                    <button name="action_approve" type="object" string="Approve"
+                            class="oe_highlight" invisible="state != 'submitted'"
+                            groups="school_management.group_school_exam_officer"/>
+                    <button name="action_lock" type="object" string="Lock"
+                            invisible="state != 'approved'"
+                            groups="school_management.group_school_exam_officer"/>
+                    <button name="action_publish" type="object" string="Publish"
+                            class="oe_highlight" invisible="state != 'locked'"
+                            groups="school_management.group_school_exam_officer"/>
+                    <button name="%(action_school_assessment_unlock)d" type="action" string="Unlock"
+                            invisible="state not in ('approved', 'locked', 'published')"
+                            groups="school_management.group_school_exam_officer"
+                            context="{'default_assessment_id': id}"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,open,submitted,returned,approved,locked,published"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="e.g. Mid-term Exam"/></h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="assessment_type" readonly="state != 'draft'"/>
+                            <field name="class_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                            <field name="subject_id" readonly="state != 'draft'" domain="[('grade_subject_ids.class_id', '=', class_id), ('active', '=', True)]" options="{'no_create': True}"/>
+                            <field name="term_id" readonly="state != 'draft'" domain="[('academic_year_id', '=', academic_year_id), ('active', '=', True)]" options="{'no_create': True}"/>
+                            <field name="academic_year_id"/>
+                            <field name="matching_assignment_count" invisible="1"/>
+                            <field name="assessment_date_in_term" invisible="1"/>
+                            <div class="alert alert-info" role="alert"
+                                 invisible="class_id and subject_id and term_id">
+                                Select Grade / Class, Subject, and Term first. The matching
+                                teacher assignment will then be selected automatically.
+                            </div>
+                            <div class="alert alert-danger" role="alert"
+                                 invisible="not term_id or not date or assessment_date_in_term">
+                                The Assessment Date is outside the selected term. Choose a
+                                date between the term start and end dates before continuing.
+                            </div>
+                            <div class="alert alert-warning" role="alert"
+                                 invisible="not class_id or not subject_id or not term_id or not assessment_date_in_term or matching_assignment_count != 0">
+                                No active teacher assignment matches this class, subject,
+                                term, and assessment date. Create it under
+                                Registrar → Teacher Assignments before entering marks.
+                            </div>
+                            <field name="teacher_assignment_id"
+                                   domain="[('class_id', '=', class_id), ('subject_id', '=', subject_id), ('term_id', '=', term_id), ('state', '=', 'active'), ('active', '=', True), ('start_date', '&lt;=', date), '|', ('end_date', '=', False), ('end_date', '&gt;=', date)]"
+                                   invisible="not class_id or not subject_id or not term_id or not assessment_date_in_term"
+                                   required="class_id and subject_id and term_id and assessment_date_in_term"
+                                   options="{'no_create': True}"/>
+                        </group>
+                        <group string="Marking">
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="max_mark" readonly="state != 'draft'"/>
+                            <field name="weight"/>
+                        </group>
+                    </group>
+                    <group string="Mark List">
+                        <field name="mark_ids" nolabel="1" colspan="2"
+                               readonly="state not in ('draft', 'open')">
+                            <list editable="bottom" create="0" delete="0" decoration-muted="mark_status == 'pending'"
+                                  decoration-danger="grade == 'F'">
+                                <field name="student_id" readonly="1" force_save="1"/>
+                                <field name="score"/>
+                                <field name="max_score" readonly="1" force_save="1"/>
+                                <field name="mark_status"/>
+                                <field name="percentage" readonly="1"/>
+                                <field name="grade" readonly="1"/>
+                                <field name="note" optional="show"/>
+                            </list>
+                        </field>
+                    </group>
+                    <chatter/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_school_assessment_search" model="ir.ui.view">
+        <field name="name">school.assessment.search</field>
+        <field name="model">school.assessment</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="class_id"/>
+                <field name="subject_id"/>
+                <filter name="filter_open" string="Open" domain="[('state', '=', 'open')]"/>
+                <filter name="filter_submitted" string="Awaiting Review" domain="[('state', '=', 'submitted')]"/>
+                <filter name="filter_approved" string="Approved" domain="[('state', 'in', ('approved', 'locked', 'published'))]"/>
+                <group name="group_by">
+                    <filter name="group_class" string="Class" context="{'group_by': 'class_id'}"/>
+                    <filter name="group_subject" string="Subject" context="{'group_by': 'subject_id'}"/>
+                    <filter name="group_term" string="Term" context="{'group_by': 'term_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_school_assessment" model="ir.actions.act_window">
+        <field name="name">Assessments</field>
+        <field name="res_model">school.assessment</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create an assessment — the mark list is generated from subject enrollments.
+            </p>
+        </field>
+    </record>
+</odoo>
