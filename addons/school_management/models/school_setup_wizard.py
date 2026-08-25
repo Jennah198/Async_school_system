@@ -123,7 +123,9 @@ class SchoolSetupWizard(models.TransientModel):
     _name = 'school.setup.wizard'
     _description = 'School Setup'
 
-    year_name = fields.Char(string='Academic Year', required=True, help='For example 2026/2027.')
+    year_name = fields.Char(
+        string='Academic Year', required=True,
+        help='Ethiopian year of the start date, for example 2018.')
     date_start = fields.Date(string='Starts On', required=True)
     date_end = fields.Date(string='Ends On', required=True)
     is_current = fields.Boolean(string='Make Current', default=True)

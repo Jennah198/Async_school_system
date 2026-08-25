@@ -17,8 +17,12 @@ attendance tracking and mark/result entry referencing the same student record.
     'category': 'Education',
     # Odoo convention: <odoo series>.<major>.<minor>.<patch>. The series prefix is what
     # tells a reader, and the Odoo app store, which Odoo this targets.
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'license': 'LGPL-3',
+
+    # Declared so Odoo reports a missing package by name at install time instead
+    # of failing to import the module and taking the whole registry down.
+    'external_dependencies': {'python': ['ethiopian_date']},
 
     'depends': [
         'base', 'contacts', 'portal', 'mail', 'web',

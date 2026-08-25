@@ -163,9 +163,11 @@ class SchoolDemoSeed(models.AbstractModel):
         )
         self.env['school.grade'].ensure_standard_academic_structure()
         company = self.env.company
-        et_year_name = str(EthiopianDateConverter.date_to_ethiopian(date(2026, 9, 1)).year)
-        year = self._one('school.academic.year', [('name', '=', et_year_name)], {
-            'name': et_year_name, 'date_start': '2026-09-01',
+        # The academic year is named by the Ethiopian year of its start date, and
+        # 2026-09-01 falls in Ethiopian 2018 — the same year the module seeds, so
+        # this reuses it rather than failing on the unique name.
+        year = self._one('school.academic.year', [('name', '=', '2018')], {
+            'name': '2018', 'date_start': '2026-09-01',
             'date_end': '2027-06-30', 'state': 'open', 'is_current': True,
         })
         term1 = self._one('school.term', [
