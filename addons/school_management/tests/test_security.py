@@ -97,14 +97,17 @@ class TestSchoolSecurity(TransactionCase):
             'teacher_id': teacher.id, 'subject_id': subject.id,
             'class_id': school_class.id, 'term_id': self._term().id,
         })
-
     def _student(self, name, school_class):
+        seq = self.env['school.student'].search_count([])
         student = self.env['school.student'].create({
             'name': name, 'class_id': school_class.id,
             'academic_year_id': school_class.academic_year_id.id,
             'date_of_birth': '2015-05-05',
             'guardian_name': 'SEC Guardian',
-            'guardian_phone': '+251911234567',
+            'guardian_phone': '+25191123%04d' % seq,
+            'emergency_contact_name': 'SEC Emergency Contact',
+            'emergency_contact_phone': '+25191124%04d' % seq,
+            'fan_number': '10000000%08d' % seq,
             'birth_certificate': DUMMY_FILE,
             'registration_date': '2026-08-01',
             'registration_status': 'approved',
@@ -112,6 +115,7 @@ class TestSchoolSecurity(TransactionCase):
         # Attendance requires an active enrollment since 17.0.7.0.0.
         student._ensure_enrollment()
         return student
+
 
     def _mark(self, student, subject):
         # Marks belong to an assessment since 17.0.8.0.0.

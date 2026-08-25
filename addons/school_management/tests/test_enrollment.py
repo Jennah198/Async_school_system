@@ -23,11 +23,15 @@ class TestEnrollment(TransactionCase):
         })
 
     def _student(self, name):
+        seq = self.env['school.student'].search_count([])
         return self.env['school.student'].create({
             'name': name,
             'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911223344',
+            'emergency_contact_name': 'Emergency Contact of %s' % name,
+            'emergency_contact_phone': '+2518%07d' % seq,
+            'fan_number': '3000000000%06d' % seq,
             'class_id': self.klass.id,
             'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
@@ -62,6 +66,9 @@ class TestEnrollment(TransactionCase):
                 'date_of_birth': '2010-01-01',
                 'guardian_name': 'Guardian',
                 'guardian_phone': '+251911223399',
+                'emergency_contact_name': 'Emergency Contact',
+                'emergency_contact_phone': '+251811223399',
+                'fan_number': '4000000000000001',
                 'class_id': self.klass.id,
                 'academic_year_id': other_year.id,
                 'birth_certificate': DUMMY_FILE,

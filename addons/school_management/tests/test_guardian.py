@@ -22,11 +22,15 @@ class TestGuardian(TransactionCase):
         })
 
     def _student(self, name, guardian='GRD Guardian One', phone='+251911000001'):
+        seq = self.env['school.student'].search_count([])
         return self.env['school.student'].create({
             'name': name,
             'date_of_birth': '2010-01-01',
             'guardian_name': guardian,
             'guardian_phone': phone,
+            'emergency_contact_name': 'Emergency Contact of %s' % name,
+            'emergency_contact_phone': '+2517%07d' % seq,
+            'fan_number': '5000000000%06d' % seq,
             'class_id': self.klass.id,
             'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,

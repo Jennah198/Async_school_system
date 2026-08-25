@@ -34,11 +34,15 @@ class TestCurriculum(TransactionCase):
         })
 
     def _approved(self, name):
+        seq = self.env['school.student'].search_count([])
         student = self.env['school.student'].create({
             'name': name,
             'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of %s' % name,
             'guardian_phone': '+251911330001',
+            'emergency_contact_name': 'Emergency Contact of %s' % name,
+            'emergency_contact_phone': '+2516%07d' % seq,
+            'fan_number': '6000000000%06d' % seq,
             'class_id': self.klass.id,
             'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,

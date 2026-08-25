@@ -19,6 +19,7 @@ class TestAssessment(TransactionCase):
         super().setUp()
         self.today = fields.Date.context_today(self.env['school.assessment'])
         self.yesterday = self.today - timedelta(days=1)
+        self.tomorrow = self.today + timedelta(days=1)
         # A year is named after the Ethiopian year of its start date and that name
         # is unique, so only one academic year can exist per Ethiopian year. The
         # seeded years already hold the ones around today, so this widens the
@@ -97,15 +98,18 @@ class TestAssessment(TransactionCase):
 
     def _approved(self, name, registration_date):
         student = self.env['school.student'].create({
-            'name': name,
-            'date_of_birth': '2010-01-01',
-            'guardian_name': 'Guardian of %s' % name,
-            'guardian_phone': '+251911550001',
-            'academic_year_id': self.year.id,
-            'class_id': self.klass.id,
-            'birth_certificate': DUMMY_FILE,
-            'registration_date': registration_date,
-        })
+        'name': name,
+        'date_of_birth': '2010-01-01',
+        'guardian_name': 'Guardian of %s' % name,
+        'guardian_phone': '+251911550001',
+        'emergency_contact_name': 'Emergency Contact for %s' % name,
+        'emergency_contact_phone': '+251911550002',
+        'fan_number': '10%014d' % self.env['school.student'].search_count([]),
+        'academic_year_id': self.year.id,
+        'class_id': self.klass.id,
+        'birth_certificate': DUMMY_FILE,
+        'registration_date': registration_date,
+    })
         student.action_mark_submitted()
         student.action_mark_approved()
         return student
@@ -223,6 +227,9 @@ class TestAssessment(TransactionCase):
             'date_of_birth': '2010-01-01',
             'guardian_name': 'Guardian of Grade Two Student',
             'guardian_phone': '+251911550099',
+            'emergency_contact_name': 'Emergency Contact for Grade Two Student',
+            'emergency_contact_phone': '+251911999004',
+            'fan_number': '11%014d' % self.env['school.student'].search_count([]),
             'academic_year_id': self.year.id,
             'class_id': self.other_class.id,
             'birth_certificate': DUMMY_FILE,

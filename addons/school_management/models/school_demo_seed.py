@@ -1,5 +1,6 @@
 import base64
-from datetime import timedelta
+from datetime import date, timedelta
+from ethiopian_date import EthiopianDateConverter
 
 from odoo import api, fields, models
 from odoo.exceptions import AccessError
@@ -481,7 +482,168 @@ class SchoolDemoSeed(models.AbstractModel):
             })
 
         return self.summary()
+    @api.model
+    def seed_sample_test_data(self):
+        """10-student synthetic dataset (Grade 7) for dev/QA/PM testing.
+        Separate from seed_all() on purpose so it never affects the core
+        demo-seed counts test. Safe to call twice (search-or-create only)."""
+        if not self.env.user.has_group('base.group_system'):
+            raise AccessError('Only a system administrator can load sample test data.')
+        self = self.sudo()
+        self.env.cr.execute(
+            "SELECT pg_advisory_xact_lock(hashtext(%s))",
+            ['school_management.sample_test_data'],
+        )
+        self.env['school.grade'].ensure_standard_academic_structure()
+        et_year_name = str(EthiopianDateConverter.date_to_ethiopian(date(2026, 9, 1)).year)
+        year = self._one('school.academic.year', [('name', '=', et_year_name)], {
+            'name': et_year_name, 'date_start': '2026-09-01',
+            'date_end': '2027-06-30', 'state': 'open', 'is_current': True,
+        })
+        term = self._one('school.term', [
+            ('name', '=', 'STD Term 1'), ('academic_year_id', '=', year.id),
+        ], {
+            'name': 'STD Term 1', 'academic_year_id': year.id,
+            'date_start': year.date_start, 'date_end': year.date_end, 'sequence': 10,
+        })
 
+        grade_7 = self.env.ref('school_management.grade_7')
+        class_a = self._one('school.class', [
+            ('name', '=', 'STD Grade 7A'), ('academic_year_id', '=', year.id),
+        ], {
+            'name': 'STD Grade 7A', 'grade_id': grade_7.id,
+            'academic_year_id': year.id, 'education_level': 'primary',
+            'min_age': 12, 'max_age': 13, 'capacity': 40,
+        })
+        class_b = self._one('school.class', [
+            ('name', '=', 'STD Grade 7B'), ('academic_year_id', '=', year.id),
+        ], {
+            'name': 'STD Grade 7B', 'grade_id': grade_7.id,
+            'academic_year_id': year.id, 'education_level': 'primary',
+            'min_age': 12, 'max_age': 13, 'capacity': 40,
+        })
+
+        subject_names = ['STD Mathematics', 'STD English', 'STD Amharic',
+                          'STD Physics', 'STD Chemistry', 'STD Biology']
+        subjects = {
+            name: self._one('school.subject', [('name', '=', name)], {'name': name})
+            for name in subject_names
+        }
+
+        job_title = self._one('school.job.title', [
+            ('name', '=', 'STD Classroom Teacher'),
+        ], {'name': 'STD Classroom Teacher', 'department': 'academic'})
+
+        teacher_names = [
+            ('Abraham', 'Bekele', '+251911600001', 'std.abraham.bekele@school.example'),
+            ('Hana', 'Tesfaye', '+251911600002', 'std.hana.tesfaye@school.example'),
+            ('Mohammed', 'Seid', '+251911600003', 'std.mohammed.seid@school.example'),
+        ]
+        teachers = []
+        for first, last, phone, email in teacher_names:
+            staff = self._staff(
+                first, last, 'academic', job_title, 'teacher',
+                phone, email, self.env['school.campus'].search([], limit=1),
+            )
+            teacher = self._one('school.teacher', [('staff_id', '=', staff.id)], {
+                'staff_id': staff.id,
+            })
+            teachers.append(teacher)
+
+        assignments = {}
+        for i, subject in enumerate(subjects.values()):
+            teacher = teachers[i % len(teachers)]
+            for school_class in (class_a, class_b):
+                assignment = self._one('school.teacher.assignment', [
+                    ('teacher_id', '=', teacher.id), ('subject_id', '=', subject.id),
+                    ('class_id', '=', school_class.id), ('term_id', '=', term.id),
+                ], {
+                    'teacher_id': teacher.id, 'subject_id': subject.id,
+                    'class_id': school_class.id, 'term_id': term.id,
+                })
+                assignments[(subject.id, school_class.id)] = assignment
+
+        student_rows = [
+            ('Abel Getachew Fekadu', '2013-09-08', 'male', 'Meron Kebede Fekadu',
+             '+251918357162', class_a),
+            ('Nahom Getachew Yohannes', '2013-03-31', 'male', 'Zeinab Seid Yohannes',
+             '+251912621534', class_a),
+            ('Abel Girma Berhanu', '2013-08-27', 'male', 'Aster Mohammed Berhanu',
+             '+251950079111', class_a),
+            ('Khalid Tadesse Yohannes', '2014-03-05', 'male', 'Marta Haile Yohannes',
+             '+251983300637', class_a),
+            ('Aster Mulugeta Bekele', '2014-12-15', 'female', 'Rahel Tadesse Bekele',
+             '+251946632757', class_a),
+            ('Eden Tadesse Hassan', '2013-04-15', 'female', 'Elsabet Abate Hassan',
+             '+251972732043', class_a),
+            ('Eyob Abate Kebede', '2014-09-10', 'male', 'Mariam Seid Kebede',
+             '+251985751409', class_a),
+            ('Robel Alemu Yohannes', '2013-05-08', 'male', 'Girma Bekele Yohannes',
+             '+251971968116', class_a),
+            ('Dagmawi Haile Girma', '2015-04-29', 'female', 'Elias Mulugeta Girma',
+             '+251960885459', class_b),
+            ('Selam Tadesse Ahmed', '2013-02-16', 'female', 'Dagmawi Alemu Ahmed',
+             '+251912601580', class_b),
+        ]
+
+        students = []
+        for name, dob, gender, guardian, phone, school_class in student_rows:
+            student = self._student(
+                name, dob, gender, guardian, phone, school_class,
+                registration_date=year.date_start,
+            )
+            students.append(student)
+
+        scheme = self._one('school.grading.scheme', [
+            ('name', '=', 'STD Standard Grading'),
+            ('company_id', '=', self.env.company.id),
+        ], {
+            'name': 'STD Standard Grading', 'company_id': self.env.company.id,
+            'pass_percentage': 50.0,
+        })
+        for name, minimum, maximum, remark in (
+            ('A', 90, 100, 'Excellent'), ('B', 80, 89.99, 'Very Good'),
+            ('C', 70, 79.99, 'Good'), ('D', 60, 69.99, 'Satisfactory'),
+            ('E', 50, 59.99, 'Pass'), ('F', 0, 49.99, 'Needs Improvement'),
+        ):
+            self._one('school.grading.band', [
+                ('scheme_id', '=', scheme.id), ('name', '=', name),
+            ], {
+                'scheme_id': scheme.id, 'name': name,
+                'minimum_percentage': minimum, 'maximum_percentage': maximum,
+                'remark': remark,
+            })
+        scheme.action_use_for_report_cards()
+
+        assessments = {}
+        for subject in subjects.values():
+            for school_class in (class_a, class_b):
+                assignment = assignments[(subject.id, school_class.id)]
+                class_students = [s for s in students if s.class_id.id == school_class.id]
+                scores = {
+                    student.name: 55.0 + ((idx * 7 + subject.id) % 40)
+                    for idx, student in enumerate(class_students)
+                }
+                assessment = self._assessment(
+                    'STD %s Test 1' % subject.name, school_class, subject,
+                    term, assignment, scores=scores,
+                )
+                assessments[(subject.id, school_class.id)] = assessment
+
+        for idx, student in enumerate(students):
+            for day_offset in (0, 1, 2):
+                att_date = term.date_start + timedelta(days=day_offset)
+                status = 'present' if (idx + day_offset) % 5 else 'late'
+                self._one('school.attendance', [
+                    ('student_id', '=', student.id), ('date', '=', att_date),
+                ], {
+                    'student_id': student.id, 'date': att_date, 'status': status,
+                })
+
+        return {
+            'classes': 2, 'subjects': len(subjects), 'teachers': len(teachers),
+            'students': len(students),
+        }
     @api.model
     def summary(self):
         counts = {}

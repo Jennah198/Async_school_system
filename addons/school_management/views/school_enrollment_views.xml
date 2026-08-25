@@ -98,6 +98,10 @@
             <form>
                 <header>
                     <button name="action_activate" type="object" string="Activate" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_discard" string="Discard"  special="cancel"
+        class="btn-secondary"
+        invisible="state != 'draft'"
+        confirm="Discard this draft enrollment? This cannot be undone."/>
                     <button name="%(action_school_enrollment_transfer)d" type="action" string="Transfer" invisible="state != 'active'"
                             groups="school_management.group_school_registrar"
                             context="{'default_enrollment_id': id}"/>
