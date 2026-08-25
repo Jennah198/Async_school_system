@@ -213,10 +213,11 @@ class SchoolMark(models.Model):
                     ], limit=1)
                     if line:
                         vals['student_subject_id'] = line.id
-            elif not vals.get('class_id'):
+            elif not vals.get('class_id') and vals.get('student_id'):
                 student = self.env['school.student'].browse(vals['student_id'])
                 vals['class_id'] = student.class_id.id
-                return super().create(vals_list)
+
+        return super().create(vals_list)
 
     def write(self, vals):
         if SCOPE_FIELDS & vals.keys():

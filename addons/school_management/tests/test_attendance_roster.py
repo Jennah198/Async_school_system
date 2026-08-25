@@ -32,8 +32,6 @@ class TestAttendanceRoster(TransactionCase):
             'academic_year_id': self.year.id,
             'is_entry_level': True,
         })
-        # Deliberately not entry-level: transfers must not re-demand
-        # registration documents.
         self.class_b = self.env['school.class'].create({
             'name': 'ATT Grade 2',
             'academic_year_id': self.year.id,
@@ -41,17 +39,17 @@ class TestAttendanceRoster(TransactionCase):
 
     def _approved(self, name, registration_date=None, class_id=None, academic_year_id=None):
         student = self.env['school.student'].create({
-                'name': name,
-                'date_of_birth': '2010-01-01',
-                'guardian_name': 'Guardian of %s' % name,
-                'guardian_phone': '+251911440001',
-                'emergency_contact_name': 'Emergency Contact for %s' % name,
-                'emergency_contact_phone': '+251911440003',
-                'fan_number': '12%014d' % self.env['school.student'].search_count([]),
-                'class_id': (class_id or self.class_a).id,
-                'academic_year_id': (academic_year_id or self.year).id,
-                'birth_certificate': DUMMY_FILE,
-                'registration_date': registration_date or self.today,
+            'name': name,
+            'date_of_birth': '2010-01-01',
+            'guardian_name': 'Guardian of %s' % name,
+            'guardian_phone': '+251911440001',
+            'emergency_contact_name': 'Emergency Contact for %s' % name,
+            'emergency_contact_phone': '+251911440003',
+            'fan_number': '12%014d' % self.env['school.student'].search_count([]),
+            'class_id': (class_id or self.class_a).id,
+            'academic_year_id': (academic_year_id or self.year).id,
+            'birth_certificate': DUMMY_FILE,
+            'registration_date': registration_date or self.today,
         })
         student.action_mark_submitted()
         student.action_mark_approved()

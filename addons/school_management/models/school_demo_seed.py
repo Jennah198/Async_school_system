@@ -83,6 +83,7 @@ class SchoolDemoSeed(models.AbstractModel):
             skip_registration_completeness=True)
         student = Student.search([('name', '=', name)], limit=1)
         if not student:
+            reg_date = registration_date or fields.Date.context_today(self)
             values = {
                 'name': name, 'first_name': name.split()[0],
                 'last_name': name.split()[-1], 'date_of_birth': birth_date,
@@ -100,12 +101,12 @@ class SchoolDemoSeed(models.AbstractModel):
                 'birth_certificate_filename': 'fictional-birth-certificate.pdf',
                 'previous_grade_document': DEMO_FILE,
                 'previous_grade_document_filename': 'fictional-previous-grade.pdf',
-                'registration_date': registration_date,
+                'registration_date': reg_date,
             }
             if candidate_number:
                 values.update({
                     'candidate_number': candidate_number,
-                    'candidate_registration_date': registration_date,
+                    'candidate_registration_date': reg_date,
                 })
             student = Student.create(values)
         if student.registration_status in ('draft', 'incomplete'):
@@ -350,7 +351,16 @@ class SchoolDemoSeed(models.AbstractModel):
                 'value_text': 'No additional support identified in this fictional demo.',
             })
 
+        if not term1.date_start or not term1.date_end:
+            year_start = term1.academic_year_id.date_start or fields.Date.context_today(self)
+            year_end = term1.academic_year_id.date_end or (year_start + timedelta(days=300))
+            term1.write({
+                'date_start': year_start,
+                'date_end': year_end,
+            })
+
         attendance_date = term1.date_start + timedelta(days=14)
+
         attendance_states = ('present', 'late', 'present', 'present', 'absent', 'sick')
         for student, status in zip(students, attendance_states):
             enrollment = student.enrollment_ids.filtered(
@@ -370,6 +380,7 @@ class SchoolDemoSeed(models.AbstractModel):
             'SRS-ENV': (84, 72, 79), 'SRS-AMATH': (86, 77, 92),
             'SRS-BIO': (90, 83, 75), 'SRS-CHEM': (81, 89, 68),
         }
+
         for school_class, codes, cohort in (
                 (class3, ('SRS-MATH', 'SRS-ENG', 'SRS-ENV'), students[:3]),
                 (class11, ('SRS-AMATH', 'SRS-BIO', 'SRS-CHEM'), students[3:])):
@@ -482,6 +493,7 @@ class SchoolDemoSeed(models.AbstractModel):
             })
 
         return self.summary()
+
     @api.model
     def seed_sample_test_data(self):
         """10-student synthetic dataset (Grade 7) for dev/QA/PM testing.
@@ -644,6 +656,7 @@ class SchoolDemoSeed(models.AbstractModel):
             'classes': 2, 'subjects': len(subjects), 'teachers': len(teachers),
             'students': len(students),
         }
+
     @api.model
     def summary(self):
         counts = {}

@@ -110,7 +110,7 @@ class TestSchoolSecurity(TransactionCase):
             'emergency_contact_phone': '+25191124%04d' % seq,
             'fan_number': '10000000%08d' % seq,
             'birth_certificate': DUMMY_FILE,
-            'registration_date': '2026-08-01',
+            'registration_date': school_class.academic_year_id.date_start,
             'registration_status': 'approved',
         })
         # Attendance requires an active enrollment since 17.0.7.0.0.
@@ -137,10 +137,21 @@ class TestSchoolSecurity(TransactionCase):
 
     def _assessment(self, school_class, subject, name):
         term = self._term()
+        assignment = self.env['school.teacher.assignment'].search([
+            ('class_id', '=', school_class.id),
+            ('subject_id', '=', subject.id),
+            ('term_id', '=', term.id),
+            ('state', '=', 'active'),
+        ], limit=1)
         return self.env['school.assessment'].create({
-            'name': name, 'assessment_type': 'test',
-            'class_id': school_class.id, 'subject_id': subject.id,
-            'term_id': term.id, 'date': term.date_start, 'state': 'open',
+            'name': name,
+            'assessment_type': 'test',
+            'class_id': school_class.id,
+            'subject_id': subject.id,
+            'term_id': term.id,
+            'teacher_assignment_id': assignment.id if assignment else False,
+            'date': term.date_start,
+            'state': 'open',
         })
 
     def _attendance(self, student):
