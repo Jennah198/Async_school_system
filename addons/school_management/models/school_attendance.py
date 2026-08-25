@@ -173,7 +173,7 @@ class SchoolAttendance(models.Model):
                 raise ValidationError(
                     '%s has no terms, so attendance cannot be recorded for %s.'
                     % (year.display_name, rec.class_id.display_name))
-            if not terms.filtered(lambda t: t.date_start <= rec.date <= t.date_end):
+            if not terms.filtered(lambda t: t.date_start and t.date_end and t.date_start <= rec.date <= t.date_end):
                 raise ValidationError(
                     '%s is outside every term of %s (%s). Attendance is only '
                     'recorded on teaching days.'

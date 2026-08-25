@@ -79,7 +79,7 @@ class TestSrsLifecycle(TransactionCase):
         with self.assertRaises(ValidationError):
             self.year.name = 'Changed'
         # An authorized correction still has to produce a valid year: the name
-        # must be YYYY/YYYY and must agree with the dates, so the correction moves
+        # must be YYYY and must agree with the dates, so the correction moves
         # both together rather than writing a free-text label.
         self.year.with_context(authorized_academic_correction=True).write({
             'name': '2028',  # Ethiopian year of 2036-09-01
