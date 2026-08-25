@@ -5,6 +5,8 @@ from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
+from .common import ethiopian_year_name, year_spanning_today
+
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 
@@ -14,14 +16,13 @@ class TestAttendanceRoster(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        real_today = fields.Date.context_today(self.env['school.attendance'])
-        self.year = self.env['school.academic.year'].create({
-            'name': '%d/%d' % (real_today.year + 20, real_today.year + 21),
-            'date_start': real_today.replace(year=real_today.year + 20),
-            'date_end': real_today.replace(year=real_today.year + 21)})
-        self.today = self.year.date_start + timedelta(days=10)
+        self.today = fields.Date.context_today(self.env['school.attendance'])
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
+        # Only one academic year can exist per Ethiopian year, and the seeded
+        # years hold the ones around today, so the seeded current year is widened
+        # rather than duplicated.
+        self.year = year_spanning_today(self.env)
         # Attendance is only recorded on teaching days, so the year needs a term
         # covering the dates these tests use.
         self.env['school.term'].create({
@@ -148,7 +149,7 @@ class TestAttendanceRoster(TransactionCase):
             ],
         })
         real_today = fields.Date.context_today(self.env['school.attendance'])
-        year_name = '%d/%d' % (real_today.year, real_today.year + 1)
+        year_name = ethiopian_year_name(real_today)
         real_year = self.env['school.academic.year'].search([
             ('name', '=', year_name),
         ], limit=1)

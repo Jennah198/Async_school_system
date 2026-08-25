@@ -4,7 +4,10 @@ from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
-YEAR = '2049/2050'
+from .common import year_spanning_today
+
+# The Ethiopian year of 2049-01-01, which is how school.academic.year is named.
+YEAR = '2041'
 
 
 class TestResponsibilityAndStaffControl(TransactionCase):
@@ -145,24 +148,15 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         in 2049, which means its assignments are future-dated and are refused by the
         future-dated rule — so a suspension test built on them passes without the
         suspension ever being consulted."""
-        today = fields.Date.context_today(self.env['school.staff'])
-        year_name = '%d/%d' % (today.year, today.year + 1)
-        year = self.env['school.academic.year'].search([
-            ('name', '=', year_name),
-        ], limit=1) or self.env['school.academic.year'].create({
-            'name': year_name,
-            'date_start': today,
-            'date_end': today + relativedelta(months=6),
-        })
-        term = self.env['school.term'].search([
-            ('academic_year_id', '=', year.id), ('name', '=', 'RESP Current Term'),
-        ], limit=1) or self.env['school.term'].create({
+        # Only one academic year can exist per Ethiopian year and the seeded years
+        # hold the ones around today, so the seeded current year is widened rather
+        # than duplicated.
+        year = year_spanning_today(self.env)
+        term = self.env['school.term'].create({
             'name': 'RESP Current Term', 'academic_year_id': year.id,
             'date_start': year.date_start, 'date_end': year.date_end, 'sequence': 10,
         })
-        school_class = self.env['school.class'].search([
-            ('academic_year_id', '=', year.id), ('name', '=', 'RESP Current Grade'),
-        ], limit=1) or self.env['school.class'].create({
+        school_class = self.env['school.class'].create({
             'name': 'RESP Current Grade', 'section_id': self._section().id,
             'academic_year_id': year.id, 'is_entry_level': True,
         })

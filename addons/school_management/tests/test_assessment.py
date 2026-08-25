@@ -5,6 +5,8 @@ from odoo import fields
 from odoo.exceptions import AccessError, ValidationError
 from odoo.tests.common import TransactionCase
 
+from .common import year_spanning_today
+
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 
@@ -15,14 +17,14 @@ class TestAssessment(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        real_today = fields.Date.context_today(self.env['school.attendance'])
-        self.year = self.env['school.academic.year'].create({
-            'name': '%d/%d' % (real_today.year + 20, real_today.year + 21),
-            'date_start': real_today.replace(year=real_today.year + 20),
-            'date_end': real_today.replace(year=real_today.year + 21)})
-        self.today = self.year.date_start + timedelta(days=10)
+        self.today = fields.Date.context_today(self.env['school.assessment'])
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
+        # A year is named after the Ethiopian year of its start date and that name
+        # is unique, so only one academic year can exist per Ethiopian year. The
+        # seeded years already hold the ones around today, so this widens the
+        # seeded current year instead of creating a second one.
+        self.year = year_spanning_today(self.env)
         self.klass = self.env['school.class'].create({
             'name': 'ASM Grade 1',
             'academic_year_id': self.year.id,

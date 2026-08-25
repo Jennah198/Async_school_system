@@ -10,7 +10,8 @@ class TestSrsLifecycle(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.year = cls.env['school.academic.year'].create({
-            'name': '2035/2036', 'date_start': date(2035, 9, 1),
+            'name': '2027',  # Ethiopian year of 2035-09-01
+            'date_start': date(2035, 9, 1),
             'date_end': date(2036, 6, 30),
         })
         cls.grade = cls.env.ref('school_management.grade_1')
@@ -77,7 +78,15 @@ class TestSrsLifecycle(TransactionCase):
         self.year.write({'state': 'closed'})
         with self.assertRaises(ValidationError):
             self.year.name = 'Changed'
-            self.year.with_context(authorized_academic_correction=True).name = '2035/2036'
+        # An authorized correction still has to produce a valid year: the name
+        # must be YYYY/YYYY and must agree with the dates, so the correction moves
+        # both together rather than writing a free-text label.
+        self.year.with_context(authorized_academic_correction=True).write({
+            'name': '2028',  # Ethiopian year of 2036-09-01
+            'date_start': date(2036, 9, 1),
+            'date_end': date(2037, 6, 30),
+        })
+        self.assertEqual(self.year.name, '2028')
 
     def test_one_enrollment_per_student_and_year_including_drafts(self):
         student = self._student('One Yearly Enrollment')

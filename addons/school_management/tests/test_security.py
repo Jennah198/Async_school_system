@@ -3,7 +3,8 @@ import base64
 from odoo.exceptions import AccessError
 from odoo.tests.common import TransactionCase
 
-YEAR = '2047/2048'
+# The Ethiopian year of 2047-01-01, which is how school.academic.year is named.
+YEAR = '2039'
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 

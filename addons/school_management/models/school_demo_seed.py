@@ -1,5 +1,6 @@
 import base64
-from datetime import timedelta
+from datetime import date, timedelta
+from ethiopian_date import EthiopianDateConverter
 
 from odoo import api, fields, models
 from odoo.exceptions import AccessError
@@ -162,8 +163,9 @@ class SchoolDemoSeed(models.AbstractModel):
         )
         self.env['school.grade'].ensure_standard_academic_structure()
         company = self.env.company
-        year = self._one('school.academic.year', [('name', '=', '2026/2027')], {
-            'name': '2026/2027', 'date_start': '2026-09-01',
+        et_year_name = str(EthiopianDateConverter.date_to_ethiopian(date(2026, 9, 1)).year)
+        year = self._one('school.academic.year', [('name', '=', et_year_name)], {
+            'name': et_year_name, 'date_start': '2026-09-01',
             'date_end': '2027-06-30', 'state': 'open', 'is_current': True,
         })
         term1 = self._one('school.term', [
@@ -491,8 +493,9 @@ class SchoolDemoSeed(models.AbstractModel):
             ['school_management.sample_test_data'],
         )
         self.env['school.grade'].ensure_standard_academic_structure()
-        year = self._one('school.academic.year', [('name', '=', '2026/2027')], {
-            'name': '2026/2027', 'date_start': '2026-09-01',
+        et_year_name = str(EthiopianDateConverter.date_to_ethiopian(date(2026, 9, 1)).year)
+        year = self._one('school.academic.year', [('name', '=', et_year_name)], {
+            'name': et_year_name, 'date_start': '2026-09-01',
             'date_end': '2027-06-30', 'state': 'open', 'is_current': True,
         })
         term = self._one('school.term', [

@@ -14,7 +14,7 @@ class TestCurriculum(TransactionCase):
     def setUp(self):
         super().setUp()
         self.year = self.env['school.academic.year'].create({
-            'name': '2094/2095',
+            'name': '2086',  # Ethiopian year of 2094-09-01
             'date_start': '2094-09-01', 'date_end': '2095-06-30'})
         self.klass = self.env['school.class'].create({
             'name': 'CUR Grade 1',
