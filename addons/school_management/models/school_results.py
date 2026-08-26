@@ -411,7 +411,12 @@ class SchoolReportCardGenerate(models.TransientModel):
             raise AccessError(
                 'Only a School Administrator or Examination Officer can generate report cards.')
 
-        if self.generation_mode == 'student':
+        # Fallback for compatibility if student_id is set without class_id
+        mode = self.generation_mode
+        if not self.class_id and self.student_id:
+            mode = 'student'
+
+        if mode == 'student':
             if not self.student_id:
                 raise ValidationError('Please select a student.')
             enrollment = self.student_id.enrollment_ids.filtered(
