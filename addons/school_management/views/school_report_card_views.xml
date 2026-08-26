@@ -45,6 +45,8 @@
                 <field name="class_id"/>
                 <field name="version"/>
                 <field name="overall_average" string="Overall Average (%)"/>
+                <field name="class_rank" optional="show"/>
+                <field name="grade_rank" optional="hide"/>
                 <field name="result"/>
                 <field name="state" widget="badge"/>
             </list>
@@ -81,6 +83,10 @@
                             <field name="grading_scheme_id" readonly="1"/>
                             <field name="overall_average" readonly="1"/>
                             <field name="result" readonly="1"/>
+                            <field name="class_rank" readonly="1"/>
+                            <field name="class_size" readonly="1"/>
+                            <field name="grade_rank" readonly="1"/>
+                            <field name="grade_size" readonly="1"/>
                             <field name="version" readonly="1"/>
                             <field name="supersedes_id" readonly="1" invisible="not supersedes_id"/>
                             <field name="superseded_by_id" readonly="1" invisible="not superseded_by_id"/>

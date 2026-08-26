@@ -107,6 +107,8 @@ class SchoolReportCard(models.Model):
     academic_year_id = fields.Many2one(
         related='enrollment_id.academic_year_id', store=True, index=True)
     class_id = fields.Many2one(related='enrollment_id.class_id', store=True)
+    grade_id = fields.Many2one(
+        'school.grade', related='class_id.grade_id', store=True, index=True)
     version = fields.Integer(required=True, readonly=True, copy=False)
     supersedes_id = fields.Many2one('school.report.card', ondelete='restrict', readonly=True)
     superseded_by_id = fields.Many2one(
@@ -126,28 +128,64 @@ class SchoolReportCard(models.Model):
     approved_at = fields.Datetime(readonly=True, copy=False)
     published_at = fields.Datetime(readonly=True, copy=False)
     correction_reason = fields.Text(copy=False)
-    class_rank = fields.Integer(string='Class Rank', compute='_compute_class_rank')
-    class_size = fields.Integer(string='Students Ranked', compute='_compute_class_rank')
+
+    class_rank = fields.Integer(string='Class Rank', compute='_compute_rankings', store=False)
+    class_size = fields.Integer(string='Class Size', compute='_compute_rankings', store=False)
+    grade_rank = fields.Integer(string='Grade Rank', compute='_compute_rankings', store=False)
+    grade_size = fields.Integer(string='Grade Size', compute='_compute_rankings', store=False)
+
     subject_results_html = fields.Html(
         string='Subject Results', compute='_compute_snapshot_html', sanitize=False)
     attendance_html = fields.Html(
         string='Attendance', compute='_compute_snapshot_html', sanitize=False)
 
-    @api.depends('overall_average', 'class_id', 'term_id', 'superseded_by_id')
-    def _compute_class_rank(self):
+    _report_card_version_unique = models.Constraint(
+        'unique(student_id, term_id, version)',
+        'Report card versions must be unique for each student and term.')
+
+    @api.depends('overall_average', 'class_id', 'grade_id', 'term_id', 'superseded_by_id', 'state')
+    def _compute_rankings(self):
         for card in self:
             if not self.env.company.school_ranking or not card.class_id:
                 card.class_rank = 0
                 card.class_size = 0
+                card.grade_rank = 0
+                card.grade_size = 0
                 continue
-            latest = {}
+
+            # Class Section Ranking
+            class_latest = {}
             for peer in self.search([
-                    ('class_id', '=', card.class_id.id),
-                    ('term_id', '=', card.term_id.id)], order='version desc'):
-                latest.setdefault(peer.student_id.id, peer)
-            card.class_size = len(latest)
+                ('class_id', '=', card.class_id.id),
+                ('term_id', '=', card.term_id.id),
+                ('state', '!=', 'superseded'),
+                ('superseded_by_id', '=', False),
+            ], order='version desc'):
+                class_latest.setdefault(peer.student_id.id, peer)
+
+            card.class_size = len(class_latest)
             card.class_rank = 1 + sum(
-                1 for peer in latest.values() if peer.overall_average > card.overall_average)
+                1 for peer in class_latest.values() if peer.overall_average > card.overall_average
+            )
+
+            # Grade Level Ranking (across all sections of the same grade)
+            if card.grade_id:
+                grade_latest = {}
+                for peer in self.search([
+                    ('grade_id', '=', card.grade_id.id),
+                    ('term_id', '=', card.term_id.id),
+                    ('state', '!=', 'superseded'),
+                    ('superseded_by_id', '=', False),
+                ], order='version desc'):
+                    grade_latest.setdefault(peer.student_id.id, peer)
+
+                card.grade_size = len(grade_latest)
+                card.grade_rank = 1 + sum(
+                    1 for peer in grade_latest.values() if peer.overall_average > card.overall_average
+                )
+            else:
+                card.grade_rank = card.class_rank
+                card.grade_size = card.class_size
 
     @api.depends('result_snapshot', 'attendance_summary')
     def _compute_snapshot_html(self):
@@ -188,10 +226,6 @@ class SchoolReportCard(models.Model):
             '<tfoot><tr><th>Total</th><th class="text-end">%s</th></tr></tfoot>'
             '</table>') % (body, sum(summary.values()))
 
-    _report_card_version_unique = models.Constraint(
-        'unique(student_id, term_id, version)',
-        'Report card versions must be unique for each student and term.')
-
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -213,7 +247,6 @@ class SchoolReportCard(models.Model):
             ('state', '=', 'active'),
         ], limit=1)
         if not enrollment:
-            # Fallback to any enrollment in the year if state is not active yet
             enrollment = self.env['school.enrollment'].search([
                 ('student_id', '=', student.id),
                 ('academic_year_id', '=', term.academic_year_id.id),
@@ -441,7 +474,6 @@ class SchoolReportCardGenerate(models.TransientModel):
                 )
                 generated_cards |= card
             except ValidationError:
-                # Student might not have published marks yet
                 continue
 
         if not generated_cards and students_skipped:
