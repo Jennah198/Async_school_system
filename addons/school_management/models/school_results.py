@@ -107,6 +107,8 @@ class SchoolReportCard(models.Model):
     academic_year_id = fields.Many2one(
         related='enrollment_id.academic_year_id', store=True, index=True)
     class_id = fields.Many2one(related='enrollment_id.class_id', store=True)
+    grade_id = fields.Many2one(
+        'school.grade', related='class_id.grade_id', store=True, index=True)
     version = fields.Integer(required=True, readonly=True, copy=False)
     supersedes_id = fields.Many2one('school.report.card', ondelete='restrict', readonly=True)
     superseded_by_id = fields.Many2one(
@@ -126,28 +128,64 @@ class SchoolReportCard(models.Model):
     approved_at = fields.Datetime(readonly=True, copy=False)
     published_at = fields.Datetime(readonly=True, copy=False)
     correction_reason = fields.Text(copy=False)
-    class_rank = fields.Integer(string='Class Rank', compute='_compute_class_rank')
-    class_size = fields.Integer(string='Students Ranked', compute='_compute_class_rank')
+
+    class_rank = fields.Integer(string='Class Rank', compute='_compute_rankings', store=False)
+    class_size = fields.Integer(string='Class Size', compute='_compute_rankings', store=False)
+    grade_rank = fields.Integer(string='Grade Rank', compute='_compute_rankings', store=False)
+    grade_size = fields.Integer(string='Grade Size', compute='_compute_rankings', store=False)
+
     subject_results_html = fields.Html(
         string='Subject Results', compute='_compute_snapshot_html', sanitize=False)
     attendance_html = fields.Html(
         string='Attendance', compute='_compute_snapshot_html', sanitize=False)
 
-    @api.depends('overall_average', 'class_id', 'term_id', 'superseded_by_id')
-    def _compute_class_rank(self):
+    _report_card_version_unique = models.Constraint(
+        'unique(student_id, term_id, version)',
+        'Report card versions must be unique for each student and term.')
+
+    @api.depends('overall_average', 'class_id', 'grade_id', 'term_id', 'superseded_by_id', 'state')
+    def _compute_rankings(self):
         for card in self:
             if not self.env.company.school_ranking or not card.class_id:
                 card.class_rank = 0
                 card.class_size = 0
+                card.grade_rank = 0
+                card.grade_size = 0
                 continue
-            latest = {}
+
+            # Class Section Ranking
+            class_latest = {}
             for peer in self.search([
-                    ('class_id', '=', card.class_id.id),
-                    ('term_id', '=', card.term_id.id)], order='version desc'):
-                latest.setdefault(peer.student_id.id, peer)
-            card.class_size = len(latest)
+                ('class_id', '=', card.class_id.id),
+                ('term_id', '=', card.term_id.id),
+                ('state', '!=', 'superseded'),
+                ('superseded_by_id', '=', False),
+            ], order='version desc'):
+                class_latest.setdefault(peer.student_id.id, peer)
+
+            card.class_size = len(class_latest)
             card.class_rank = 1 + sum(
-                1 for peer in latest.values() if peer.overall_average > card.overall_average)
+                1 for peer in class_latest.values() if peer.overall_average > card.overall_average
+            )
+
+            # Grade Level Ranking (across all sections of the same grade)
+            if card.grade_id:
+                grade_latest = {}
+                for peer in self.search([
+                    ('grade_id', '=', card.grade_id.id),
+                    ('term_id', '=', card.term_id.id),
+                    ('state', '!=', 'superseded'),
+                    ('superseded_by_id', '=', False),
+                ], order='version desc'):
+                    grade_latest.setdefault(peer.student_id.id, peer)
+
+                card.grade_size = len(grade_latest)
+                card.grade_rank = 1 + sum(
+                    1 for peer in grade_latest.values() if peer.overall_average > card.overall_average
+                )
+            else:
+                card.grade_rank = card.class_rank
+                card.grade_size = card.class_size
 
     @api.depends('result_snapshot', 'attendance_summary')
     def _compute_snapshot_html(self):
@@ -188,10 +226,6 @@ class SchoolReportCard(models.Model):
             '<tfoot><tr><th>Total</th><th class="text-end">%s</th></tr></tfoot>'
             '</table>') % (body, sum(summary.values()))
 
-    _report_card_version_unique = models.Constraint(
-        'unique(student_id, term_id, version)',
-        'Report card versions must be unique for each student and term.')
-
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -202,7 +236,7 @@ class SchoolReportCard(models.Model):
             ], order='version desc', limit=1)
             vals['version'] = previous.version + 1 if previous else 1
             vals['name'] = '%s - %s - v%s' % (student.name, term.name, vals['version'])
-            vals.setdefault('supersedes_id', previous.id)
+            vals.setdefault('supersedes_id', previous.id if previous else False)
         return super().create(vals_list)
 
     @api.model
@@ -210,54 +244,88 @@ class SchoolReportCard(models.Model):
         enrollment = self.env['school.enrollment'].search([
             ('student_id', '=', student.id),
             ('academic_year_id', '=', term.academic_year_id.id),
+            ('state', '=', 'active'),
         ], limit=1)
         if not enrollment:
+            enrollment = self.env['school.enrollment'].search([
+                ('student_id', '=', student.id),
+                ('academic_year_id', '=', term.academic_year_id.id),
+            ], limit=1)
+        if not enrollment:
             raise ValidationError('The student has no enrollment for this term.')
+
         scheme = self.env.company.school_grading_scheme_id
         if not scheme or not scheme.band_ids:
             raise ValidationError(
                 'No active grading scheme is selected. Go to Administration → '
                 'Grading Schemes, complete bands covering 0–100, then click '
                 'Use for Report Cards.')
+
         marks = self.env['school.mark'].search([
-            ('student_id', '=', student.id), ('term_id', '=', term.id),
+            ('student_id', '=', student.id),
+            ('term_id', '=', term.id),
             ('assessment_id.state', '=', 'published'),
-            ('mark_status', 'in', ('recorded', 'transfer')),
+            ('mark_status', 'in', ('recorded', 'transfer', 'makeup')),
         ])
         if not marks:
             raise ValidationError('No published marks are available for this report card.')
+
         grouped = {}
         for mark in marks:
             row = grouped.setdefault(mark.subject_id.id, {
-                'subject': mark.subject_id.name, 'raw_total': 0.0,
-                'maximum_total': 0.0, 'weighted_total': 0.0,
+                'subject_id': mark.subject_id.id,
+                'subject': mark.subject_id.name,
+                'raw_total': 0.0,
+                'maximum_total': 0.0,
+                'weighted_total': 0.0,
+                'total_weight': 0.0,
+                'assessments': [],
             })
             row['raw_total'] += mark.score
             row['maximum_total'] += mark.max_score
             row['weighted_total'] += mark.weighted_score
+            row['total_weight'] += (mark.assessment_id.weight or 0.0)
+            row['assessments'].append({
+                'assessment_id': mark.assessment_id.id,
+                'assessment_name': mark.assessment_id.name,
+                'score': mark.score,
+                'max_score': mark.max_score,
+                'weight': mark.assessment_id.weight,
+                'weighted_score': mark.weighted_score,
+            })
+
         results = []
         for values in grouped.values():
-            percentage = (values['raw_total'] / values['maximum_total'] * 100.0)
+            if values['total_weight'] > 0:
+                percentage = (values['weighted_total'] / values['total_weight']) * 100.0
+            elif values['maximum_total'] > 0:
+                percentage = (values['raw_total'] / values['maximum_total']) * 100.0
+            else:
+                percentage = 0.0
+
             band = scheme.grade_for(percentage)
             values.update({
-                'percentage': percentage, 'grade': band.name if band else False,
+                'percentage': round(percentage, 2),
+                'grade': band.name if band else False,
                 'pass': percentage >= scheme.pass_percentage,
             })
             results.append(values)
-        average = sum(row['percentage'] for row in results) / len(results)
-        # Generation is already restricted to trusted academic roles. Read
-        # only this student's term aggregate without granting Exam Officers
-        # general access to sensitive attendance screens.
+
+        average = sum(row['percentage'] for row in results) / len(results) if results else 0.0
+
         attendance = self.env['school.attendance'].sudo()._read_group(
             [('student_id', '=', student.id),
              ('date', '>=', term.date_start), ('date', '<=', term.date_end)],
             ['status'], ['__count'])
+
         return self.create({
-            'student_id': student.id, 'enrollment_id': enrollment.id,
-            'term_id': term.id, 'grading_scheme_id': scheme.id,
+            'student_id': student.id,
+            'enrollment_id': enrollment.id,
+            'term_id': term.id,
+            'grading_scheme_id': scheme.id,
             'result_snapshot': results,
             'attendance_summary': {status: count for status, count in attendance},
-            'overall_average': average,
+            'overall_average': round(average, 2),
             'result': 'pass' if all(row['pass'] for row in results) else 'fail',
             'correction_reason': correction_reason,
         })
@@ -270,7 +338,8 @@ class SchoolReportCard(models.Model):
     def action_approve(self):
         self._require_exam_officer()
         self.filtered(lambda card: card.state == 'draft').write({
-            'state': 'approved', 'approved_by_id': self.env.user.id,
+            'state': 'approved',
+            'approved_by_id': self.env.user.id,
             'approved_at': fields.Datetime.now(),
         })
 
@@ -299,8 +368,16 @@ class SchoolReportCardGenerate(models.TransientModel):
     _name = 'school.report.card.generate'
     _description = 'Generate Student Report Card'
 
+    generation_mode = fields.Selection([
+        ('class', 'By Class/Section'),
+        ('student', 'Single Student'),
+    ], string='Mode', default='class', required=True)
+    class_id = fields.Many2one(
+        'school.class', string='Class',
+        domain=[('active', '=', True)],
+    )
     student_id = fields.Many2one(
-        'school.student', string='Student', required=True,
+        'school.student', string='Student',
         domain=[('registration_status', '=', 'approved'), ('active', '=', True)],
     )
     term_id = fields.Many2one(
@@ -310,23 +387,21 @@ class SchoolReportCardGenerate(models.TransientModel):
     correction_reason = fields.Text(
         help='Required when generating a corrected version of an existing report card.')
 
-    @api.onchange('term_id')
-    def _onchange_term_id(self):
-        for wizard in self.filtered('term_id'):
-            if wizard.student_id and not wizard.student_id.enrollment_ids.filtered(
-                    lambda enrollment: enrollment.academic_year_id ==
-                    wizard.term_id.academic_year_id):
-                wizard.student_id = False
-            return {
-                'domain': {
-                    'student_id': [
-                        ('registration_status', '=', 'approved'),
-                        ('active', '=', True),
-                        ('enrollment_ids.academic_year_id', '=',
-                         wizard.term_id.academic_year_id.id),
-                    ],
-                },
-            }
+    @api.onchange('term_id', 'generation_mode', 'class_id')
+    def _onchange_filters(self):
+        if not self.term_id:
+            return {}
+        domain = {
+            'class_id': [('academic_year_id', '=', self.term_id.academic_year_id.id)],
+            'student_id': [
+                ('registration_status', '=', 'approved'),
+                ('active', '=', True),
+                ('enrollment_ids.academic_year_id', '=', self.term_id.academic_year_id.id),
+            ],
+        }
+        if self.class_id:
+            domain['student_id'].append(('enrollment_ids.class_id', '=', self.class_id.id))
+        return {'domain': domain}
 
     def action_generate(self):
         self.ensure_one()
@@ -335,28 +410,90 @@ class SchoolReportCardGenerate(models.TransientModel):
                 or self.env.user.has_group('school_management.group_school_exam_officer')):
             raise AccessError(
                 'Only a School Administrator or Examination Officer can generate report cards.')
-        enrollment = self.student_id.enrollment_ids.filtered(
-            lambda item: item.academic_year_id == self.term_id.academic_year_id)
-        if not enrollment:
-            raise ValidationError(
-                '%s is not enrolled in the %s academic year.' % (
-                    self.student_id.name, self.term_id.academic_year_id.name))
-        previous = self.env['school.report.card'].search_count([
-            ('student_id', '=', self.student_id.id),
-            ('term_id', '=', self.term_id.id),
+
+        # Fallback for compatibility if student_id is set without class_id
+        mode = self.generation_mode
+        if not self.class_id and self.student_id:
+            mode = 'student'
+
+        if mode == 'student':
+            if not self.student_id:
+                raise ValidationError('Please select a student.')
+            enrollment = self.student_id.enrollment_ids.filtered(
+                lambda item: item.academic_year_id == self.term_id.academic_year_id)
+            if not enrollment:
+                raise ValidationError(
+                    '%s is not enrolled in the %s academic year.' % (
+                        self.student_id.name, self.term_id.academic_year_id.name))
+            previous = self.env['school.report.card'].search_count([
+                ('student_id', '=', self.student_id.id),
+                ('term_id', '=', self.term_id.id),
+            ])
+            if previous and not self.correction_reason:
+                raise ValidationError(
+                    'Enter a correction reason before generating a new report-card version.')
+            card = self.env['school.report.card'].generate_for(
+                self.student_id, self.term_id,
+                correction_reason=self.correction_reason or None,
+            )
+            return {
+                'type': 'ir.actions.act_window',
+                'name': card.name,
+                'res_model': 'school.report.card',
+                'res_id': card.id,
+                'view_mode': 'form',
+                'target': 'current',
+            }
+
+        # Batch Generation by Class
+        if not self.class_id:
+            raise ValidationError('Please select a class to generate report cards in batch.')
+
+        enrollments = self.env['school.enrollment'].search([
+            ('class_id', '=', self.class_id.id),
+            ('academic_year_id', '=', self.term_id.academic_year_id.id),
+            ('state', '=', 'active'),
         ])
-        if previous and not self.correction_reason:
+        if not enrollments:
             raise ValidationError(
-                'Enter a correction reason before generating a new report-card version.')
-        card = self.env['school.report.card'].generate_for(
-            self.student_id, self.term_id,
-            correction_reason=self.correction_reason or None,
-        )
+                'No active enrollments found for class %s in academic year %s.' % (
+                    self.class_id.name, self.term_id.academic_year_id.name))
+
+        generated_cards = self.env['school.report.card']
+        students_skipped = []
+        for enrollment in enrollments:
+            student = enrollment.student_id
+            existing = self.env['school.report.card'].search([
+                ('student_id', '=', student.id),
+                ('term_id', '=', self.term_id.id),
+            ], order='version desc', limit=1)
+
+            if existing and not self.correction_reason:
+                students_skipped.append(student.name)
+                continue
+
+            try:
+                card = self.env['school.report.card'].generate_for(
+                    student, self.term_id,
+                    correction_reason=self.correction_reason or None,
+                )
+                generated_cards |= card
+            except ValidationError:
+                continue
+
+        if not generated_cards and students_skipped:
+            raise ValidationError(
+                'Report cards already exist for students in this class. '
+                'Enter a correction reason to generate new versions.')
+        elif not generated_cards:
+            raise ValidationError(
+                'No published marks were found for students in class %s.' % self.class_id.name)
+
         return {
             'type': 'ir.actions.act_window',
-            'name': card.name,
+            'name': 'Report Cards - %s - %s' % (self.class_id.name, self.term_id.name),
             'res_model': 'school.report.card',
-            'res_id': card.id,
-            'view_mode': 'form',
+            'domain': [('id', 'in', generated_cards.ids)],
+            'view_mode': 'list,form',
             'target': 'current',
         }

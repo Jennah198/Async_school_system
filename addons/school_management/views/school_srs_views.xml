@@ -114,9 +114,13 @@
         <field name="arch" type="xml">
             <form string="Generate Report Card">
                 <group>
-                    <div class="alert alert-info" role="alert" colspan="2">The average is calculated automatically as a percentage from this student's published marks for the selected term.</div>
+                    <div class="alert alert-info" role="alert" colspan="2">
+                        Report cards are generated automatically from published assessment marks for the selected term.
+                    </div>
                     <field name="term_id" options="{'no_create': True}"/>
-                    <field name="student_id" options="{'no_create': True}"/>
+                    <field name="generation_mode" widget="radio"/>
+                    <field name="class_id" options="{'no_create': True}" invisible="generation_mode != 'class'" required="generation_mode == 'class'"/>
+                    <field name="student_id" options="{'no_create': True}" invisible="generation_mode != 'student'" required="generation_mode == 'student'"/>
                     <field name="correction_reason" placeholder="Only needed when creating a corrected version"/>
                 </group>
                 <footer>
