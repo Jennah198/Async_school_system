@@ -304,3 +304,15 @@ class TestReportCardEngine(TransactionCase):
         self.assertEqual(card_1.grade_rank, 2)
         self.assertEqual(card_2.grade_rank, 2)
         self.assertEqual(card_4.grade_rank, 4)  # 1224 competition ranking skips rank 3
+
+
+    def test_qweb_pdf_report_rendering(self):
+        self._create_and_publish_assessment(self.subject_math, 88.0, 74.0)
+        card = self.env['school.report.card'].generate_for(self.student_1, self.term)
+        card.with_user(self.officer).action_approve()
+        card.with_user(self.officer).action_publish()
+
+        report = self.env.ref('school_management.action_report_school_report_card')
+        content, content_type = report._render_qweb_pdf(report.id, [card.id])
+        self.assertEqual(content_type, 'pdf')
+        self.assertTrue(len(content) > 0)
