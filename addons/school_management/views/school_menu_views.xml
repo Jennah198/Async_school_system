@@ -2,7 +2,6 @@
 <odoo>
     <!--
         School Management — Menus
-        ==========================
         One submenu section per role. Each menuitem carries a groups= attribute
         so users only see sections their role permits.
         Load order: always loaded last in __manifest__.py.
@@ -106,18 +105,34 @@
               name="Student Registration"
               parent="menu_school_registrar"
               action="action_school_admission_wizard"/>
+
     <menuitem id="menu_school_student_list"
               name="Student List"
               parent="menu_school_registrar"
               action="action_school_student_list"
               groups="school_management.group_school_registrar"
               sequence="11"/>
+
+    <menuitem id="menu_school_assessment_marks"
+              name="Assessments &amp; Marks"
+              parent="menu_school_registrar"
+              groups="school_management.group_school_registrar,school_management.group_school_exam_officer,school_management.group_school_director"
+              sequence="32"/>
+              
     <menuitem id="menu_school_assessment"
               name="Assessments"
-              parent="menu_school_registrar"
+              parent="menu_school_assessment_marks"
               action="action_school_assessment"
               groups="school_management.group_school_registrar,school_management.group_school_exam_officer"
               sequence="33"/>
+
+    <menuitem id="menu_school_report_cards"
+              name="Report Cards"
+              parent="menu_school_assessment_marks"
+              action="action_school_report_card"
+              groups="school_management.group_school_registrar,school_management.group_school_exam_officer,school_management.group_school_director"
+              sequence="34"/>
+
 
     <menuitem id="menu_school_student"
               name="Students"

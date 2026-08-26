@@ -157,8 +157,10 @@ class TestResponsibilityAndStaffControl(TransactionCase):
             'date_start': year.date_start, 'date_end': year.date_end, 'sequence': 10,
         })
         school_class = self.env['school.class'].create({
-            'name': 'RESP Current Grade', 'section_id': self._section().id,
-            'academic_year_id': year.id, 'is_entry_level': True,
+            'name': 'RESP Current Grade',
+            'section_id': self._section().id,
+            'academic_year_id': year.id,
+            'is_entry_level': True,
         })
         return term, school_class
 

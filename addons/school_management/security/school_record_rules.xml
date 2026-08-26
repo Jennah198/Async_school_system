@@ -2,7 +2,6 @@
 <odoo>
     <!--
         School Management — Record Rules (Row-Level Access)
-        ====================================================
         Odoo ORs all rules a user qualifies for.
         Each role gets its own narrow rule; Admin inherits all via implied_ids
         and automatically passes every rule through.

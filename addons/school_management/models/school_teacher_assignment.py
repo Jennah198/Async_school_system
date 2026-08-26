@@ -110,7 +110,6 @@ class SchoolTeacherAssignment(models.Model):
     @api.constrains('teacher_id')
     def _check_staff_can_take_work(self):
         """Brief section 4: suspended or inactive staff take no new assignments.
-
         Control status and employment status are separate fields on purpose, and
         each blocks work on its own: Suspend sets state, while a resignation is
         recorded as an employment_status. Checking only one of them let a
@@ -124,6 +123,14 @@ class SchoolTeacherAssignment(models.Model):
                     '%s is %s as a staff member and cannot receive new assignments.'
                     % (rec.teacher_id.name, label)
                 )
+            employment_status = staff.employment_status
+            if employment_status not in ('active', 'on_leave'):
+                raise ValidationError(
+                    '%s is %s as a staff member and cannot receive new assignments.'
+                    % (rec.teacher_id.name, employment_status)
+                )
+            if not staff.active:
+                raise ValidationError('Inactive staff cannot receive assignments.')
             employment_status = staff.employment_status
             if employment_status not in ('active', 'on_leave'):
                 raise ValidationError(
@@ -156,6 +163,7 @@ class SchoolTeacherAssignment(models.Model):
                 raise ValidationError(
                     '%s is not on the curriculum of %s.' % (
                         rec.subject_id.name, rec.class_id.display_name))
+
     @api.constrains('start_date', 'end_date')
     def _check_dates(self):
         for rec in self:
@@ -165,11 +173,11 @@ class SchoolTeacherAssignment(models.Model):
     @api.constrains('term_id', 'academic_year_id', 'start_date', 'end_date')
     def _check_period(self):
         for rec in self:
-            if rec.term_id.academic_year_id != rec.academic_year_id:
+            if rec.term_id and rec.academic_year_id and rec.term_id.academic_year_id != rec.academic_year_id:
                 raise ValidationError('The assignment term must belong to its academic year.')
-            if rec.start_date < rec.term_id.date_start:
+            if rec.term_id.date_start and rec.start_date and rec.start_date < rec.term_id.date_start:
                 raise ValidationError('The assignment cannot start before its term.')
-            if rec.end_date and rec.end_date > rec.term_id.date_end:
+            if rec.term_id.date_end and rec.end_date and rec.end_date > rec.term_id.date_end:
                 raise ValidationError('The assignment cannot end after its term.')
 
     def unlink(self):
@@ -195,18 +203,13 @@ class SchoolTeacherAssignment(models.Model):
         for vals in vals_list:
             if vals.get('term_id'):
                 term = self.env['school.term'].browse(vals['term_id'])
-                vals.setdefault('start_date', term.date_start)
-                vals.setdefault('end_date', term.date_end)
-        records = super().create(vals_list)
-        for rec in records:
-            partner = rec.teacher_id.user_id.partner_id
-            if partner:
-                rec.message_subscribe(partner_ids=partner.ids)
-                rec.message_post(
-                    body=f'You have been assigned: {rec.name} for {rec.academic_year_id.name}.',
-                    partner_ids=partner.ids,
-                )
-        return records
+                if term.date_start and not vals.get('start_date'):
+                    vals['start_date'] = term.date_start
+                if term.date_end and not vals.get('end_date'):
+                    vals['end_date'] = term.date_end
+            if not vals.get('start_date'):
+                vals['start_date'] = fields.Date.context_today(self)
+        return super().create(vals_list)
 
     def write(self, vals):
         if vals.get('term_id'):

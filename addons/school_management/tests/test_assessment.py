@@ -20,11 +20,9 @@ class TestAssessment(TransactionCase):
         self.today = fields.Date.context_today(self.env['school.assessment'])
         self.yesterday = self.today - timedelta(days=1)
         self.tomorrow = self.today + timedelta(days=1)
-        # A year is named after the Ethiopian year of its start date and that name
-        # is unique, so only one academic year can exist per Ethiopian year. The
-        # seeded years already hold the ones around today, so this widens the
-        # seeded current year instead of creating a second one.
+
         self.year = year_spanning_today(self.env)
+
         self.klass = self.env['school.class'].create({
             'name': 'ASM Grade 1',
             'academic_year_id': self.year.id,
@@ -36,16 +34,21 @@ class TestAssessment(TransactionCase):
         })
         self.math = self.env['school.subject'].create({'name': 'ASM Mathematics'})
         self.art = self.env['school.subject'].create({'name': 'ASM Art'})
-        # A term has to sit inside its academic year, so it takes the year's span.
+
         self.term = self.env['school.term'].create({
-            'name': 'ASM Term', 'academic_year_id': self.year.id,
+            'name': 'ASM Term',
+            'academic_year_id': self.year.id,
             'date_start': self.year.date_start,
-            'date_end': self.year.date_end})
+            'date_end': self.year.date_end,
+        })
+
         self.env['school.grade.subject'].create({
-            'class_id': self.klass.id, 'subject_id': self.math.id,
+            'class_id': self.klass.id,
+            'subject_id': self.math.id,
         })
         self.env['school.grade.subject'].create({
-            'class_id': self.other_class.id, 'subject_id': self.math.id,
+            'class_id': self.other_class.id,
+            'subject_id': self.math.id,
         })
 
         self.teacher_user = self._user('asm_teacher', 'group_school_teacher')
@@ -59,9 +62,10 @@ class TestAssessment(TransactionCase):
     # ---------- fixtures ----------
 
     def _user(self, login, group_name):
-        # message_post refuses an author without an email address.
         return self.env['res.users'].create({
-            'name': login, 'login': login, 'email': f'{login}@school.example',
+            'name': login,
+            'login': login,
+            'email': f'{login}@school.example',
             'group_ids': [(6, 0, [
                 self.env.ref('base.group_user').id,
                 self.env.ref(f'school_management.{group_name}').id,
@@ -71,54 +75,69 @@ class TestAssessment(TransactionCase):
     def _teacher(self, name, user):
         first_name, _, last_name = name.partition(' ')
         job_title = self.env['school.job.title'].search([
-            ('name', '=', 'ASM Teacher'), ('department', '=', 'academic'),
+            ('name', '=', 'ASM Teacher'),
+            ('department', '=', 'academic'),
         ], limit=1) or self.env['school.job.title'].create({
-            'name': 'ASM Teacher', 'department': 'academic',
+            'name': 'ASM Teacher',
+            'department': 'academic',
         })
         staff = self.env['school.staff'].create({
-            'first_name': first_name, 'last_name': last_name or 'Staff',
-            'department': 'academic', 'job_title_id': job_title.id,
-            'employment_status': 'active', 'user_id': user.id,
+            'first_name': first_name,
+            'last_name': last_name or 'Staff',
+            'department': 'academic',
+            'job_title_id': job_title.id,
+            'employment_status': 'active',
+            'user_id': user.id,
             'date_of_birth': '1990-01-15',
-            # Staff phone numbers are unique, so each teacher gets one of its own.
             'phone': '+2519115%05d' % self.env['school.staff'].search_count([]),
         })
         self.env['school.staff.responsibility'].create({
-            'staff_id': staff.id, 'responsibility': 'teacher',
-            'is_primary': True, 'start_date': '2026-07-01', 'department': 'academic',
+            'staff_id': staff.id,
+            'responsibility': 'teacher',
+            'is_primary': True,
+            'start_date': '2026-07-01',
+            'department': 'academic',
         })
         staff.action_activate()
-        return self.env['school.teacher'].create({'staff_id': staff.id, 'user_id': user.id})
+        return self.env['school.teacher'].create({
+            'staff_id': staff.id,
+            'user_id': user.id,
+        })
 
     def _assign(self, teacher, subject, school_class):
         return self.env['school.teacher.assignment'].create({
-            'teacher_id': teacher.id, 'subject_id': subject.id,
-            'class_id': school_class.id, 'term_id': self.term.id,
+            'teacher_id': teacher.id,
+            'subject_id': subject.id,
+            'class_id': school_class.id,
+            'term_id': self.term.id,
         })
 
     def _approved(self, name, registration_date):
         student = self.env['school.student'].create({
-        'name': name,
-        'date_of_birth': '2010-01-01',
-        'guardian_name': 'Guardian of %s' % name,
-        'guardian_phone': '+251911550001',
-        'emergency_contact_name': 'Emergency Contact for %s' % name,
-        'emergency_contact_phone': '+251911550002',
-        'fan_number': '10%014d' % self.env['school.student'].search_count([]),
-        'academic_year_id': self.year.id,
-        'class_id': self.klass.id,
-        'birth_certificate': DUMMY_FILE,
-        'registration_date': registration_date,
-    })
+            'name': name,
+            'date_of_birth': '2010-01-01',
+            'guardian_name': f'Guardian of {name}',
+            'guardian_phone': '+251911550001',
+            'emergency_contact_name': f'Emergency Contact for {name}',
+            'emergency_contact_phone': '+251911550002',
+            'fan_number': '10%014d' % self.env['school.student'].search_count([]),
+            'academic_year_id': self.year.id,
+            'class_id': self.klass.id,
+            'birth_certificate': DUMMY_FILE,
+            'registration_date': registration_date,
+        })
         student.action_mark_submitted()
         student.action_mark_approved()
         return student
 
     def _assessment(self, **overrides):
         vals = {
-            'name': 'Test 1', 'assessment_type': 'test',
-            'class_id': self.klass.id, 'subject_id': self.math.id,
-            'term_id': self.term.id, 'date': self.today,
+            'name': 'Test 1',
+            'assessment_type': 'test',
+            'class_id': self.klass.id,
+            'subject_id': self.math.id,
+            'term_id': self.term.id,
+            'date': self.today,
         }
         vals.update(overrides)
         return self.env['school.assessment'].create(vals)
@@ -264,7 +283,8 @@ class TestAssessment(TransactionCase):
             assessment.mark_ids[0].unlink()
 
         wizard = self.env['school.assessment.unlock'].with_user(self.officer_user).create({
-            'assessment_id': assessment.id, 'reason': 'Score typed for the wrong student.',
+            'assessment_id': assessment.id,
+            'reason': 'Score typed for the wrong student.',
         })
         wizard.action_confirm()
         self.assertEqual(assessment.state, 'open')
@@ -275,7 +295,8 @@ class TestAssessment(TransactionCase):
     def test_publish_follows_lock(self):
         self.env.company.school_grading_configured = True
         scheme = self.env['school.grading.scheme'].create({
-            'name': 'ASM Scheme', 'pass_percentage': 50.0,
+            'name': 'ASM Scheme',
+            'pass_percentage': 50.0,
             'band_ids': [
                 (0, 0, {'name': 'A', 'minimum_percentage': 80, 'maximum_percentage': 100}),
                 (0, 0, {'name': 'B', 'minimum_percentage': 50, 'maximum_percentage': 79.99}),
@@ -296,14 +317,16 @@ class TestAssessment(TransactionCase):
 
     def test_published_marks_create_versioned_report_card(self):
         scheme = self.env['school.grading.scheme'].create({
-            'name': 'ASM Report Scheme', 'pass_percentage': 50.0,
+            'name': 'ASM Report Scheme',
+            'pass_percentage': 50.0,
             'band_ids': [
                 (0, 0, {'name': 'Pass', 'minimum_percentage': 50, 'maximum_percentage': 100}),
                 (0, 0, {'name': 'Fail', 'minimum_percentage': 0, 'maximum_percentage': 49.99}),
             ],
         })
         self.env.company.write({
-            'school_grading_configured': True, 'school_grading_scheme_id': scheme.id,
+            'school_grading_configured': True,
+            'school_grading_scheme_id': scheme.id,
         })
         assessment = self._assessment()
         assessment.action_open()
@@ -327,7 +350,8 @@ class TestAssessment(TransactionCase):
 
     def test_grading_scheme_activation_requires_complete_percentage_coverage(self):
         scheme = self.env['school.grading.scheme'].create({
-            'name': 'ASM Incomplete Scheme', 'pass_percentage': 50.0,
+            'name': 'ASM Incomplete Scheme',
+            'pass_percentage': 50.0,
             'band_ids': [
                 (0, 0, {'name': 'A', 'minimum_percentage': 90,
                         'maximum_percentage': 100}),
@@ -339,8 +363,10 @@ class TestAssessment(TransactionCase):
             scheme.action_use_for_report_cards()
 
         scheme.band_ids.create({
-            'scheme_id': scheme.id, 'name': 'C',
-            'minimum_percentage': 0, 'maximum_percentage': 79.99,
+            'scheme_id': scheme.id,
+            'name': 'C',
+            'minimum_percentage': 0,
+            'maximum_percentage': 79.99,
         })
         scheme.band_ids.filtered(lambda band: band.name == 'B').maximum_percentage = 89.99
         scheme.action_use_for_report_cards()
@@ -350,7 +376,8 @@ class TestAssessment(TransactionCase):
 
     def test_report_card_wizard_generates_and_opens_percentage_average(self):
         scheme = self.env['school.grading.scheme'].create({
-            'name': 'ASM Wizard Scheme', 'pass_percentage': 50.0,
+            'name': 'ASM Wizard Scheme',
+            'pass_percentage': 50.0,
             'band_ids': [
                 (0, 0, {'name': 'Pass', 'minimum_percentage': 50,
                         'maximum_percentage': 100}),

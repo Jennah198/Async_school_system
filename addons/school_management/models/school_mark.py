@@ -2,10 +2,11 @@ from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 # Grade boundaries, highest first. First band whose floor the percentage reaches wins.
-GRADE_BANDS = [(90, 'A'), (80, 'B'), (70, 'C'), (60, 'D'), (50, 'E')]
+DEFAULT_GRADE_BANDS = [(90, 'A'), (80, 'B'), (70, 'C'), (60, 'D'), (50, 'E')]
+GRADE_BANDS = DEFAULT_GRADE_BANDS
 
 # BR-10: statuses that carry a countable score. Everything else renders no grade.
-SCORED_STATUSES = ('recorded', 'transfer')
+SCORED_STATUSES = ('recorded', 'transfer', 'makeup')
 
 # Fields a teacher fills in — roster identity and assessment scope are generated.
 ENTRY_FIELDS = {'score', 'mark_status', 'note'}
@@ -27,11 +28,9 @@ class SchoolMark(models.Model):
         domain="[('registration_status', '=', 'approved'), ('enrollment_ids.subject_ids.state', '=', 'enrolled')]",
         help='Only approved student registrations can receive marks.',
     )
-    # Optional link to SRS §7.4 student subject enrollment to track dropped status/electives
     student_subject_id = fields.Many2one(
-        'school.student.subject', string='Student Subject Enrollment',
-        ondelete='set null', index=True,
-        help='Links mark to specific student subject enrollment roster if applicable.'
+        'school.student.subject', string='Subject Enrollment',
+        ondelete='restrict', index=True,
     )
     # Snapshot of the class at recording time — a later transfer must not
     # rewrite mark history (same fix as attendance in 17.0.7.0.0).
@@ -114,6 +113,7 @@ class SchoolMark(models.Model):
                     (g for floor, g in GRADE_BANDS if rec.percentage >= floor), 'F')
                 weight_val = rec.assessment_id.weight if rec.assessment_id else 0.0
                 rec.weighted_score = (rec.percentage * weight_val / 100.0)
+
             else:
                 rec.percentage = 0.0
                 rec.grade = False
@@ -213,6 +213,10 @@ class SchoolMark(models.Model):
                     ], limit=1)
                     if line:
                         vals['student_subject_id'] = line.id
+            elif not vals.get('class_id') and vals.get('student_id'):
+                student = self.env['school.student'].browse(vals['student_id'])
+                vals['class_id'] = student.class_id.id
+
         return super().create(vals_list)
 
     def write(self, vals):

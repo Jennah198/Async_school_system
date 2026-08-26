@@ -1,9 +1,9 @@
 import re
 
-from odoo import api, fields, models  # type: ignore
-from odoo.exceptions import AccessError, ValidationError  # type: ignore
 from dateutil.relativedelta import relativedelta
 from ethiopian_date import EthiopianDateConverter
+from odoo import api, fields, models
+from odoo.exceptions import AccessError, ValidationError
 
 
 class SchoolAcademicYear(models.Model):
@@ -98,18 +98,6 @@ class SchoolAcademicYear(models.Model):
         return super().write(vals)
 
     def action_open(self):
-        """A year is recorded in Draft and only becomes usable here, which is why
-        the date rule belongs on this transition and not on create(): a school has
-        to be able to record the year it is currently in — which by definition
-        started in the past — and the historical years its reports and migrations
-        refer to. What must not happen is a finished year being opened for
-        enrolment and attendance, and that is what is checked below.
-
-        Opening a year always makes it Current, even if an earlier year is
-        still Open and running its own attendance/marks. Current means
-        "where new registrations default to," not "which year is actively
-        in session" — those are tracked independently via each year's state.
-        """
         today = fields.Date.today()
         for year in self:
             if year.state != 'draft':
@@ -152,11 +140,6 @@ class SchoolAcademicYear(models.Model):
         }
 
     def action_create_next_year(self):
-        """Generate the following academic year from this one: name + 1,
-        both dates shifted forward exactly one year. Goes through create(),
-        so every existing validation (future-date, Ethiopian name match,
-        unique name) still applies automatically.
-        """
         self.ensure_one()
         next_name = str(int(self.name) + 1)
         next_date_start = self.date_start + relativedelta(years=1)

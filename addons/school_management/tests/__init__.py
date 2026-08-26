@@ -5,6 +5,7 @@ from . import test_curriculum
 from . import test_academic_year
 from . import test_attendance_roster
 from . import test_assessment
+# from . import test_results
 from . import test_security
 from . import test_responsibility
 from . import test_staff_registration
