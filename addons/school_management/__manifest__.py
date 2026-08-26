@@ -72,6 +72,7 @@ attendance tracking and mark/result entry referencing the same student record.
         'report/school_student_report.xml',
         'report/school_report_card_report.xml',
         'data/school_weekday_data.xml',
+        'views/school_report_card_views.xml',
         'views/school_menu_views.xml',
         'views/school_srs_views.xml',
         # After school_srs_views.xml: these inherit views defined there.
