@@ -15,3 +15,4 @@ from . import test_user_validation
 from . import test_srs_lifecycle
 from . import test_odoo19_ui_access
 from . import test_demo_seed
+from . import test_report_card_engine

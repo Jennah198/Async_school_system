@@ -206,3 +206,101 @@ class TestReportCardEngine(TransactionCase):
         self.assertEqual(card_v2.state, 'published')
         self.assertEqual(card_v1.state, 'superseded')
         self.assertEqual(card_v1.superseded_by_id, card_v2)
+
+    def test_class_and_grade_ranking_with_ties(self):
+        # Enable ranking setting
+        self.env.company.school_ranking = True
+
+        # Setup grade & two sections
+        grade_9 = self.env['school.grade'].create({
+            'name': 'Grade 9 Level',
+            'code': 'G9_TEST',
+            'level': '9',
+            'sequence': 9,
+        })
+        self.school_class.write({'grade_id': grade_9.id, 'name': 'Grade 9A'})
+        
+        class_9b = self.env['school.class'].create({
+            'name': 'Grade 9B',
+            'grade_id': grade_9.id,
+            'academic_year_id': self.year.id,
+            'is_entry_level': True,
+        })
+        self.env['school.grade.subject'].create([
+            {'class_id': class_9b.id, 'subject_id': self.subject_math.id},
+        ])
+        self.env['school.teacher.assignment'].create([
+            {'teacher_id': self.teacher.id, 'subject_id': self.subject_math.id, 'class_id': class_9b.id, 'term_id': self.term.id},
+        ])
+
+        # Create students for Class 9B
+        student_3 = self.env['school.student'].create({
+            'name': 'Student Gamma (9B)',
+            'class_id': class_9b.id,
+            'date_of_birth': '2085-01-01',
+            'guardian_name': 'Guardian Gamma',
+            'guardian_phone': '+251911000097',
+            'birth_certificate': DUMMY_FILE,
+            'registration_date': '2099-08-01',
+            'registration_status': 'approved',
+        })
+        student_3._ensure_enrollment()
+
+        student_4 = self.env['school.student'].create({
+            'name': 'Student Delta (9B)',
+            'class_id': class_9b.id,
+            'date_of_birth': '2085-01-01',
+            'guardian_name': 'Guardian Delta',
+            'guardian_phone': '+251911000096',
+            'birth_certificate': DUMMY_FILE,
+            'registration_date': '2099-08-01',
+            'registration_status': 'approved',
+        })
+        student_4._ensure_enrollment()
+
+        # Publish assessments in 9A (Student 1: 90%, Student 2: 90% -> Tied Rank 1)
+        self._create_and_publish_assessment(self.subject_math, 90.0, 90.0)
+
+        # Publish assessments in 9B (Student 3: 95%, Student 4: 70%)
+        assessment_b = self.env['school.assessment'].create({
+            'name': 'Math Assessment 9B',
+            'assessment_type': 'quiz',
+            'term_id': self.term.id,
+            'class_id': class_9b.id,
+            'subject_id': self.subject_math.id,
+            'teacher_id': self.teacher.id,
+            'max_score': 100.0,
+            'weight': 1.0,
+            'due_date': '2099-10-15',
+        })
+        assessment_b.action_open()
+        for mark in assessment_b.mark_ids:
+            if mark.student_id == student_3:
+                mark.score = 95.0
+            elif mark.student_id == student_4:
+                mark.score = 70.0
+        assessment_b.action_submit()
+        officer_ab = assessment_b.with_user(self.officer)
+        officer_ab.action_approve()
+        officer_ab.action_lock()
+        officer_ab.action_publish()
+
+        # Generate report cards
+        card_1 = self.env['school.report.card'].generate_for(self.student_1, self.term)
+        card_2 = self.env['school.report.card'].generate_for(self.student_2, self.term)
+        card_3 = self.env['school.report.card'].generate_for(student_3, self.term)
+        card_4 = self.env['school.report.card'].generate_for(student_4, self.term)
+
+        # Section Rankings in 9A
+        self.assertEqual(card_1.class_size, 2)
+        self.assertEqual(card_2.class_size, 2)
+        self.assertEqual(card_1.class_rank, 1)
+        self.assertEqual(card_2.class_rank, 1)
+
+        # Grade-Level Rankings across 9A and 9B (Total: 4 students)
+        # Scores: Student 3 (95%), Student 1 (90%), Student 2 (90%), Student 4 (70%)
+        self.assertEqual(card_3.grade_size, 4)
+        self.assertEqual(card_3.grade_rank, 1)
+        self.assertEqual(card_1.grade_rank, 2)
+        self.assertEqual(card_2.grade_rank, 2)
+        self.assertEqual(card_4.grade_rank, 4)  # 1224 competition ranking skips rank 3
