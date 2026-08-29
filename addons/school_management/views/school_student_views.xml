@@ -46,10 +46,16 @@
                         <h1>
                             <field name="regno" readonly="1"/>
                         </h1>
-                        <h2>
-                            <field name="name" placeholder="Student Full Name" readonly="registration_status == 'approved'"/>
-                        </h2>
-                    </div>
+                        <h3><field name="admission_number" readonly="1"/></h3>
+                        <h2><field name="name" readonly="1"/></h2>
+                        </div>
+                    <div class="o_row">
+                        <field name="first_name" placeholder="First Name" readonly="registration_status == 'approved'"/>
+                        <field name="middle_name" placeholder="Middle Name" readonly="registration_status == 'approved'"/>
+                        <field name="last_name" placeholder="Last Name" readonly="registration_status == 'approved'"/>
+                        </div>
+                        
+                    
 
                     <group>
                         <group string="Identity &amp; Academic Placement">
@@ -71,6 +77,8 @@
                         <group string="Intake Parent / Guardian">
                             <field name="guardian_name" readonly="registration_status == 'approved'"/>
                             <field name="guardian_phone" placeholder="e.g. 912345678" readonly="registration_status == 'approved'"/>
+                            <field name="guardian_relationship" readonly="registration_status == 'approved'"/>
+                            <field name="guardian_occupation" readonly="registration_status == 'approved'"/>
                             <field name="previous_school" readonly="registration_status == 'approved'"/>
                             <field name="address" readonly="registration_status == 'approved'"/>
                         </group>
@@ -101,6 +109,9 @@
                             <field name="guardian_ids" nolabel="1">
                                 <list editable="bottom">
                                     <field name="partner_id"/>
+                                    <field name="relationship"/>
+                                    <field name="phone"/>
+                                    <field name="occupation"/>
                                     <field name="is_primary"/>
                                 </list>
                             </field>

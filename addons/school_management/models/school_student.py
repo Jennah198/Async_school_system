@@ -15,10 +15,10 @@ class SchoolStudent(models.Model):
 
     regno = fields.Char(string='Student ID', copy=False, readonly=True, index=True)
     admission_number = fields.Char(copy=False, readonly=True, index=True)
-    name = fields.Char(string='Full Name', required=True)
-    first_name = fields.Char()
+    name = fields.Char(string='Full Name', compute='_compute_name', store=True, index=True)
+    first_name = fields.Char(required=True)
     middle_name = fields.Char()
-    last_name = fields.Char()
+    last_name = fields.Char(required=True)
     photo = fields.Image(max_width=512, max_height=512)
     date_of_birth = fields.Date(string='Date of Birth', required=True)
     place_of_birth = fields.Char()
@@ -38,6 +38,13 @@ class SchoolStudent(models.Model):
     guardian_name = fields.Char(string='Parent / Guardian Name', required=True)
     guardian_phone = fields.Char(string='Guardian Phone', required=True,
                                   help='Enter local number or include + with country code.')
+    guardian_relationship = fields.Selection([
+    ('father', 'Father'),
+    ('mother', 'Mother'),
+    ('guardian', 'Guardian'),
+    ('other', 'Other'),
+    ], string='Guardian Relationship', default='guardian')
+    guardian_occupation = fields.Char(string='Guardian Occupation')
     address = fields.Text(string='Address')
     emergency_contact_name = fields.Char(string='Emergency Contact Name', required=True)
     emergency_contact_phone = fields.Char(string='Emergency Contact Phone', required=True,
@@ -233,6 +240,12 @@ class SchoolStudent(models.Model):
         for rec in self:
             rec.age = relativedelta(today, rec.date_of_birth).years if rec.date_of_birth else 0
 
+    @api.depends('first_name', 'middle_name', 'last_name')
+    def _compute_name(self):
+        for rec in self:
+            parts = [rec.first_name, rec.middle_name, rec.last_name]
+            rec.name = ' '.join(p for p in parts if p) or False
+
     def _get_full_phone(self, phone):
         """Combine the nationality's country code with a locally-entered phone number."""
         if not phone:
@@ -406,6 +419,8 @@ class SchoolStudent(models.Model):
             'student_id': self.id,
             'partner_id': partner.id,
             'is_primary': True,
+            'relationship': self.guardian_relationship or 'guardian',
+            'occupation': self.guardian_occupation,
         })
 
     def action_view_enrollments(self):
