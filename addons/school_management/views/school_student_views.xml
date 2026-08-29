@@ -50,9 +50,9 @@
                         <h2><field name="name" readonly="1"/></h2>
                         </div>
                     <div class="o_row">
-                        <field name="first_name" placeholder="First Name" readonly="registration_status == 'approved'"/>
+                        <field name="first_name" placeholder="First Name" required="1" readonly="registration_status == 'approved'"/>
                         <field name="middle_name" placeholder="Middle Name" readonly="registration_status == 'approved'"/>
-                        <field name="last_name" placeholder="Last Name" readonly="registration_status == 'approved'"/>
+                        <field name="last_name" placeholder="Last Name" required="1" readonly="registration_status == 'approved'"/>
                         </div>
                         
                     
