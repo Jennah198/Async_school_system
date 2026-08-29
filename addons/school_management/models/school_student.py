@@ -15,7 +15,11 @@ class SchoolStudent(models.Model):
 
     regno = fields.Char(string='Student ID', copy=False, readonly=True, index=True)
     admission_number = fields.Char(copy=False, readonly=True, index=True)
+<<<<<<< HEAD
     name = fields.Char(string='Full Name', compute='_compute_name', store=True, index=True)
+=======
+    name = fields.Char(string='Full Name', compute='_compute_name',inverse='_inverse_name', store=True, index=True)
+>>>>>>> aeb6b27 (Add guardian relationship/occupation fields; split student name into first/middle/last)
     first_name = fields.Char(required=True)
     middle_name = fields.Char()
     last_name = fields.Char(required=True)
@@ -246,6 +250,11 @@ class SchoolStudent(models.Model):
             parts = [rec.first_name, rec.middle_name, rec.last_name]
             rec.name = ' '.join(p for p in parts if p) or False
 
+<<<<<<< HEAD
+=======
+    def _inverse_name(self):
+        pass
+>>>>>>> aeb6b27 (Add guardian relationship/occupation fields; split student name into first/middle/last)
     def _get_full_phone(self, phone):
         """Combine the nationality's country code with a locally-entered phone number."""
         if not phone:
