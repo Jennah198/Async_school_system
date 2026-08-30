@@ -1,6 +1,8 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
 
+from .school_staff import PERSONAL_DATA_GROUPS
+
 
 class SchoolTeacher(models.Model):
     _name = 'school.teacher'
@@ -23,7 +25,7 @@ class SchoolTeacher(models.Model):
     )
 
     staff_id = fields.Many2one('school.staff', string='Staff Record', required=True, ondelete='restrict',
-                                domain="[('active', '=', True), ('state', '=', 'active'), '|', ('department', '=', 'academic'), ('primary_responsibility', 'in', ['teacher', 'homeroom', 'department_head', 'coordinator'])]",
+                                domain="[('active', '=', True), ('state', '=', 'active'), ('employment_status', '=', 'active'), '|', ('department', '=', 'academic'), ('primary_responsibility', 'in', ['teacher', 'homeroom', 'department_head', 'coordinator'])]",
                                 help='Link to the official staff master record.')
 
     department = fields.Selection(
@@ -32,11 +34,35 @@ class SchoolTeacher(models.Model):
     primary_responsibility = fields.Selection(
         related='staff_id.primary_responsibility', string='Primary Responsibility', store=True, readonly=True,
     )
+    # Related and unstored, so the teacher profile reads the staff record rather
+    # than holding a second copy that could be edited into disagreeing with it.
+    # Unlike hire_date there is no case for the two differing: a person has one
+    # Fayda number, and the staff record is where it is registered.
+    fayda_id = fields.Char(
+        related='staff_id.fayda_id', string='Fayda ID', readonly=True,
+        groups=PERSONAL_DATA_GROUPS,
+        help='Registered on the staff record, which is the source of truth for it.',
+    )
 
     qualification = fields.Char(string='Highest Qualification')
     specialization = fields.Char(string='Specialization')
     years_of_experience = fields.Integer(string='Years of Experience')
-    hire_date = fields.Date(string='Hire / Start Date')
+    hire_date = fields.Date(
+        string='Hire / Start Date', compute='_compute_hire_date',
+        store=True, readonly=False,
+        help='Taken from the staff record when the profile is created. It can be '
+             'changed here for a teacher who started teaching later than they were '
+             'hired.',
+    )
+
+    @api.depends('staff_id')
+    def _compute_hire_date(self):
+        """The date is already on the staff record, so asking for it again is a
+        second chance to disagree. It stays editable rather than related, because
+        a teacher can start teaching later than the date they were employed — and
+        because an existing profile must keep the date it already carries."""
+        for rec in self:
+            rec.hire_date = rec.hire_date or rec.staff_id.hire_date
 
     teaching_status = fields.Selection([
         ('active', 'Active'),
@@ -61,7 +87,31 @@ class SchoolTeacher(models.Model):
         readonly=True
     )
 
+    login_password = fields.Char(
+        string='Login Password', store=False, copy=False,
+        compute='_compute_login_password', inverse='_inverse_login_password',
+        help='Password for the teacher login. Leave empty to email a set-password '
+             'link instead. Never stored on the teacher record.',
+    )
+
     active = fields.Boolean(string='Active', default=True)
+
+    def _compute_login_password(self):
+        self.login_password = False
+
+    def _inverse_login_password(self):
+        """The field is not stored, so the typed value only exists during this save.
+        A teacher who has no login yet must therefore get one here — reading the
+        field back from action_create_login_user returns the computed False, which
+        is how a typed password used to be dropped in favour of a reset email.
+        """
+        for rec in self:
+            if not rec.login_password:
+                continue
+            if rec.user_id:
+                rec.user_id.sudo().password = rec.login_password
+            else:
+                rec._create_teacher_user(password=rec.login_password)
 
     # =========================================================================
     # TEACHER DASHBOARD KPI COMPUTED FIELDS
@@ -83,10 +133,14 @@ class SchoolTeacher(models.Model):
         compute='_compute_dashboard_kpis'
     )
 
-    _sql_constraints = [
-        ('teacher_id_unique', 'unique(teacher_id)', 'Teacher ID must be unique.'),
-        ('staff_id_unique', 'unique(staff_id)', 'This staff member already has a teacher profile.'),
-    ]
+    _teacher_id_unique = models.Constraint(
+        'unique(teacher_id)',
+        'Teacher ID must be unique.',
+    )
+    _staff_id_unique = models.Constraint(
+        'unique(staff_id)',
+        'This staff member already has a teacher profile.',
+    )
 
     # =========================================================================
     # COMPUTE METHODS
@@ -182,7 +236,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'My Students',
             'res_model': 'school.student',
-            'view_mode': 'tree,form,kanban',
+            'view_mode': 'list,form,kanban',
             'domain': [('class_id', 'in', class_ids)],
         }
 
@@ -192,7 +246,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'My Class Schedule',
             'res_model': 'school.class.schedule',
-            'view_mode': 'calendar,tree,form',
+            'view_mode': 'calendar,list,form',
             'domain': [('teacher_id', '=', self.id)],
         }
 
@@ -203,7 +257,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Class Attendance',
             'res_model': 'school.attendance',
-            'view_mode': 'tree,form',
+            'view_mode': 'list,form',
             'domain': [('class_id', 'in', class_ids)],
         }
 
@@ -215,7 +269,7 @@ class SchoolTeacher(models.Model):
             'type': 'ir.actions.act_window',
             'name': 'Mark List Analysis',
             'res_model': 'school.mark',
-            'view_mode': 'tree,form,graph,pivot',
+            'view_mode': 'list,form,graph,pivot',
             'domain': [('class_id', 'in', class_ids), ('subject_id', 'in', subject_ids)],
         }
 
@@ -223,7 +277,8 @@ class SchoolTeacher(models.Model):
     def _check_staff_active(self):
         for rec in self:
             if rec.staff_id:
-                if not rec.staff_id.active or rec.staff_id.state != 'active':
+                if (not rec.staff_id.active or rec.staff_id.state != 'active' or
+                    rec.staff_id.employment_status != 'active'):
                     raise ValidationError('A teacher profile must be linked to an active staff record.')
                 if rec.staff_id.department != 'academic' and rec.staff_id.primary_responsibility not in ('teacher', 'homeroom', 'department_head', 'coordinator'):
                     raise ValidationError('Selected staff member must be a teacher or academic staff member.')
@@ -236,12 +291,13 @@ class SchoolTeacher(models.Model):
         for vals in vals_list:
             if vals.get('teacher_id', 'New') == 'New':
                 vals['teacher_id'] = self.env['ir.sequence'].next_by_code('school.teacher') or 'New'
+        passwords = [vals.pop('login_password', None) for vals in vals_list]
         teachers = super().create(vals_list)
-        for teacher in teachers:
-            teacher._create_teacher_user()
+        for teacher, password in zip(teachers, passwords):
+            teacher._create_teacher_user(password=password)
         return teachers
 
-    def _create_teacher_user(self):
+    def _create_teacher_user(self, password=None):
         self.ensure_one()
         if self.user_id:
             return
@@ -256,13 +312,24 @@ class SchoolTeacher(models.Model):
         groups = [(4, internal_group.id)]
         if teacher_group:
             groups.append((4, teacher_group.id))
-        user = Users.create({
+        user_vals = {
             'name': self.name,
             'login': self.staff_id.email,
             'email': self.staff_id.email,
-            'groups_id': groups,
-        })
-        user.action_reset_password()
+            'group_ids': groups,
+        }
+        if password:
+            user_vals['password'] = password
+        user = Users.create(user_vals)
+        if not password:
+            user.action_reset_password()
         self.user_id = user.id
-    def action_create_login_user(self): 
-        for teacher in self: teacher._create_teacher_user()
+        if not self.staff_id.user_id:
+            self.staff_id.user_id = user.id
+
+    def action_create_login_user(self):
+        """Clicking the button saves the form first, so a typed password has already
+        been applied by _inverse_login_password and the login already exists. Reading
+        login_password here would only ever return the computed False."""
+        for teacher in self:
+            teacher._create_teacher_user()

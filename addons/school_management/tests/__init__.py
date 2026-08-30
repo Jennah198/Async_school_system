@@ -2,7 +2,17 @@ from . import test_class_schedule
 from . import test_enrollment
 from . import test_guardian
 from . import test_curriculum
+from . import test_academic_year
 from . import test_attendance_roster
 from . import test_assessment
+# from . import test_results
 from . import test_security
 from . import test_responsibility
+from . import test_staff_registration
+from . import test_staff_fayda_id
+from . import test_staff_import
+from . import test_user_validation
+from . import test_srs_lifecycle
+from . import test_odoo19_ui_access
+from . import test_demo_seed
+from . import test_report_card_engine

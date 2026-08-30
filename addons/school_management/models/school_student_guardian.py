@@ -30,12 +30,12 @@ class SchoolStudentGuardian(models.Model):
     ], string='Relationship', required=True, default='guardian')
     is_primary = fields.Boolean(string='Primary Contact')
     name = fields.Char(related='partner_id.name', string='Name')
-    phone = fields.Char(related='partner_id.phone', string='Phone')
-
-    _sql_constraints = [
-        ('student_partner_unique', 'unique(student_id, partner_id)',
-         'This contact is already linked to the student.'),
-    ]
+    phone = fields.Char(related='partner_id.phone', string='Phone', readonly=False)
+    occupation = fields.Char(string='Occupation')
+    _student_partner_unique = models.Constraint(
+        'unique(student_id, partner_id)',
+        'This contact is already linked to the student.',
+    )
 
     @api.constrains('is_primary', 'student_id')
     def _check_single_primary(self):
@@ -66,7 +66,7 @@ class SchoolStudentGuardian(models.Model):
     def _sync_primary_to_student(self):
         """Mirror the primary contact onto the student's intake chars so the
         pre-guardian views, domains, and reports stay correct."""
-        # ponytail: edits made directly on the partner do not sync back;
+        # Caveat: edits made directly on the partner do not sync back;
         # override res.partner.write if that ever bites.
         for rec in self.filtered('is_primary'):
             student = rec.student_id

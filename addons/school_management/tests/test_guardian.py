@@ -12,7 +12,9 @@ class TestGuardian(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.year = self.env['school.academic.year'].create({'name': '2096/2097'})
+        self.year = self.env['school.academic.year'].create({
+            'name': '2088',  # Ethiopian year of 2096-09-01
+            'date_start': '2096-09-01', 'date_end': '2097-06-30'})
         self.klass = self.env['school.class'].create({
             'name': 'GRD Grade 1',
             'academic_year_id': self.year.id,
@@ -20,12 +22,17 @@ class TestGuardian(TransactionCase):
         })
 
     def _student(self, name, guardian='GRD Guardian One', phone='+251911000001'):
+        seq = self.env['school.student'].search_count([])
         return self.env['school.student'].create({
             'name': name,
-            'date_of_birth': '2091-01-01',
+            'date_of_birth': '2010-01-01',
             'guardian_name': guardian,
             'guardian_phone': phone,
+            'emergency_contact_name': 'Emergency Contact of %s' % name,
+            'emergency_contact_phone': '+2517%07d' % seq,
+            'fan_number': '5000000000%06d' % seq,
             'class_id': self.klass.id,
+            'academic_year_id': self.year.id,
             'birth_certificate': DUMMY_FILE,
         })
 
@@ -81,7 +88,7 @@ class TestGuardian(TransactionCase):
         registrar = self.env['res.users'].create({
             'name': 'GRD Registrar',
             'login': 'grd_registrar',
-            'groups_id': [
+            'group_ids': [
                 (4, self.env.ref('base.group_user').id),
                 (4, self.env.ref('school_management.group_school_registrar').id),
             ],
