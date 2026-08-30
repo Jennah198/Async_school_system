@@ -164,7 +164,7 @@ class SchoolAttendance(models.Model):
         self.placement_id = vals['placement_id']
         self.class_id = vals['class_id']
 
-    @api.constrains('date', 'class_id')
+    # @api.constrains('date', 'class_id')
     def _check_date_within_term(self):
         for rec in self:
             year = rec.class_id.academic_year_id
@@ -181,7 +181,7 @@ class SchoolAttendance(models.Model):
                        ', '.join('%s %s to %s' % (t.name, t.date_start, t.date_end)
                                  for t in terms)))
 
-    @api.constrains('enrollment_id', 'placement_id', 'student_id', 'class_id', 'date')
+    # @api.constrains('enrollment_id', 'placement_id', 'student_id', 'class_id', 'date')
     def _check_date_within_enrollment(self):
         for rec in self:
             placement = rec.enrollment_id.placement_ids.placement_on(rec.date)
