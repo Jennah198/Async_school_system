@@ -19,6 +19,10 @@ class SchoolClass(models.Model):
         ondelete='restrict', index=True,
         default=lambda self: self.env['school.academic.year']._default_year(),
     )
+    room_id = fields.Many2one(
+        'school.room', string='Room', ondelete='restrict', index=True,
+        )
+    
     student_ids = fields.One2many('school.student', 'class_id', string='Students')
     grade_subject_ids = fields.One2many(
         'school.grade.subject', 'class_id', string='Subjects')
