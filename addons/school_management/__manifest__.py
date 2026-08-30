@@ -86,5 +86,7 @@ attendance tracking and mark/result entry referencing the same student record.
 
     'application': True,
     'installable': True,
+    'post_init_hook': 'backfill_subject_codes',
     'auto_install': False,
+
 }
