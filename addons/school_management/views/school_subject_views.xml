@@ -4,8 +4,10 @@
         <field name="model">school.subject</field>
         <field name="arch" type="xml">
             <list>
+                <field name="sequence_code"/>
                 <field name="name"/>
                 <field name="code"/>
+                <field name="credit_hours"/>
                 <field name="active"/>
             </list>
         </field>
@@ -18,9 +20,13 @@
             <form>
                 <sheet>
                     <group>
+                        <field name="sequence_code" readonly="1"/>
                         <field name="name"/>
                         <field name="code"/>
-                                <field name="active"/>
+                        <field name="short_name"/>
+                        <field name="subject_type"/>
+                        <field name="credit_hours"/>
+                        <field name="active"/>
                     </group>
                 </sheet>
             </form>
