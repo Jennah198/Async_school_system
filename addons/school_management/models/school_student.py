@@ -83,7 +83,6 @@ class SchoolStudent(models.Model):
         string="Section",
         readonly=True,
     )
-
     registration_status = fields.Selection([
         ('draft', 'Draft'),
         ('pending_verification', 'Pending Verification'),

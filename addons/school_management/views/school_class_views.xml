@@ -5,8 +5,10 @@
         <field name="arch" type="xml">
             <list>
                 <field name="name"/>
+                <field name="grade_id"/>
                 <field name="section_id"/>
                 <field name="academic_year_id"/>
+                <field name="room_id"/>
                 <field name="education_level"/>
                 <field name="min_age"/>
                 <field name="max_age"/>
@@ -23,7 +25,9 @@
                 <sheet>
                     <group>
                         <group>
+                            <field name="grade_id" options="{'no_create': True}"/>
                             <field name="section_id" options="{'no_create': True}"/>
+                            <field name="room_id" options="{'no_create': True}"/>
                             <field name="name" placeholder="Filled from Grade and Section"/>
                             <field name="academic_year_id" options="{'no_create': True}"/>
                             <field name="education_level"/>

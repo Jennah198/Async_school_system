@@ -4,9 +4,7 @@ from datetime import timedelta
 from odoo import fields
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
-
 from .common import ethiopian_year_name, year_spanning_today
-
 DUMMY_FILE = base64.b64encode(b'fictional test document')
 
 
