@@ -34,3 +34,4 @@ from . import school_admission_wizard
 from . import school_setup_wizard
 from . import school_day_builder
 from . import school_demo_seed
+from . import school_promotion
