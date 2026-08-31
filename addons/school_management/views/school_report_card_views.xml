@@ -45,6 +45,7 @@
                 <field name="class_id"/>
                 <field name="version"/>
                 <field name="overall_average" string="Overall Average (%)"/>
+                <field name="conduct" optional="show"/>
                 <field name="class_rank" optional="show"/>
                 <field name="grade_rank" optional="hide"/>
                 <field name="result"/>
@@ -91,6 +92,11 @@
                             <field name="supersedes_id" readonly="1" invisible="not supersedes_id"/>
                             <field name="superseded_by_id" readonly="1" invisible="not superseded_by_id"/>
                         </group>
+                    </group>
+                    <group string="Evaluation &amp; Conduct">
+                        <field name="conduct" readonly="state in ('published', 'superseded')"/>
+                        <field name="homeroom_remarks" readonly="state in ('published', 'superseded')"/>
+                        <field name="principal_remarks" readonly="state in ('published', 'superseded')"/>
                     </group>
                 </sheet>
                 <chatter/>
