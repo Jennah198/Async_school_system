@@ -143,6 +143,15 @@ class SchoolReportCard(models.Model):
         'unique(student_id, term_id, version)',
         'Report card versions must be unique for each student and term.')
 
+    conduct = fields.Selection([
+        ('A', 'A - Excellent'),
+        ('B', 'B - Very Good'),
+        ('C', 'C - Satisfactory'),
+        ('D', 'D - Needs Improvement'),
+    ], string='Conduct', default='A', tracking=True)
+    homeroom_remarks = fields.Text(string='Homeroom Teacher Remarks')
+    principal_remarks = fields.Text(string='Director Remarks')
+
     @api.depends('overall_average', 'class_id', 'grade_id', 'term_id', 'superseded_by_id', 'state')
     def _compute_rankings(self):
         for card in self:

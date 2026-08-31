@@ -17,3 +17,4 @@ from . import test_odoo19_ui_access
 from . import test_demo_seed
 from . import test_report_card_engine
 from . import test_promotion_workflow
+from . import test_conduct_and_assessment_weight

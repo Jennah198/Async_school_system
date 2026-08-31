@@ -132,6 +132,23 @@ class SchoolAssessment(models.Model):
                        rec.term_id.date_end)
                 )
 
+    @api.constrains('weight', 'class_id', 'subject_id', 'term_id', 'state')
+    def _check_total_weight_per_subject_term(self):
+        for rec in self:
+            if not rec.class_id or not rec.subject_id or not rec.term_id:
+                continue
+            assessments = self.search([
+                ('class_id', '=', rec.class_id.id),
+                ('subject_id', '=', rec.subject_id.id),
+                ('term_id', '=', rec.term_id.id),
+            ])
+            total_weight = sum(assessments.mapped('weight'))
+            if total_weight > 100.0:
+                raise ValidationError(
+                    f"Total assessment weight for {rec.subject_id.name} in {rec.class_id.name} "
+                    f"({rec.term_id.name}) cannot exceed 100%. Current total: {total_weight}%."
+                )
+            
     @api.onchange('class_id')
     def _onchange_class_id(self):
         for rec in self:
