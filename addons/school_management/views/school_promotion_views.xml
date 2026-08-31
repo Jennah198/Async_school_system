@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_school_promotion_batch_tree" model="ir.ui.view">
+        <field name="name">school.promotion.batch.list</field>
+        <field name="model">school.promotion.batch</field>
+        <field name="arch" type="xml">
+            <list string="Promotion Batches" decoration-muted="state == 'draft'" decoration-info="state == 'calculated'" decoration-primary="state == 'approved'" decoration-success="state == 'done'">
+                <field name="name"/>
+                <field name="academic_year_id"/>
+                <field name="target_academic_year_id"/>
+                <field name="grade_id"/>
+                <field name="line_count" string="Students"/>
+                <field name="promoted_count" string="Promoted"/>
+                <field name="retained_count" string="Retained"/>
+                <field name="graduated_count" string="Graduated"/>
+                <field name="conditional_count" string="Conditional"/>
+                <field name="state" widget="badge" decoration-info="state == 'calculated'" decoration-primary="state == 'approved'" decoration-success="state == 'done'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_school_promotion_batch_form" model="ir.ui.view">
+        <field name="name">school.promotion.batch.form</field>
+        <field name="model">school.promotion.batch</field>
+        <field name="arch" type="xml">
+            <form string="Promotion Batch">
+                <header>
+                    <button name="action_calculate_outcomes" string="Calculate Decisions" type="object" class="btn-primary" invisible="state not in ('draft', 'calculated')"/>
+                    <button name="action_approve" string="Approve Decisions" type="object" class="btn-primary" invisible="state != 'calculated'"/>
+                    <button name="action_apply_promotion" string="Execute Promotion &amp; Enrollments" type="object" class="btn-success" invisible="state != 'approved'" confirm="This will close active enrollments for the current year and create new enrollments for the target year. Proceed?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,calculated,approved,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Batch Name" readonly="state != 'draft'"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Academic Scope">
+                            <field name="academic_year_id" readonly="state != 'draft'"/>
+                            <field name="target_academic_year_id" readonly="state != 'draft'"/>
+                            <field name="grade_id" readonly="state != 'draft'"/>
+                            <field name="class_ids" widget="many2many_tags" readonly="state != 'draft'" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Promotion Rules &amp; Summary">
+                            <field name="minimum_pass_average" readonly="state != 'draft'"/>
+                            <field name="max_failed_subjects" readonly="state != 'draft'"/>
+                            <div class="o_td_label">
+                                <label for="promoted_count" string="Counts"/>
+                            </div>
+                            <div>
+                                <span class="badge rounded-pill text-bg-success me-1">Promoted: <field name="promoted_count" readonly="1"/></span>
+                                <span class="badge rounded-pill text-bg-warning me-1">Retained: <field name="retained_count" readonly="1"/></span>
+                                <span class="badge rounded-pill text-bg-primary me-1">Graduated: <field name="graduated_count" readonly="1"/></span>
+                                <span class="badge rounded-pill text-bg-secondary">Conditional: <field name="conditional_count" readonly="1"/></span>
+                            </div>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Student Decisions" invisible="state == 'draft'">
+                            <field name="line_ids" readonly="state in ('draft', 'done')">
+                                <list editable="bottom" decoration-success="final_outcome == 'promoted'" decoration-warning="final_outcome == 'retained'" decoration-info="final_outcome == 'graduated'" decoration-danger="final_outcome == 'conditional'">
+                                    <field name="student_id" readonly="1"/>
+                                    <field name="regno" readonly="1"/>
+                                    <field name="admission_number" readonly="1"/>
+                                    <field name="current_class_id" readonly="1"/>
+                                    <field name="annual_average" readonly="1"/>
+                                    <field name="calculated_outcome" readonly="1"/>
+                                    <field name="final_outcome"/>
+                                    <field name="is_overridden" readonly="1"/>
+                                    <field name="override_reason" placeholder="Required if overriding..."/>
+                                    <field name="target_grade_id" readonly="1"/>
+                                    <field name="target_class_id" options="{'no_create': True}"/>
+                                    <field name="target_stream_id" options="{'no_create': True}"/>
+                                    <field name="state" widget="badge" decoration-success="state == 'done'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_school_promotion_batch" model="ir.actions.act_window">
+        <field name="name">End-of-Year Promotion</field>
+        <field name="res_model">school.promotion.batch</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create an End-of-Year promotion batch to transition students into the next academic year.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_school_promotion_batch"
+              name="Student Promotions"
+              parent="school_management.menu_school_registrar"
+              action="action_school_promotion_batch"
+              sequence="45"/>
+</odoo>
