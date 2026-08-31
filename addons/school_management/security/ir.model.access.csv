@@ -177,3 +177,9 @@ access_school_job_title_frontoffice,school.job.title frontoffice,model_school_jo
 access_school_job_title_teacher,school.job.title teacher,model_school_job_title,school_management.group_school_teacher,1,0,0,0
 access_school_job_title_hr,school.job.title hr,model_school_job_title,school_management.group_school_hr,1,0,0,0
 access_school_staff_hr,school.staff hr,model_school_staff,school_management.group_school_hr,1,0,0,0
+access_school_promotion_batch_registrar,school.promotion.batch.registrar,model_school_promotion_batch,school_management.group_school_registrar,1,1,1,1
+access_school_promotion_batch_admin,school.promotion.batch.admin,model_school_promotion_batch,school_management.group_school_admin,1,1,1,1
+access_school_promotion_batch_teacher,school.promotion.batch.teacher,model_school_promotion_batch,school_management.group_school_teacher,1,0,0,0
+access_school_promotion_line_registrar,school.promotion.line.registrar,model_school_promotion_line,school_management.group_school_registrar,1,1,1,1
+access_school_promotion_line_admin,school.promotion.line.admin,model_school_promotion_line,school_management.group_school_admin,1,1,1,1
+access_school_promotion_line_teacher,school.promotion.line.teacher,model_school_promotion_line,school_management.group_school_teacher,1,0,0,0
