@@ -85,8 +85,8 @@ class SchoolGradingBand(models.Model):
         for band in self:
             overlap = self.search([
                 ('id', '!=', band.id), ('scheme_id', '=', band.scheme_id.id),
-                ('minimum_percentage', '<=', band.maximum_percentage),
-                ('maximum_percentage', '>=', band.minimum_percentage),
+                ('minimum_percentage', '<', band.maximum_percentage),
+                ('maximum_percentage', '>', band.minimum_percentage),
             ], limit=1)
             if overlap:
                 raise ValidationError('Grading bands cannot overlap.')

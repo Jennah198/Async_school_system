@@ -32,7 +32,7 @@ access_school_assessment_admin,school.assessment admin,model_school_assessment,s
 access_school_assessment_exam_officer,school.assessment exam officer,model_school_assessment,school_management.group_school_exam_officer,1,1,1,1
 access_school_assessment_registrar,school.assessment registrar,model_school_assessment,school_management.group_school_registrar,1,1,1,1
 access_school_assessment_director,school.assessment director,model_school_assessment,school_management.group_school_director,1,0,0,0
-access_school_assessment_teacher,school.assessment teacher,model_school_assessment,school_management.group_school_teacher,1,1,0,0
+access_school_assessment_teacher,school.assessment teacher,model_school_assessment,school_management.group_school_teacher,1,1,1,0
 access_school_assessment_unlock_admin,school.assessment.unlock admin,model_school_assessment_unlock,school_management.group_school_admin,1,1,1,1
 access_school_assessment_unlock_exam_officer,school.assessment.unlock exam officer,model_school_assessment_unlock,school_management.group_school_exam_officer,1,1,1,1
 access_school_assessment_return_exam_officer,school.assessment.return exam officer,model_school_assessment_return,school_management.group_school_exam_officer,1,1,1,1
@@ -54,11 +54,11 @@ access_school_attendance_roster_teacher,school.attendance.roster teacher,model_s
 access_school_dashboard_admin,school.dashboard admin,model_school_dashboard,school_management.group_school_admin,1,1,1,1
 access_school_dashboard_director,school.dashboard director,model_school_dashboard,school_management.group_school_director,1,0,0,0
 access_school_staff_admin,school.staff admin,model_school_staff,school_management.group_school_admin,1,1,1,1
-access_school_staff_registrar,school.staff registrar,model_school_staff,school_management.group_school_registrar,1,1,1,1
+access_school_staff_registrar,school.staff registrar,model_school_staff,school_management.group_school_registrar,1,1,1,0
 access_school_staff_director,school.staff director,model_school_staff,school_management.group_school_director,1,0,0,0
 access_school_staff_frontoffice,school.staff frontoffice,model_school_staff,school_management.group_school_frontoffice,1,0,0,0
 access_school_job_title_admin,school.job.title admin,model_school_job_title,school_management.group_school_admin,1,1,1,1
-access_school_job_title_registrar,school.job.title registrar,model_school_job_title,school_management.group_school_registrar,1,1,1,1
+access_school_job_title_registrar,school.job.title registrar,model_school_job_title,school_management.group_school_registrar,1,1,1,0
 access_school_attendance_admin,school.attendance admin,model_school_attendance,school_management.group_school_admin,1,1,1,1
 access_school_attendance_teacher,school.attendance teacher,model_school_attendance,school_management.group_school_teacher,1,1,1,0
 access_school_room_admin,school.room admin,model_school_room,school_management.group_school_admin,1,1,1,1
