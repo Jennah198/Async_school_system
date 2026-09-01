@@ -64,7 +64,8 @@ right transport for future machine-to-machine jobs.
 | `lib/odoo/session.ts` | Seals/opens the app cookie. |
 | `lib/odoo/auth.ts` | `login`, `logout`, `requireSession`, `getCurrentUser`. |
 | `lib/odoo/client.ts` | `searchRead`, `readOne`, `readGroup`, `hasAccess`, `callAction`. |
-| `lib/odoo/models/school.ts` | Typed per-model services with explicit field lists. |
+| `lib/odoo/models/school.ts` | Typed read services with explicit field lists. |
+| `lib/odoo/models/staff.ts` | Staff registration, activation and HR reads. |
 | `lib/navigation.ts` | Role-aware nav, encoding the *measured* permission matrix. |
 
 Nothing above `lib/odoo/` knows an Odoo URL, a database name, or a session id.
@@ -79,14 +80,18 @@ Coverage below reflects what is **implemented today**, not the full domain.
 |---|---|---|---|---|
 | `res.users` | Sign in, identity, scope | all | `/login` | ✅ |
 | — | Role dashboard | all | `/dashboard` | ✅ |
-| `school.student` | Student list, search, paging | Registrar, Teacher (own classes), Admin, Exam Officer | `/students` | ✅ list |
-| `school.staff` | Staff register | Registrar, Admin, Director, HR, Front Office, Teacher | `/staff` | ✅ list |
-| `school.teacher` | Teacher profiles + workload | Registrar, Admin, Teacher, Director | `/teachers` | ✅ list |
+| `school.student` | Student list, search, paging | Registrar, Teacher (own classes), Admin, Exam Officer, Director, Front Office | `/students` | ✅ list |
+| `school.staff` | Staff register, registration, activation | Registrar, Admin, Director, HR, Front Office, Teacher | `/staff`, `/staff/new`, `/staff/[id]` | ✅ list · detail · **create** · **activate/suspend/deactivate/reset** |
+| `school.staff.responsibility` | Responsibilities | as staff | `/staff/[id]` | ✅ read (seeded on create) |
+| `school.staff.employment` | Employment history | HR, Admin only | `/staff/[id]` | ✅ read, degrades for others |
+| `school.staff.daily.status` | Daily status | HR, Admin only | `/staff/[id]` | ✅ read, degrades for others |
+| `school.job.title` | Job titles + granted responsibility | Registrar, Admin, Director, HR, Front Office, Teacher | (used by `/staff/new`) | ✅ read |
+| `school.teacher` | Teacher profiles + workload | Registrar, Admin, Teacher, Exam Officer | `/teachers` | ✅ list |
 | `school.academic.year` | Academic years | Registrar, Admin, Teacher | `/academic-years` | ✅ list |
-| `school.class` | Classes | Registrar, Admin, Teacher, Director | `/classes` | ✅ list |
+| `school.class` | Classes | Registrar, Admin, Teacher, Exam Officer | `/classes` | ✅ list |
 | `school.subject` | Subjects | Registrar, Admin, Teacher | `/subjects` | ✅ list |
-| `school.teacher.assignment` | Teaching assignments | Registrar, Admin, Teacher, Director | `/assignments` | ✅ list |
-| `school.mark` | Marks (Odoo-computed grades) | Teacher (own assignment), Exam Officer | `/marks` | ✅ list |
+| `school.teacher.assignment` | Teaching assignments | Registrar, Admin, Teacher | `/assignments` | ✅ list |
+| `school.mark` | Marks (Odoo-computed grades) | Teacher (own assignment), Exam Officer, Registrar, Director | `/marks` | ✅ list |
 | `school.enrollment` | Enrolment lifecycle | Registrar, Director | `/enrollments` | ⛔ not built |
 | `school.attendance` | Attendance capture | Teacher, Registrar | `/attendance` | ⛔ not built |
 | `school.assessment` | Assessment state machine | Teacher, Exam Officer | `/assessments` | ⛔ not built |
@@ -128,22 +133,42 @@ messages pass through, because the module authors wrote those for end users.
 
 ---
 
-## 6. Known backend limitations the UI must respect
+## 6. Backend security: what was repaired, and what is still open
 
-Four record rules are ineffective because the matching ACL row is missing.
-Confirmed by live test, not inference:
+### Repaired
 
-| Rule | Group | Model | Observed |
-|---|---|---|---|
-| `rule_student_all_director` | Director | `school.student` | 403 |
-| `rule_student_contact_frontoffice` | Front Office | `school.student` | 403 |
-| `rule_mark_all_registrar` | Registrar | `school.mark` | 403 |
-| `rule_mark_all_director` | Director | `school.mark` | 403 |
+Four record rules could never fire because no ACL row existed for the group.
+The intent was unambiguous from `README.md`'s access matrix, so the four
+missing rows were added to `security/ir.model.access.csv` — the smallest
+correct fix, since the rules themselves were already right:
 
-The frontend does **not** pretend these work: those nav entries are hidden from
-those roles, and dashboard tiles show "Not available to your role" rather than
-failing. This needs a product/security decision — do not fix it in the
-frontend.
+| Rule | Group | Model | ACL added | Verified on staging |
+|---|---|---|---|---|
+| `rule_student_all_director` | Director | `school.student` | `1,0,0,0` | 6 rows |
+| `rule_student_contact_frontoffice` | Front Office | `school.student` | `1,0,0,0` | 6 rows |
+| `rule_mark_all_director` | Director | `school.mark` | `1,0,0,0` | 18 rows |
+| `rule_mark_all_registrar` | Registrar | `school.mark` | `1,1,1,1` | 18 rows |
+
+README basis: *"Director / Principal — **Read-only** on every academic model,
+unscoped… No create, write, or delete anywhere"*; *"Registrar — Full
+create/edit/delete on … marks"*; *"Delete is held by Registrar and School
+Administrator"*; *"Front Office — All students for contact lookup."*
+
+### Still open — needs a product decision, NOT fixed here
+
+README says the Director is read-only on **every** academic model. In fact
+`group_school_director` has no ACL row on:
+
+`school.teacher` · `school.class` · `school.subject` · `school.academic.year` ·
+`school.term` · `school.teacher.assignment`
+
+Front Office likewise has none on any academic model. Those nav entries are
+therefore hidden from those roles rather than offered as 403s. Widening them
+is an authorisation policy change and is deliberately left to the owner.
+
+Also unchanged: `school.grading.policy`, `school.report.card.line` and
+`school.subject.result` have no ACL declarations at all (the repo's own
+`scripts/check_acl_coverage.py` reports this on untouched `main` too).
 
 Also outstanding on staging: `admin`/`admin` still works, and Odoo error
 bodies still carry Python tracebacks (stripped at this boundary, but present
@@ -158,11 +183,24 @@ npm run build          # includes TypeScript
 npm run lint
 npm run start          # then, against a running server:
 node scripts/e2e-staging.mjs   http://localhost:3100   # authorisation edges
+node scripts/e2e-staff.mjs     http://localhost:3100   # staff write workflow
 node scripts/route-sweep.mjs   http://localhost:3100   # every route, every role
 ```
+
+Current results: **18 + 21 passing, sweep clean across teacher, registrar,
+director and front office.**
+
+`e2e-staff.mjs` creates one synthetic staff record on staging, activates it
+through `action_activate`, asserts Odoo minted the `STF-` sequence and the
+linked `hr.employee`, then deactivates it.
 
 Both scripts need `E2E_PASSWORD`, `E2E_TEACHER_LOGIN`, `E2E_REGISTRAR_LOGIN`
 in the environment — no credential is committed. They drive the system Chrome
 through `playwright-core`, so no browser download is required.
 
 They target **staging only**. Never point them at production.
+
+`SESSION_COOKIE_SECURE=false` exists only so a local `next start` over plain
+http can hold a session — `next start` forces NODE_ENV=production, which would
+otherwise set a `Secure` cookie the browser declines to return on same-site
+POSTs, breaking every server action. Never set it in a deployed environment.
