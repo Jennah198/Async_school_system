@@ -1,5 +1,6 @@
 import 'server-only'
-import { callAction, callKw, create, readOne, searchRead, write } from '@/lib/odoo/client'
+import { callKw, create, readOne, searchRead, write } from '@/lib/odoo/client'
+import { orNullOnRefusal } from '@/lib/odoo/errors'
 import type { Many2one, Page, Selection } from '@/lib/odoo/types'
 
 /**
@@ -19,13 +20,6 @@ import type { Many2one, Page, Selection } from '@/lib/odoo/types'
  * legitimately invisible to some roles — so one restricted panel must not take
  * the whole page down. It never hides a value the caller was entitled to.
  */
-async function orNull<T>(promise: Promise<T>): Promise<T | null> {
-  try {
-    return await promise
-  } catch {
-    return null
-  }
-}
 
 /* ------------------------------------------------------------- metadata --- */
 
@@ -111,7 +105,7 @@ export interface StaffDetail {
  * only needed by the activation panel, which requires write access anyway.
  */
 export async function getActivationBlockers(id: number): Promise<string | null> {
-  const row = await orNull(
+  const row = await orNullOnRefusal(
     readOne<{ missing_to_activate: string | false }>(id ? 'school.staff' : 'school.staff', id, [
       'missing_to_activate',
     ]),
@@ -133,7 +127,7 @@ export interface StaffLinks {
 }
 
 export function getStaffLinks(id: number): Promise<StaffLinks | null> {
-  return orNull(readOne<StaffLinks>('school.staff', id, ['employee_id', 'user_id'])) as Promise<
+  return orNullOnRefusal(readOne<StaffLinks>('school.staff', id, ['employee_id', 'user_id'])) as Promise<
     StaffLinks | null
   >
 }
@@ -170,14 +164,10 @@ export function getStaff(id: number): Promise<StaffDetail | null> {
  * than failing the whole page, and the caller renders "restricted".
  * This is not a workaround: the value is never obtained.
  */
-export async function getStaffPersonalData(
+export function getStaffPersonalData(
   id: number,
 ): Promise<{ date_of_birth: string | false; fayda_id: string | false; age: number } | null> {
-  try {
-    return await readOne('school.staff', id, ['date_of_birth', 'fayda_id', 'age'])
-  } catch {
-    return null
-  }
+  return orNullOnRefusal(readOne('school.staff', id, ['date_of_birth', 'fayda_id', 'age']))
 }
 
 export interface ResponsibilityRow {
@@ -220,7 +210,7 @@ export interface EmploymentRow {
  * rather than failing whole.
  */
 export function listEmployment(staffId: number): Promise<Page<EmploymentRow> | null> {
-  return orNull(searchRead<EmploymentRow>(
+  return orNullOnRefusal(searchRead<EmploymentRow>(
     'school.staff.employment',
     ['job_title_id', 'responsibility', 'manager_id', 'campus_id', 'date_start', 'date_end', 'reason'],
     { domain: [['staff_id', '=', staffId]], limit: 50 },
@@ -237,7 +227,7 @@ export interface DailyStatusRow {
 }
 
 export function listDailyStatus(staffId: number, limit = 14): Promise<Page<DailyStatusRow> | null> {
-  return orNull(searchRead<DailyStatusRow>(
+  return orNullOnRefusal(searchRead<DailyStatusRow>(
     'school.staff.daily.status',
     ['date', 'status', 'check_in', 'check_out', 'worked_hours'],
     { domain: [['staff_id', '=', staffId]], limit, order: 'date desc' },
@@ -319,21 +309,6 @@ export function updateStaff(id: number, values: Record<string, unknown>): Promis
 }
 
 /* ------------------------------------------------------- state machine --- */
-
-/**
- * The four transitions Odoo exposes on school.staff. Each is a real method
- * with side effects — sequence assignment, hr.employee creation, archiving the
- * linked res.users on deactivate — so `state` is never written directly.
- */
-export type StaffTransition =
-  | 'action_activate'
-  | 'action_suspend'
-  | 'action_deactivate'
-  | 'action_reset_draft'
-
-export function runStaffTransition(id: number, transition: StaffTransition): Promise<unknown> {
-  return callAction('school.staff', transition, [id])
-}
 
 export function addResponsibility(
   staffId: number,

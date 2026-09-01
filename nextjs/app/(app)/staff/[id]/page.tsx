@@ -23,7 +23,8 @@ import {
   getActivationBlockers,
 } from '@/lib/odoo/models/staff'
 import { m2oLabel } from '@/lib/odoo/types'
-import { StaffStatePanel } from './state-panel'
+import { WorkflowPanel } from '@/components/workflow-panel'
+import { availableTransitions } from '@/lib/odoo/workflows'
 
 export const metadata = { title: 'Staff record · Async School' }
 
@@ -229,11 +230,21 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
               </Badge>
               {!staff.active ? <Badge tone="muted">Archived</Badge> : null}
             </div>
-            <StaffStatePanel
+            <WorkflowPanel
+              workflow="staff"
               id={staff.id}
-              state={String(staff.state || '')}
-              missing={blockers ?? ''}
+              transitions={availableTransitions('staff', String(staff.state || '')).map(
+                ({ key, label, confirm, destructive, requiresReason }) => ({
+                  key,
+                  label,
+                  confirm,
+                  destructive,
+                  requiresReason,
+                }),
+              )}
+              revalidate={[`/staff/${staff.id}`, '/staff']}
               canWrite={canWrite}
+              blockedNote={staff.state === 'draft' ? (blockers ?? undefined) : undefined}
             />
           </Card>
         </div>

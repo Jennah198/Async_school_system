@@ -4,13 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
-import {
-  createStaff,
-  runStaffTransition,
-  updateStaff,
-  type StaffIntake,
-  type StaffTransition,
-} from '@/lib/odoo/models/staff'
+import { createStaff, updateStaff, type StaffIntake } from '@/lib/odoo/models/staff'
 
 /**
  * Every mutation here runs as the signed-in user's Odoo session. Nothing from
@@ -40,13 +34,6 @@ const INTAKE_FIELDS = [
 
 function submittedValues(form: FormData): Record<string, string> {
   return Object.fromEntries(INTAKE_FIELDS.map((f) => [f, String(form.get(f) ?? '')]))
-}
-
-const TRANSITIONS: Record<string, StaffTransition> = {
-  activate: 'action_activate',
-  suspend: 'action_suspend',
-  deactivate: 'action_deactivate',
-  reset: 'action_reset_draft',
 }
 
 function text(form: FormData, key: string): string {
@@ -117,29 +104,6 @@ export async function registerStaffAction(
 
   revalidatePath('/staff')
   redirect(`/staff/${id}`)
-}
-
-export async function staffTransitionAction(
-  _previous: FormState,
-  form: FormData,
-): Promise<FormState> {
-  await requireSession()
-  const id = Number(text(form, 'id'))
-  const transition = TRANSITIONS[text(form, 'transition')]
-
-  if (!id || !transition) return { error: 'That action is not available.' }
-
-  try {
-    await runStaffTransition(id, transition)
-  } catch (cause) {
-    // Activation fails loudly when Odoo's completeness rule is unmet; the
-    // message names exactly which fields are missing.
-    return { error: toOdooError(cause).message }
-  }
-
-  revalidatePath(`/staff/${id}`)
-  revalidatePath('/staff')
-  return { ok: true }
 }
 
 export async function updateStaffAction(_previous: FormState, form: FormData): Promise<FormState> {
