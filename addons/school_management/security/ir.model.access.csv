@@ -183,3 +183,7 @@ access_school_promotion_batch_teacher,school.promotion.batch.teacher,model_schoo
 access_school_promotion_line_registrar,school.promotion.line.registrar,model_school_promotion_line,school_management.group_school_registrar,1,1,1,1
 access_school_promotion_line_admin,school.promotion.line.admin,model_school_promotion_line,school_management.group_school_admin,1,1,1,1
 access_school_promotion_line_teacher,school.promotion.line.teacher,model_school_promotion_line,school_management.group_school_teacher,1,0,0,0
+access_school_student_director,school.student director,model_school_student,school_management.group_school_director,1,0,0,0
+access_school_student_frontoffice,school.student frontoffice,model_school_student,school_management.group_school_frontoffice,1,0,0,0
+access_school_mark_director,school.mark director,model_school_mark,school_management.group_school_director,1,0,0,0
+access_school_mark_registrar,school.mark registrar,model_school_mark,school_management.group_school_registrar,1,1,1,1
