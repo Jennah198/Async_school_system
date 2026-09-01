@@ -62,6 +62,12 @@ const NAV_RULES: NavRuleSection[] = [
         // All six hold an ACL row on school.student.
       },
       {
+        href: '/enrollments',
+        label: 'Enrolments',
+        // Registrar RWC, Director read-only, Teacher read scoped to own classes.
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isDirector, r.isTeacher),
+      },
+      {
         href: '/staff',
         label: 'Staff',
         visible: (r) =>

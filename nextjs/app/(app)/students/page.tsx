@@ -13,6 +13,7 @@ import { listStudents } from '@/lib/odoo/models/school'
 import { toOdooError } from '@/lib/odoo/errors'
 import { m2oLabel } from '@/lib/odoo/types'
 import { SearchField } from '@/components/search-field'
+import { hasAccess } from '@/lib/odoo/client'
 
 export const metadata = { title: 'Students · Async School' }
 
@@ -35,6 +36,8 @@ export default async function StudentsPage({ searchParams }: PageProps<'/student
   const page = Number(typeof params.page === 'string' ? params.page : '1') || 1
   const offset = (page - 1) * PAGE_SIZE
 
+  const canCreate = await hasAccess('school.student', 'create')
+
   let result
   try {
     result = await listStudents({ search, limit: PAGE_SIZE, offset })
@@ -55,6 +58,16 @@ export default async function StudentsPage({ searchParams }: PageProps<'/student
       <PageHeader
         title="Students"
         subtitle={`${result.total.toLocaleString()} record${result.total === 1 ? '' : 's'} visible to you`}
+        action={
+          canCreate ? (
+            <Link
+              href="/students/new"
+              className="rounded-[9999px] bg-ink px-5 py-2.5 text-[13px] font-medium text-white hover:bg-graphite"
+            >
+              Register student
+            </Link>
+          ) : undefined
+        }
       />
 
       <Card padded={false}>
