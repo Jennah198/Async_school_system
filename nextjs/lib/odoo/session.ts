@@ -55,11 +55,25 @@ async function unseal(token: string): Promise<AppSession | null> {
   }
 }
 
+/**
+ * `Secure` is on by default and must stay on wherever the app is reachable
+ * over HTTPS — which is every real deployment.
+ *
+ * It is overridable only because `next start` forces NODE_ENV=production, so a
+ * local run over plain http://localhost would set a Secure cookie the browser
+ * then declines to send back on same-site POSTs, and every server action would
+ * look like a signed-out user. Set SESSION_COOKIE_SECURE=false for that case
+ * and nowhere else.
+ */
+function secureCookie(): boolean {
+  return process.env.SESSION_COOKIE_SECURE !== 'false'
+}
+
 export async function writeSession(session: AppSession): Promise<void> {
   const store = await cookies()
   store.set(SESSION_COOKIE, await seal(session), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureCookie(),
     sameSite: 'lax',
     path: '/',
     maxAge: MAX_AGE_SECONDS,

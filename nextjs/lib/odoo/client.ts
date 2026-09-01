@@ -104,8 +104,13 @@ export async function hasAccess(
   operation: 'read' | 'write' | 'create' | 'unlink',
 ): Promise<boolean> {
   try {
-    return await callKw<boolean>(model, 'has_access', [operation])
-  } catch {
+    // `has_access` is a record method, not @api.model, so call_kw expects
+    // [ids, operation] — an empty id list asks about the model itself.
+    return await callKw<boolean>(model, 'has_access', [[], operation])
+  } catch (cause) {
+    // A refusal is a legitimate answer, but a transport fault is not: log it
+    // server-side rather than silently rendering the UI as "not permitted".
+    console.error(`hasAccess(${model}, ${operation}) failed`, cause)
     return false
   }
 }
