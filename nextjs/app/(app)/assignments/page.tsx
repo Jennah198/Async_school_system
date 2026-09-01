@@ -1,4 +1,7 @@
-import { Badge } from '@/components/ui'
+import {
+  StatusBadge,
+} from '@/components/ui'
+import { formatSelection } from '@/lib/format'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listAssignments } from '@/lib/odoo/models/school'
 import { m2oLabel } from '@/lib/odoo/types'
@@ -20,12 +23,10 @@ export default function AssignmentsPage() {
           <Cell>{m2oLabel(row.subject_id)}</Cell>
           <Cell>{m2oLabel(row.class_id)}</Cell>
           <Cell>{m2oLabel(row.term_id)}</Cell>
-          <Cell>{String(row.responsibility || '—').replace(/_/g, ' ')}</Cell>
+          <Cell>{formatSelection(row.responsibility)}</Cell>
           <Cell numeric>{row.weekly_periods}</Cell>
           <Cell>
-            <Badge tone={row.state === 'active' ? 'live' : 'muted'}>
-              {String(row.state || '—')}
-            </Badge>
+            <StatusBadge state={row.state} />
           </Cell>
         </>
       )}

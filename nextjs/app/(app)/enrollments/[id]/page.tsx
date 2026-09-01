@@ -1,15 +1,17 @@
 import Link from 'next/link'
+import { formatDate, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
 import {
-  Badge,
   Card,
   CardHeader,
   Cell,
   DataTable,
+  DetailField,
   EmptyState,
   ErrorState,
   PageHeader,
   Row,
+  StatusBadge,
 } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
@@ -20,16 +22,6 @@ import { availableTransitions } from '@/lib/odoo/workflows'
 
 export const metadata = { title: 'Enrolment · Async School' }
 
-const TONE = { active: 'live', completed: 'solid', withdrawn: 'muted', transferred: 'neutral' } as const
-
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] tracking-wide text-stone uppercase">{label}</dt>
-      <dd className="mt-0.5 text-[13px] text-graphite">{value || '—'}</dd>
-    </div>
-  )
-}
 
 export default async function EnrollmentDetailPage({ params }: PageProps<'/enrollments/[id]'>) {
   const id = Number((await params).id)
@@ -75,7 +67,7 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
           <Card>
             <CardHeader title="Placement" />
             <dl className="grid gap-4 sm:grid-cols-3">
-              <Detail
+              <DetailField
                 label="Student"
                 value={
                   enrollment.student_id ? (
@@ -90,12 +82,12 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
                   )
                 }
               />
-              <Detail label="Class" value={m2oLabel(enrollment.class_id)} />
-              <Detail label="Academic year" value={m2oLabel(enrollment.academic_year_id)} />
-              <Detail label="Roll number" value={enrollment.roll_number || '—'} />
-              <Detail label="Admission type" value={String(enrollment.admission_type || '—')} />
-              <Detail label="Enrolled on" value={enrollment.enrollment_date} />
-              <Detail label="Ended on" value={enrollment.end_date || '—'} />
+              <DetailField label="Class" value={m2oLabel(enrollment.class_id)} />
+              <DetailField label="Academic year" value={m2oLabel(enrollment.academic_year_id)} />
+              <DetailField label="Roll number" value={enrollment.roll_number || '—'} />
+              <DetailField label="Admission type" value={formatSelection(enrollment.admission_type)} />
+              <DetailField label="Enrolled on" value={formatDate(enrollment.enrollment_date)} />
+              <DetailField label="Ended on" value={formatDate(enrollment.end_date)} />
             </dl>
           </Card>
 
@@ -114,17 +106,15 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
                 hint="Activating the enrolment derives the compulsory subjects."
               />
             ) : (
-              <DataTable head={['Subject', 'Type', 'From', 'To', 'Status']}>
+              <DataTable columns={['Subject', 'Type', 'From', 'To', 'Status']}>
                 {subjects.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>{m2oLabel(row.subject_id)}</Cell>
-                    <Cell>{String(row.subject_type || '—').replace(/_/g, ' ')}</Cell>
-                    <Cell>{row.date_start}</Cell>
-                    <Cell>{row.date_end || '—'}</Cell>
+                    <Cell>{formatSelection(row.subject_type)}</Cell>
+                    <Cell>{formatDate(row.date_start)}</Cell>
+                    <Cell>{formatDate(row.date_end)}</Cell>
                     <Cell>
-                      <Badge tone={row.state === 'enrolled' ? 'live' : 'muted'}>
-                        {String(row.state || '—')}
-                      </Badge>
+                      <StatusBadge state={row.state} />
                     </Cell>
                   </Row>
                 ))}
@@ -144,14 +134,14 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
             ) : placements.rows.length === 0 ? (
               <EmptyState title="No placement recorded" />
             ) : (
-              <DataTable head={['Class', 'Shift', 'Stream', 'Roll', 'From', 'To']}>
+              <DataTable columns={['Class', 'Shift', 'Stream', 'Roll', 'From', 'To']}>
                 {placements.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>{m2oLabel(row.class_id)}</Cell>
                     <Cell>{m2oLabel(row.shift_id)}</Cell>
                     <Cell>{m2oLabel(row.stream_id)}</Cell>
                     <Cell numeric>{row.roll_number || '—'}</Cell>
-                    <Cell>{row.date_start}</Cell>
+                    <Cell>{formatDate(row.date_start)}</Cell>
                     <Cell>{row.date_end || 'Current'}</Cell>
                   </Row>
                 ))}
@@ -164,7 +154,7 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
           <Card>
             <CardHeader title="Status" />
             <div className="mb-4">
-              <Badge tone={TONE[state as keyof typeof TONE] ?? 'muted'}>{state || '—'}</Badge>
+              <StatusBadge state={state} />
             </div>
             <WorkflowPanel
               workflow="enrollment"

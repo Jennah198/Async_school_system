@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { formatDateTime, formatSelection } from '@/lib/format'
 import { ErrorState, PageHeader } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
@@ -28,7 +29,7 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
   return (
     <WorkflowDetail
       title={program.name}
-      subtitle={`${String(program.program_type || '')} · ${program.start_datetime}`}
+      subtitle={`${String(program.program_type || '')} · ${formatDateTime(program.start_datetime)}`}
       backHref="/programs"
       backLabel="Back to programs"
       workflow="program"
@@ -38,8 +39,8 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
       revalidate={[`/programs/${program.id}`, '/programs']}
       note="A cancelled program stays visible with its status rather than disappearing."
       fields={[
-        { label: 'Type', value: String(program.program_type || '—').replace(/_/g, ' ') },
-        { label: 'Audience', value: String(program.audience_type || '—').replace(/_/g, ' ') },
+        { label: 'Type', value: formatSelection(program.program_type) },
+        { label: 'Audience', value: formatSelection(program.audience_type) },
         { label: 'Starts', value: program.start_datetime },
         { label: 'Ends', value: program.end_datetime },
         { label: 'Location', value: program.location || '—' },

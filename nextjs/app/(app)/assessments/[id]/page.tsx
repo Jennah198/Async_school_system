@@ -1,15 +1,17 @@
 import Link from 'next/link'
+import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
 import {
-  Badge,
   Card,
   CardHeader,
   Cell,
   DataTable,
+  DetailField,
   EmptyState,
   ErrorState,
   PageHeader,
   Row,
+  StatusBadge,
 } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
@@ -26,24 +28,6 @@ import { MarkRow } from './mark-row'
 
 export const metadata = { title: 'Assessment · Async School' }
 
-const TONE = {
-  draft: 'muted',
-  open: 'live',
-  submitted: 'neutral',
-  returned: 'neutral',
-  approved: 'neutral',
-  locked: 'solid',
-  published: 'solid',
-} as const
-
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] tracking-wide text-stone uppercase">{label}</dt>
-      <dd className="mt-0.5 text-[13px] text-graphite">{value || '—'}</dd>
-    </div>
-  )
-}
 
 export default async function AssessmentDetailPage({ params }: PageProps<'/assessments/[id]'>) {
   const id = Number((await params).id)
@@ -76,7 +60,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
     <>
       <PageHeader
         title={assessment.name}
-        subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${assessment.date}`}
+        subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${formatDate(assessment.date)}`}
         action={
           <Link
             href="/assessments"
@@ -92,15 +76,15 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
           <Card>
             <CardHeader title="Setup" hint="Frozen by Odoo once the mark list exists." />
             <dl className="grid gap-4 sm:grid-cols-3">
-              <Detail label="Type" value={String(assessment.assessment_type || '—')} />
-              <Detail label="Class" value={m2oLabel(assessment.class_id)} />
-              <Detail label="Subject" value={m2oLabel(assessment.subject_id)} />
-              <Detail label="Term" value={m2oLabel(assessment.term_id)} />
-              <Detail label="Academic year" value={m2oLabel(assessment.academic_year_id)} />
-              <Detail label="Date" value={assessment.date} />
-              <Detail label="Maximum mark" value={assessment.max_mark} />
-              <Detail label="Weight" value={assessment.weight} />
-              <Detail
+              <DetailField label="Type" value={formatSelection(assessment.assessment_type)} />
+              <DetailField label="Class" value={m2oLabel(assessment.class_id)} />
+              <DetailField label="Subject" value={m2oLabel(assessment.subject_id)} />
+              <DetailField label="Term" value={m2oLabel(assessment.term_id)} />
+              <DetailField label="Academic year" value={m2oLabel(assessment.academic_year_id)} />
+              <DetailField label="Date" value={formatDate(assessment.date)} />
+              <DetailField label="Maximum mark" value={assessment.max_mark} />
+              <DetailField label="Weight" value={assessment.weight} />
+              <DetailField
                 label="Teacher assignment"
                 value={m2oLabel(assessment.teacher_assignment_id)}
               />
@@ -175,12 +159,12 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
             ) : events.rows.length === 0 ? (
               <EmptyState title="No events recorded yet" />
             ) : (
-              <DataTable head={['Event', 'By', 'When', 'Reason']}>
+              <DataTable columns={['Event', 'By', 'When', 'Reason']}>
                 {events.rows.map((row) => (
                   <Row key={row.id}>
-                    <Cell strong>{String(row.event_type || '—').replace(/_/g, ' ')}</Cell>
+                    <Cell strong>{formatSelection(row.event_type)}</Cell>
                     <Cell>{m2oLabel(row.actor_id)}</Cell>
-                    <Cell>{row.occurred_at}</Cell>
+                    <Cell>{formatDateTime(row.occurred_at)}</Cell>
                     <Cell>{row.reason || '—'}</Cell>
                   </Row>
                 ))}
@@ -193,7 +177,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
           <Card>
             <CardHeader title="Status" />
             <div className="mb-4">
-              <Badge tone={TONE[state as keyof typeof TONE] ?? 'neutral'}>{state || '—'}</Badge>
+              <StatusBadge state={state} />
             </div>
             <WorkflowPanel
               workflow="assessment"

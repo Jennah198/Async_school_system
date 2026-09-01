@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { formatSelection } from '@/lib/format'
 import { registerStudentAction, type StudentFormState } from '../actions'
 
 interface Option {
@@ -170,7 +171,7 @@ export function StudentRegistrationForm({
         {chosen ? (
           <p className="text-[11px] text-stone sm:col-span-2">
             {chosen.name} sits in {chosen.year}
-            {chosen.level ? ` · ${chosen.level.replace(/_/g, ' ')}` : ''}
+            {chosen.level ? ` · ${formatSelection(chosen.level)}` : ''}
             {chosen.entryLevel
               ? ' · entry level, so no previous-grade document is required'
               : ' · a previous-grade document is required before submission'}

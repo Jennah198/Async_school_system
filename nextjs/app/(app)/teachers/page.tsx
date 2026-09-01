@@ -1,4 +1,6 @@
-import { Badge } from '@/components/ui'
+import {
+  StatusBadge,
+} from '@/components/ui'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listTeachers } from '@/lib/odoo/models/school'
 
@@ -21,9 +23,7 @@ export default function TeachersPage() {
           <Cell numeric>{row.total_student_count}</Cell>
           <Cell numeric>{row.current_weekly_periods}</Cell>
           <Cell>
-            <Badge tone={row.teaching_status === 'active' ? 'live' : 'muted'}>
-              {String(row.teaching_status || '—')}
-            </Badge>
+            <StatusBadge state={row.teaching_status} />
           </Cell>
         </>
       )}

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
+import { formatSelection } from '@/lib/format'
 import {
-  Badge,
   Card,
   CardHeader,
   Cell,
@@ -9,6 +9,7 @@ import {
   ErrorState,
   PageHeader,
   Row,
+  StatusBadge,
 } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
@@ -77,7 +78,7 @@ export default async function PromotionDetailPage({ params }: PageProps<'/promot
           <EmptyState title="No outcomes yet" hint="Run Calculate outcomes to populate them." />
         ) : (
           <DataTable
-            head={['Student', 'Student ID', 'Current class', 'Average', 'Calculated', 'Final', 'Target class']}
+            columns={['Student', 'Student ID', 'Current class', 'Average', 'Calculated', 'Final', 'Target class']}
           >
             {lines.rows.map((line) => (
               <Row key={line.id}>
@@ -87,11 +88,9 @@ export default async function PromotionDetailPage({ params }: PageProps<'/promot
                 <Cell numeric>
                   {typeof line.annual_average === 'number' ? line.annual_average.toFixed(2) : '—'}
                 </Cell>
-                <Cell>{String(line.calculated_outcome || '—')}</Cell>
+                <Cell>{formatSelection(line.calculated_outcome)}</Cell>
                 <Cell>
-                  <Badge tone={line.is_overridden ? 'live' : 'neutral'}>
-                    {String(line.final_outcome || '—')}
-                  </Badge>
+                  <StatusBadge state={line.final_outcome} />
                 </Cell>
                 <Cell>{m2oLabel(line.target_class_id)}</Cell>
               </Row>

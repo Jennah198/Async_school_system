@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { formatSelection } from '@/lib/format'
 import { ErrorState, PageHeader } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
@@ -46,7 +47,7 @@ export default async function ScheduleDetailPage({ params }: PageProps<'/schedul
         { label: 'Day', value: WEEKDAYS[Number(slot.day_of_week)] ?? '—' },
         { label: 'Starts', value: formatSlotTime(slot.start_time) },
         { label: 'Ends', value: formatSlotTime(slot.end_time) },
-        { label: 'Type', value: String(slot.schedule_type || '—') },
+        { label: 'Type', value: formatSelection(slot.schedule_type) },
       ]}
     />
   )

@@ -1,12 +1,14 @@
 import Link from 'next/link'
-import { Badge } from '@/components/ui'
+import { formatSelection } from '@/lib/format'
+import {
+  StatusBadge,
+} from '@/components/ui'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { formatSlotTime, listSchedule, WEEKDAYS } from '@/lib/odoo/models/operations'
 import { m2oLabel } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Timetable · Async School' }
 
-const TONE = { published: 'live', completed: 'solid', cancelled: 'muted', draft: 'muted' } as const
 
 export default function SchedulePage() {
   return (
@@ -27,12 +29,10 @@ export default function SchedulePage() {
           <Cell>{m2oLabel(row.subject_id)}</Cell>
           <Cell>{m2oLabel(row.teacher_id)}</Cell>
           <Cell>{m2oLabel(row.room_id)}</Cell>
-          <Cell>{String(row.schedule_type || '—')}</Cell>
+          <Cell>{formatSelection(row.schedule_type)}</Cell>
           <Cell>
             <Link href={`/schedule/${row.id}`} className="hover:text-action-blue">
-              <Badge tone={TONE[row.state as keyof typeof TONE] ?? 'neutral'}>
-                {String(row.state || '—')}
-              </Badge>
+              <StatusBadge state={row.state} />
             </Link>
           </Cell>
         </>

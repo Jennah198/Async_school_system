@@ -8,6 +8,7 @@ import {
   PageHeader,
   Row,
 } from '@/components/ui'
+import { formatDate, formatSelection } from '@/lib/format'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
 import { listClasses } from '@/lib/odoo/models/school'
@@ -73,13 +74,13 @@ export default async function AttendancePage({ searchParams }: PageProps<'/atten
             hint="Generate a roster above, or widen the filter."
           />
         ) : (
-          <DataTable head={['Date', 'Student', 'Class', 'Type', 'Period', 'Status']}>
+          <DataTable columns={['Date', 'Student', 'Class', 'Type', 'Period', 'Status']}>
             {attendance.rows.map((row) => (
               <Row key={row.id}>
-                <Cell strong>{row.date}</Cell>
+                <Cell strong>{formatDate(row.date)}</Cell>
                 <Cell>{m2oLabel(row.student_id)}</Cell>
                 <Cell>{m2oLabel(row.class_id)}</Cell>
-                <Cell>{String(row.attendance_type || '—')}</Cell>
+                <Cell>{formatSelection(row.attendance_type)}</Cell>
                 <Cell>{row.period || '—'}</Cell>
                 <Cell>
                   <AttendanceStatus

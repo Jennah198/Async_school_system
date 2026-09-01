@@ -1,6 +1,14 @@
-import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
+import {
+  Card,
+  CardHeader,
+  DetailGrid,
+  LinkButton,
+  Note,
+  PageHeader,
+  StatusBadge,
+  type Crumb,
+} from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { availableTransitions, type WorkflowKey } from '@/lib/odoo/workflows'
 
@@ -12,32 +20,6 @@ import { availableTransitions, type WorkflowKey } from '@/lib/odoo/workflows'
  * state, and only `{key,label,confirm,destructive,requiresReason}` crosses to
  * the client — never a model or a method name.
  */
-
-export function DetailField({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] tracking-wide text-stone uppercase">{label}</dt>
-      <dd className="mt-0.5 text-[13px] text-graphite">{value || '—'}</dd>
-    </div>
-  )
-}
-
-const TONE: Record<string, 'solid' | 'live' | 'muted' | 'neutral'> = {
-  published: 'solid',
-  verified: 'solid',
-  completed: 'solid',
-  locked: 'solid',
-  done: 'solid',
-  active: 'live',
-  open: 'live',
-  approved: 'live',
-  draft: 'muted',
-  cancelled: 'muted',
-  archived: 'muted',
-  rejected: 'muted',
-  superseded: 'muted',
-  expired: 'muted',
-}
 
 export function WorkflowDetail({
   title,
@@ -51,6 +33,8 @@ export function WorkflowDetail({
   fields,
   revalidate,
   note,
+  breadcrumbs,
+  meta,
   children,
 }: {
   title: string
@@ -64,6 +48,9 @@ export function WorkflowDetail({
   fields: Array<{ label: string; value: ReactNode }>
   revalidate: string[]
   note?: string
+  breadcrumbs?: Crumb[]
+  /** Chips beside the page title. */
+  meta?: ReactNode
   /** Extra cards rendered beneath the detail grid. */
   children?: ReactNode
 }) {
@@ -72,24 +59,19 @@ export function WorkflowDetail({
       <PageHeader
         title={title}
         subtitle={subtitle}
+        breadcrumbs={breadcrumbs}
+        meta={meta}
         action={
-          <Link
-            href={backHref}
-            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
-          >
+          <LinkButton href={backHref} icon="arrowLeft">
             {backLabel}
-          </Link>
+          </LinkButton>
         }
       />
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
           <Card>
             <CardHeader title="Details" />
-            <dl className="grid gap-4 sm:grid-cols-3">
-              {fields.map((field) => (
-                <DetailField key={field.label} label={field.label} value={field.value} />
-              ))}
-            </dl>
+            <DetailGrid fields={fields} />
           </Card>
           {children}
         </div>
@@ -97,7 +79,7 @@ export function WorkflowDetail({
           <Card>
             <CardHeader title="Status" />
             <div className="mb-4">
-              <Badge tone={TONE[state] ?? 'neutral'}>{state || '—'}</Badge>
+              <StatusBadge state={state} />
             </div>
             <WorkflowPanel
               workflow={workflow}
@@ -114,9 +96,7 @@ export function WorkflowDetail({
               revalidate={revalidate}
               canWrite={canWrite}
             />
-            {note ? (
-              <p className="mt-4 border-t border-silver pt-3 text-[11px] text-stone">{note}</p>
-            ) : null}
+            {note ? <Note>{note}</Note> : null}
           </Card>
         </div>
       </div>

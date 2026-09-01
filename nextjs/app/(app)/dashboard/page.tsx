@@ -1,5 +1,15 @@
 import Link from 'next/link'
-import { Badge, Card, CardHeader, DataTable, Cell, EmptyState, PageHeader, Row, Stat } from '@/components/ui'
+import {
+  Card,
+  CardHeader,
+  Cell,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  Row,
+  Stat,
+  StatusBadge,
+} from '@/components/ui'
 import { requireSession } from '@/lib/odoo/auth'
 import { primaryRoleLabel } from '@/lib/navigation'
 import { listAssignments, safeCount } from '@/lib/odoo/models/school'
@@ -70,7 +80,7 @@ export default async function DashboardPage() {
               hint="A registrar assigns you to a subject and class for a given term."
             />
           ) : (
-            <DataTable head={['Class', 'Subject', 'Term', 'Periods', 'Status']}>
+            <DataTable columns={['Class', 'Subject', 'Term', 'Periods', 'Status']}>
               {assignments.rows.map((row) => (
                 <Row key={row.id}>
                   <Cell strong>{m2oLabel(row.class_id)}</Cell>
@@ -78,9 +88,7 @@ export default async function DashboardPage() {
                   <Cell>{m2oLabel(row.term_id)}</Cell>
                   <Cell numeric>{row.weekly_periods}</Cell>
                   <Cell>
-                    <Badge tone={row.state === 'active' ? 'live' : 'muted'}>
-                      {String(row.state || '—')}
-                    </Badge>
+                    <StatusBadge state={row.state} />
                   </Cell>
                 </Row>
               ))}

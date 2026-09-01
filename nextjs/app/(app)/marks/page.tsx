@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui'
+import { formatSelection } from '@/lib/format'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listMarks } from '@/lib/odoo/models/school'
 import { m2oLabel } from '@/lib/odoo/types'
@@ -34,14 +35,14 @@ export default function MarksPage() {
           <Cell strong>{m2oLabel(row.student_id)}</Cell>
           <Cell>{m2oLabel(row.subject_id)}</Cell>
           <Cell>{m2oLabel(row.class_id)}</Cell>
-          <Cell>{String(row.exam_type || '—')}</Cell>
+          <Cell>{formatSelection(row.exam_type)}</Cell>
           <Cell numeric>{row.score}</Cell>
           <Cell numeric>{row.max_score}</Cell>
           <Cell numeric>{row.percentage != null ? row.percentage.toFixed(1) : '—'}</Cell>
           <Cell>
             <Badge tone="neutral">{row.grade || '—'}</Badge>
           </Cell>
-          <Cell>{String(row.mark_status || '—').replace(/_/g, ' ')}</Cell>
+          <Cell>{formatSelection(row.mark_status)}</Cell>
         </>
       )}
     />
