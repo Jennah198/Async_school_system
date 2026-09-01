@@ -4,16 +4,15 @@ import type { SchoolRoles } from '@/lib/odoo/types'
  * Role-aware navigation.
  *
  * Visibility here is a UX decision, never a security one — Odoo re-checks
- * every call. What it encodes is the *measured* permission matrix from the
- * Phase E staging tests, so people are not shown doors that open onto a 403.
+ * every call. What it encodes is the *measured* permission matrix, so people
+ * are not shown doors that open onto a 403.
  *
- * Four record rules are known to be ineffective because the matching ACL row
- * is missing (rule_student_all_director, rule_student_contact_frontoffice,
- * rule_mark_all_registrar, rule_mark_all_director). Verified on staging:
- * Director and Front Office get AccessError on school.student, and Registrar
- * and Director get AccessError on school.mark. Those entries are therefore
- * NOT shown to those roles. When the ACLs are fixed, widen the predicates
- * below — do not work around them in the frontend.
+ * Four record rules previously could not fire because the matching ACL row was
+ * absent (rule_student_all_director, rule_student_contact_frontoffice,
+ * rule_mark_all_registrar, rule_mark_all_director). The missing rows have been
+ * added in security/ir.model.access.csv to match the access matrix documented
+ * in README.md, so Director and Front Office can now read students, and
+ * Director and Registrar can read marks. The predicates below reflect that.
  */
 
 interface NavRule {
@@ -56,9 +55,11 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/students',
         label: 'Students',
-        // Registrar RWC, Teacher R (own classes), Exam Officer R.
-        // Director and Front Office are excluded: no ACL row exists.
-        visible: (r) => any(r.isRegistrar, r.isTeacher, r.isAdmin, r.isExamOfficer),
+        // Registrar RWC; Teacher R scoped to own classes; Exam Officer,
+        // Director and Front Office read-only and unscoped.
+        visible: (r) =>
+          any(r.isRegistrar, r.isTeacher, r.isAdmin, r.isExamOfficer, r.isDirector, r.isFrontOffice),
+        // All six hold an ACL row on school.student.
       },
       {
         href: '/staff',
@@ -69,7 +70,9 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/teachers',
         label: 'Teachers',
-        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isDirector, r.isExamOfficer),
+        // Director is excluded: there is no ACL row for group_school_director
+        // on school.teacher, so the page would answer 403.
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isExamOfficer),
       },
     ],
   },
@@ -84,7 +87,8 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/classes',
         label: 'Classes',
-        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isDirector, r.isExamOfficer),
+        // No director ACL row on school.class — see /teachers above.
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isExamOfficer),
       },
       {
         href: '/subjects',
@@ -99,14 +103,16 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/assignments',
         label: 'Teaching assignments',
-        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isDirector),
+        // No director ACL row on school.teacher.assignment.
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher),
       },
       {
         href: '/marks',
         label: 'Marks',
-        // Teacher RW (own assignment), Exam Officer full.
-        // Registrar and Director are excluded: no ACL row exists.
-        visible: (r) => any(r.isTeacher, r.isExamOfficer, r.isAdmin),
+        // Teacher RW scoped to their own assignment; Exam Officer and
+        // Registrar full; Director read-only.
+        visible: (r) =>
+          any(r.isTeacher, r.isExamOfficer, r.isAdmin, r.isRegistrar, r.isDirector),
       },
     ],
   },
