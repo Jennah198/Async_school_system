@@ -70,8 +70,7 @@ access_school_class_schedule_admin,school.class.schedule admin,model_school_clas
 access_school_announcement_admin,school.announcement admin,model_school_announcement,school_management.group_school_admin,1,1,1,1
 access_school_announcement_frontoffice,school.announcement frontoffice,model_school_announcement,school_management.group_school_frontoffice,1,1,1,0
 access_school_student_teacher,school.student teacher,model_school_student,school_management.group_school_teacher,1,0,0,0
-access_school_mark_teacher,school.mark teacher,model_school_mark,school_management.group_school_teacher,1,1,1,0
-access_school_mark_teacher,school.mark teacher,school_management.model_school_mark,school_management.group_school_teacher,1,1,1,0
+access_school_mark_teacher,school.mark teacher,model_school_mark,school_management.group_school_teacher,1,1,0,0
 access_school_class_schedule_teacher,school.class.schedule teacher,model_school_class_schedule,school_management.group_school_teacher,1,0,0,0
 access_school_announcement_teacher,school.announcement teacher,model_school_announcement,school_management.group_school_teacher,1,0,0,0
 access_school_class_registrar,school.class registrar,model_school_class,school_management.group_school_registrar,1,1,1,0
