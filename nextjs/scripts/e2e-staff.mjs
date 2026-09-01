@@ -166,7 +166,7 @@ try {
   const deactivate = page.locator('button:has-text("Deactivate")')
   if (await deactivate.isVisible().catch(() => false)) {
     await deactivate.click()
-    await page.locator('button:has-text("Yes, deactivate")').click()
+    await page.locator('button:has-text("Confirm deactivate")').click()
     await page.waitForTimeout(5000)
     check('probe record deactivated', true, `staff #${staffId}`)
   } else {

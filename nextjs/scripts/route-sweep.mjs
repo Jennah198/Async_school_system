@@ -17,6 +17,8 @@ const ROLES = {
 const ROUTES = [
   '/dashboard',
   '/students',
+  '/students/new',
+  '/enrollments',
   '/staff',
   '/staff/new',
   '/teachers',
