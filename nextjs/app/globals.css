@@ -11,9 +11,18 @@
   shell runs full width, and the type scale stops at 24px. design.md itself
   specifies "Density: compact", which is the instruction being followed here.
 
-  One documented deviation: a single muted red. design.md says not to
-  introduce colour beyond the blue accent, but destructive confirmation and
-  form validation must not signal by text alone. It appears nowhere else.
+  Two documented deviations from design.md's "no colour beyond the blue
+  accent":
+
+  1. A single muted red for destructive confirmation and form validation,
+     which must not signal by text alone.
+
+  2. A five-hue status palette — used *only* for status chips and the dot
+     inside them, and never as a page or control colour. A school system's
+     whole job is telling somebody what state a hundred rows are in, and
+     monochrome fill weight alone did not survive a dense table. Every chip
+     still carries its word, so the hue is reinforcement rather than the
+     signal; see lib/status.ts for the semantic tones these map to.
 */
 
 @theme {
@@ -30,6 +39,21 @@
   /* Documented deviation — destructive + validation only. */
   --color-danger: #b42318;
   --color-danger-bg: #fef3f2;
+
+  /* Documented deviation — status chips only. Desaturated to sit calmly
+     beside the monochrome table they annotate. */
+  --color-status-idle: #6b7280;
+  --color-status-idle-bg: #f1f2f4;
+  --color-status-progress: #b25e09;
+  --color-status-progress-bg: #fdf4e7;
+  --color-status-active: #0a66c2;
+  --color-status-active-bg: #eaf3fc;
+  --color-status-done: #1a7f52;
+  --color-status-done-bg: #e9f6ef;
+  --color-status-stopped: #b42318;
+  --color-status-stopped-bg: #fef3f2;
+  --color-status-muted: #898989;
+  --color-status-muted-bg: transparent;
 
   /* ---- Type ----------------------------------------------------------- */
   /* design.md substitutes: Cal Sans → Poppins, body → Inter Light. */
