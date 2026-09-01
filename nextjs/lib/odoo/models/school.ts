@@ -1,5 +1,6 @@
 import 'server-only'
 import { readOne, searchCount, searchRead } from '@/lib/odoo/client'
+import { orNullOnRefusal } from '@/lib/odoo/errors'
 import type { Domain, Ids, Many2one, Page, Selection } from '@/lib/odoo/types'
 
 /**
@@ -296,10 +297,6 @@ export function listAcademicYears(): Promise<Page<AcademicYearRow>> {
  * roles legitimately get AccessError on school.student and school.mark; a
  * dashboard tile should say "not available to your role", not crash the page.
  */
-export async function safeCount(model: string, domain: Domain = []): Promise<number | null> {
-  try {
-    return await searchCount(model, domain)
-  } catch {
-    return null
-  }
+export function safeCount(model: string, domain: Domain = []): Promise<number | null> {
+  return orNullOnRefusal(searchCount(model, domain))
 }

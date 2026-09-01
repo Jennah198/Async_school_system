@@ -1,4 +1,5 @@
 import 'server-only'
+import { unstable_rethrow } from 'next/navigation'
 
 /**
  * Odoo error normalisation.
@@ -138,6 +139,9 @@ export function normaliseOdooError(raw: RawOdooError | undefined): OdooError {
 
 /** Anything thrown inside the client that is not already an OdooError. */
 export function toOdooError(cause: unknown): OdooError {
+  // redirect() and notFound() work by throwing. A catch-all that swallowed
+  // them would turn "sign in again" into a generic error page.
+  unstable_rethrow(cause)
   if (cause instanceof OdooError) return cause
   if (cause instanceof DOMException && cause.name === 'AbortError') {
     return new OdooError(
@@ -152,4 +156,22 @@ export function toOdooError(cause: unknown): OdooError {
     502,
     cause instanceof Error ? cause.message : String(cause),
   )
+}
+
+/**
+ * Resolve to null when Odoo refuses the read, while letting framework errors
+ * through.
+ *
+ * Several models are legitimately invisible to some roles, so one restricted
+ * panel must not fail a whole page. A bare `catch` here would also swallow the
+ * redirect an expired session throws, which is what previously stranded users
+ * on an error with no way to sign in again.
+ */
+export async function orNullOnRefusal<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise
+  } catch (cause) {
+    unstable_rethrow(cause)
+    return null
+  }
 }
