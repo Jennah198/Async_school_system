@@ -10,12 +10,15 @@ const PASSWORD = process.env.E2E_PASSWORD
 const ROLES = {
   teacher: process.env.E2E_TEACHER_LOGIN,
   registrar: process.env.E2E_REGISTRAR_LOGIN,
+  director: process.env.E2E_DIRECTOR_LOGIN,
+  frontoffice: process.env.E2E_FRONTOFFICE_LOGIN,
 }
 
 const ROUTES = [
   '/dashboard',
   '/students',
   '/staff',
+  '/staff/new',
   '/teachers',
   '/academic-years',
   '/classes',
@@ -36,7 +39,7 @@ for (const [role, login] of Object.entries(ROLES)) {
   await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' })
   await page.fill('#login', login)
   await page.fill('#password', PASSWORD)
-  await page.click('button[type=submit]')
+  await page.click('#submit-login')
   await page.waitForURL('**/dashboard', { timeout: 90_000 }).catch(() => {})
 
   console.log(`\n${role} (${login})`)

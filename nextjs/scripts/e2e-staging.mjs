@@ -43,7 +43,7 @@ async function signIn(context, login) {
   await page.fill('#password', PASSWORD)
   await Promise.all([
     page.waitForURL('**/dashboard', { timeout: 90_000 }).catch(() => {}),
-    page.click('button[type=submit]'),
+    page.click('#submit-login'),
   ])
   return page
 }
@@ -59,7 +59,7 @@ try {
     await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' })
     await page.fill('#login', TEACHER)
     await page.fill('#password', 'definitely-the-wrong-password')
-    await page.click('button[type=submit]')
+    await page.click('#submit-login')
     // Scoped to our own element: Next.js injects its own empty [role=alert].
     await page.waitForSelector('#login-error', { timeout: 60_000 })
     const message = (await page.textContent('#login-error'))?.trim() ?? ''
@@ -114,10 +114,8 @@ try {
   // The shell renders a sidebar nav and a mobile nav; read them all.
   const navText = async (page) => (await page.locator('nav').allTextContents()).join(' ')
   const registrarNav = await navText(registrarPage)
-  check(
-    'Marks is hidden from registrar (rule_mark_all_registrar is dead)',
-    !registrarNav.includes('Marks'),
-  )
+  // rule_mark_all_registrar now has its ACL row, so this must be offered.
+  check('Marks is offered to registrar (rule_mark_all_registrar repaired)', registrarNav.includes('Marks'))
   const teacherNav = await navText(teacherPage)
   check('Marks is offered to teacher', teacherNav.includes('Marks'))
 
