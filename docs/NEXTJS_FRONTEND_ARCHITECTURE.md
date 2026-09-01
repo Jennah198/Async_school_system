@@ -66,6 +66,11 @@ right transport for future machine-to-machine jobs.
 | `lib/odoo/client.ts` | `searchRead`, `readOne`, `readGroup`, `hasAccess`, `callAction`. |
 | `lib/odoo/models/school.ts` | Typed read services with explicit field lists. |
 | `lib/odoo/models/staff.ts` | Staff registration, activation and HR reads. |
+| `lib/odoo/models/student.ts` | Student registration, guardians, enrolment, uploads. |
+| `lib/odoo/models/assessment.ts` | Assessments, mark entry, report cards, promotion. |
+| `lib/odoo/models/operations.ts` | Attendance, timetable, announcements, programs, documents, configuration. |
+| `lib/odoo/workflows.ts` | **Allowlist** of every Odoo transition the UI may invoke. |
+| `app/(app)/workflow-action.ts` | The single server action all transitions go through. |
 | `lib/navigation.ts` | Role-aware nav, encoding the *measured* permission matrix. |
 
 Nothing above `lib/odoo/` knows an Odoo URL, a database name, or a session id.
@@ -92,14 +97,21 @@ Coverage below reflects what is **implemented today**, not the full domain.
 | `school.subject` | Subjects | Registrar, Admin, Teacher | `/subjects` | ✅ list |
 | `school.teacher.assignment` | Teaching assignments | Registrar, Admin, Teacher | `/assignments` | ✅ list |
 | `school.mark` | Marks (Odoo-computed grades) | Teacher (own assignment), Exam Officer, Registrar, Director | `/marks` | ✅ list |
-| `school.enrollment` | Enrolment lifecycle | Registrar, Director | `/enrollments` | ⛔ not built |
-| `school.attendance` | Attendance capture | Teacher, Registrar | `/attendance` | ⛔ not built |
-| `school.assessment` | Assessment state machine | Teacher, Exam Officer | `/assessments` | ⛔ not built |
-| `school.report.card` | Report cards | Exam Officer, Director | `/report-cards` | ⛔ not built |
-| `school.class.schedule` | Timetable | Teacher, Registrar | `/schedule` | ⛔ not built |
-| `school.document` | Documents | Registrar, HR | `/documents` | ⛔ not built |
-| `school.announcement` | Announcements | Registrar, Front Office | `/announcements` | ⛔ not built |
-| `school.student.guardian` | Guardians | Registrar | `/students/:id/guardians` | ⛔ not built |
+| `school.enrollment` | Enrolment register + lifecycle | Registrar, Admin, Director, Teacher | `/enrollments`, `/enrollments/[id]` | ✅ list · detail · **activate/discard/withdraw/complete/graduate** |
+| `school.enrollment.placement` | Placement history | as enrolment | `/enrollments/[id]` | ✅ read |
+| `school.student.subject` | Derived subject enrolments | as enrolment | `/enrollments/[id]` | ✅ read |
+| `school.student.guardian` | Guardians | Registrar, Admin, Director, Teacher | `/students/[id]` | ✅ read |
+| `school.assessment` | Assessment state machine | Teacher, Exam Officer, Registrar, Director | `/assessments`, `/assessments/[id]` | ✅ list · detail · **open/regenerate/submit/return/reopen/approve/lock/publish** |
+| `school.mark` | Mark entry | Teacher (own assignment), Exam Officer | `/assessments/[id]`, `/marks` | ✅ list · **inline score/status/remark entry** |
+| `school.assessment.event` | Immutable audit trail | as assessment | `/assessments/[id]` | ✅ read |
+| `school.attendance` | Attendance capture | Teacher, Registrar, Admin | `/attendance` | ✅ list · **roster generation** · **status entry** |
+| `school.class.schedule` | Timetable | Teacher, Admin | `/schedule`, `/schedule/[id]` | ✅ list · detail · **publish/complete/cancel** |
+| `school.announcement` | Announcements | Registrar, Front Office, Admin, Teacher | `/announcements`, `/announcements/[id]` | ✅ list · detail · **publish/archive/reset** |
+| `school.program` | Programs | Registrar, Admin, Teacher | `/programs`, `/programs/[id]` | ✅ list · detail · **publish/complete/cancel** |
+| `school.document` | Document register | Registrar, Admin, HR | `/documents`, `/documents/[id]` | ✅ list · detail · **verify/reject with reason** |
+| `school.report.card` | Report cards | Exam Officer, Admin, Director, Registrar | `/report-cards`, `/report-cards/[id]` | ✅ list · detail · **generate/approve/publish** |
+| `school.promotion.batch` | Promotion | Registrar, Admin, Teacher | `/promotion`, `/promotion/[id]` | ✅ list · detail · **calculate/approve/apply** |
+| `school.grade` · `school.section` · `school.stream` · `school.shift` · `school.campus` · `school.room` · `school.term` · `school.grade.subject` | Academic configuration | Registrar, Admin | `/configuration` | ✅ read, per-card degradation |
 
 Also unbuilt: student and guardian portals. Those groups
 (`group_school_student_portal`, `group_school_guardian_portal`) hold **zero ACL
@@ -184,11 +196,13 @@ npm run lint
 npm run start          # then, against a running server:
 node scripts/e2e-staging.mjs   http://localhost:3100   # authorisation edges
 node scripts/e2e-staff.mjs     http://localhost:3100   # staff write workflow
+node scripts/e2e-student.mjs   http://localhost:3100   # student lifecycle + uploads
+node scripts/e2e-session-expiry.mjs http://localhost:3100  # expired-session recovery
 node scripts/route-sweep.mjs   http://localhost:3100   # every route, every role
 ```
 
-Current results: **18 + 21 passing, sweep clean across teacher, registrar,
-director and front office.**
+Current results: **18 + 21 + 25 + 7 passing, and the sweep clean across
+21 routes × 4 roles (84 combinations).**
 
 `e2e-staff.mjs` creates one synthetic staff record on staging, activates it
 through `action_activate`, asserts Odoo minted the `STF-` sequence and the
@@ -204,3 +218,31 @@ They target **staging only**. Never point them at production.
 http can hold a session — `next start` forces NODE_ENV=production, which would
 otherwise set a `Secure` cookie the browser declines to return on same-site
 POSTs, breaking every server action. Never set it in a deployed environment.
+
+
+---
+
+## 8. How a business transition reaches Odoo
+
+Every state change in the application takes one path:
+
+```
+Browser posts {workflow, transition, id, reason?}   ← never a model or method
+        ▼
+app/(app)/workflow-action.ts        resolves the allowlist entry, or refuses
+        ▼
+lib/odoo/workflows.ts               model + method + guard for that key
+        ▼
+callAction()                        as the signed-in user's Odoo session
+        ▼
+Odoo action_*                       ACL → record rule → guard → side effects
+```
+
+Odoo takes a reason in three different shapes, and the allowlist records which:
+in the context (`transition_reason` on assessment transitions), as a positional
+argument (`action_return(reason)`), or written to a field first
+(`school.document.action_reject` raises unless `rejection_reason` is set).
+
+The `from` states in the allowlist decide which buttons are *offered*. Odoo
+re-checks the same guard, so a stale page produces a rejected action with its
+own message — never a silent success.

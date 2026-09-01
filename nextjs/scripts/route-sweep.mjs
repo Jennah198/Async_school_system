@@ -16,17 +16,14 @@ const ROLES = {
 
 const ROUTES = [
   '/dashboard',
-  '/students',
-  '/students/new',
+  '/students', '/students/new',
   '/enrollments',
-  '/staff',
-  '/staff/new',
+  '/staff', '/staff/new',
   '/teachers',
-  '/academic-years',
-  '/classes',
-  '/subjects',
-  '/assignments',
-  '/marks',
+  '/academic-years', '/classes', '/subjects', '/configuration',
+  '/assignments', '/schedule', '/attendance',
+  '/assessments', '/marks', '/report-cards', '/promotion',
+  '/announcements', '/programs', '/documents',
 ]
 
 const LEAK = /Traceback|\/usr\/lib\/python|psycopg2|odoo\.exceptions|session_id=/i

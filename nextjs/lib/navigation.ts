@@ -3,22 +3,25 @@ import type { SchoolRoles } from '@/lib/odoo/types'
 /**
  * Role-aware navigation.
  *
- * Visibility here is a UX decision, never a security one — Odoo re-checks
- * every call. What it encodes is the *measured* permission matrix, so people
- * are not shown doors that open onto a 403.
+ * Visibility is a UX decision, never a security one — Odoo re-checks every
+ * call. What it encodes is the *measured* ACL coverage from staging, so nobody
+ * is offered a door that opens onto a 403.
  *
  * Four record rules previously could not fire because the matching ACL row was
- * absent (rule_student_all_director, rule_student_contact_frontoffice,
- * rule_mark_all_registrar, rule_mark_all_director). The missing rows have been
- * added in security/ir.model.access.csv to match the access matrix documented
- * in README.md, so Director and Front Office can now read students, and
- * Director and Registrar can read marks. The predicates below reflect that.
+ * absent; those rows were added in security/ir.model.access.csv to match the
+ * matrix in README.md, so Director and Front Office now read students, and
+ * Director and Registrar read marks.
+ *
+ * Still absent from the CSV, and therefore still hidden here: Director has no
+ * ACL row on school.teacher, school.class, school.subject, school.academic.year,
+ * school.term or school.teacher.assignment, and Front Office has none on any
+ * academic model. Widening those is an authorisation decision for the owner —
+ * do not work around it in the frontend.
  */
 
 interface NavRule {
   href: string
   label: string
-  /** Returns true when this role combination can actually use the screen. */
   visible: (roles: SchoolRoles) => boolean
 }
 
@@ -27,11 +30,7 @@ interface NavRuleSection {
   items: NavRule[]
 }
 
-/**
- * What crosses into the client component. The predicates above are evaluated
- * on the server and never serialised — a function cannot cross the boundary,
- * and the decision is not the browser's to make in any case.
- */
+/** What crosses to the client. Predicates are evaluated on the server. */
 export interface NavItem {
   href: string
   label: string
@@ -42,7 +41,7 @@ export interface NavSection {
   items: NavItem[]
 }
 
-const any = (...flags: Array<boolean>) => flags.some(Boolean)
+const any = (...flags: boolean[]) => flags.some(Boolean)
 
 const NAV_RULES: NavRuleSection[] = [
   {
@@ -55,16 +54,12 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/students',
         label: 'Students',
-        // Registrar RWC; Teacher R scoped to own classes; Exam Officer,
-        // Director and Front Office read-only and unscoped.
         visible: (r) =>
           any(r.isRegistrar, r.isTeacher, r.isAdmin, r.isExamOfficer, r.isDirector, r.isFrontOffice),
-        // All six hold an ACL row on school.student.
       },
       {
         href: '/enrollments',
         label: 'Enrolments',
-        // Registrar RWC, Director read-only, Teacher read scoped to own classes.
         visible: (r) => any(r.isRegistrar, r.isAdmin, r.isDirector, r.isTeacher),
       },
       {
@@ -74,10 +69,9 @@ const NAV_RULES: NavRuleSection[] = [
           any(r.isRegistrar, r.isAdmin, r.isDirector, r.isHr, r.isFrontOffice, r.isTeacher),
       },
       {
+        // No director ACL row on school.teacher.
         href: '/teachers',
         label: 'Teachers',
-        // Director is excluded: there is no ACL row for group_school_director
-        // on school.teacher, so the page would answer 403.
         visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isExamOfficer),
       },
     ],
@@ -93,13 +87,17 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/classes',
         label: 'Classes',
-        // No director ACL row on school.class — see /teachers above.
         visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isExamOfficer),
       },
       {
         href: '/subjects',
         label: 'Subjects',
         visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher, r.isExamOfficer),
+      },
+      {
+        href: '/configuration',
+        label: 'Configuration',
+        visible: (r) => any(r.isRegistrar, r.isAdmin),
       },
     ],
   },
@@ -109,16 +107,66 @@ const NAV_RULES: NavRuleSection[] = [
       {
         href: '/assignments',
         label: 'Teaching assignments',
-        // No director ACL row on school.teacher.assignment.
         visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher),
+      },
+      {
+        // school.class.schedule carries ACL rows for admin and teacher only.
+        href: '/schedule',
+        label: 'Timetable',
+        visible: (r) => any(r.isAdmin, r.isTeacher),
+      },
+      {
+        // No director ACL row on school.attendance.
+        href: '/attendance',
+        label: 'Attendance',
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher),
+      },
+    ],
+  },
+  {
+    title: 'Assessment',
+    items: [
+      {
+        href: '/assessments',
+        label: 'Assessments',
+        visible: (r) => any(r.isTeacher, r.isExamOfficer, r.isAdmin, r.isRegistrar, r.isDirector),
       },
       {
         href: '/marks',
         label: 'Marks',
-        // Teacher RW scoped to their own assignment; Exam Officer and
-        // Registrar full; Director read-only.
-        visible: (r) =>
-          any(r.isTeacher, r.isExamOfficer, r.isAdmin, r.isRegistrar, r.isDirector),
+        visible: (r) => any(r.isTeacher, r.isExamOfficer, r.isAdmin, r.isRegistrar, r.isDirector),
+      },
+      {
+        href: '/report-cards',
+        label: 'Report cards',
+        visible: (r) => any(r.isExamOfficer, r.isAdmin, r.isDirector, r.isRegistrar),
+      },
+      {
+        href: '/promotion',
+        label: 'Promotion',
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher),
+      },
+    ],
+  },
+  {
+    title: 'Operations',
+    items: [
+      {
+        // Director has no ACL row on school.announcement.
+        href: '/announcements',
+        label: 'Announcements',
+        visible: (r) => any(r.isRegistrar, r.isFrontOffice, r.isAdmin, r.isTeacher),
+      },
+      {
+        // No director ACL row on school.program.
+        href: '/programs',
+        label: 'Programs',
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isTeacher),
+      },
+      {
+        href: '/documents',
+        label: 'Documents',
+        visible: (r) => any(r.isRegistrar, r.isAdmin, r.isHr),
       },
     ],
   },
