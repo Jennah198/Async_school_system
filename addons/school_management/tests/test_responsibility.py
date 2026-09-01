@@ -319,4 +319,5 @@ class TestResponsibilityAndStaffControl(TransactionCase):
         self.staff.action_activate()
         self.teacher_profile()
         with self.assertRaises(Exception):
-            self.env['school.teacher'].create({'staff_id': self.staff.id})
+            with self.env.cr.savepoint():
+                self.env['school.teacher'].create({'staff_id': self.staff.id})
