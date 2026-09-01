@@ -1,8 +1,27 @@
 import 'server-only'
-import { OdooError } from './errors'
+import { redirect } from 'next/navigation'
+import { OdooError, toOdooError } from './errors'
 import { rawCallKw } from './rpc'
 import { readSession } from './session'
 import type { Domain, Page } from './types'
+
+/**
+ * An Odoo session can expire while this app's own cookie is still valid — the
+ * app cookie lasts a school day, Odoo's does not. Every call therefore routes
+ * an UNAUTHENTICATED answer to /signed-out, which clears the stale cookie and
+ * returns the user to the login form. Without this the page simply threw and
+ * offered no way back in.
+ */
+async function guarded<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run()
+  } catch (cause) {
+    if (cause instanceof OdooError && cause.code === 'UNAUTHENTICATED') {
+      redirect('/signed-out')
+    }
+    throw cause
+  }
+}
 
 /**
  * The Odoo client every screen uses.
@@ -28,7 +47,7 @@ export async function callKw<T>(
   args: unknown[] = [],
   kwargs: Record<string, unknown> = {},
 ): Promise<T> {
-  return rawCallKw<T>(await sessionId(), model, method, args, kwargs)
+  return guarded(async () => rawCallKw<T>(await sessionId(), model, method, args, kwargs))
 }
 
 /**
@@ -51,6 +70,7 @@ export async function searchRead<T>(
   } = {},
 ): Promise<Page<T>> {
   const { domain = [], limit = 50, offset = 0, order, context } = options
+  return guarded(async () => {
   const sid = await sessionId()
 
   const [rows, total] = await Promise.all([
@@ -66,6 +86,7 @@ export async function searchRead<T>(
   ])
 
   return { rows, total, offset, limit }
+  })
 }
 
 /** Read one record by id, or null when it is absent or out of scope. */
@@ -110,7 +131,9 @@ export async function hasAccess(
   } catch (cause) {
     // A refusal is a legitimate answer, but a transport fault is not: log it
     // server-side rather than silently rendering the UI as "not permitted".
-    console.error(`hasAccess(${model}, ${operation}) failed`, cause)
+    // toOdooError rethrows framework errors, so an expired-session redirect
+    // still reaches the user.
+    console.error(`hasAccess(${model}, ${operation}) failed`, toOdooError(cause).code)
     return false
   }
 }
@@ -140,6 +163,8 @@ export async function callAction<T = unknown>(
   action: string,
   ids: number[],
   context?: Record<string, unknown>,
+  /** Positional arguments the Odoo method takes after the recordset. */
+  extraArgs: unknown[] = [],
 ): Promise<T> {
-  return callKw<T>(model, action, [ids], context ? { context } : {})
+  return callKw<T>(model, action, [ids, ...extraArgs], context ? { context } : {})
 }
