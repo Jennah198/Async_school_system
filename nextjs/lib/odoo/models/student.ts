@@ -512,3 +512,61 @@ export function listAllGuardians(
     },
   )
 }
+/* -------------------------------------------------------------- search --- */
+
+export interface StudentSearchRow {
+  id: number
+  name: string
+  regno: string | false
+  admission_number: string | false
+}
+
+const STUDENT_SEARCH_FIELDS = ['name', 'regno', 'admission_number'] as const
+
+/**
+ * Approved students only — mirrors school.enrollment.student_id's domain.
+ * Used by the "existing student" enrollment-creation flow (returning /
+ * re-admitted admission types skip registration and pick a student here).
+ */
+export function searchApprovedStudents(query: string): Promise<StudentSearchRow[]> {
+  return searchRead<StudentSearchRow>(
+    'school.student',
+    ['name', 'regno', 'admission_number'],
+    {
+      domain: listDomain(
+        { search: query },
+        {
+          base: [['registration_status', '=', 'approved']],
+          searchFields: STUDENT_SEARCH_FIELDS,
+        },
+      ),
+      limit: 15,
+      order: 'name',
+    },
+  ).then((page) => page.rows)
+}
+
+/* ---------------------------------------------------------- enrollment --- */
+
+export interface EnrollmentIntake {
+  student_id: number
+  class_id: number
+  admission_type: string
+  enrollment_date: string
+}
+
+/**
+ * Create a draft enrolment for a student who already exists (returning /
+ * re-admitted). Mirrors school.student._ensure_enrollment's shape, minus the
+ * activation call — activation (capacity check, roll number, placement,
+ * subject derivation) stays a deliberate step from the enrolment's own
+ * Status panel, not implied by creation.
+ */
+export function createEnrollment(intake: EnrollmentIntake): Promise<number> {
+  return create('school.enrollment', {
+    student_id: intake.student_id,
+    class_id: intake.class_id,
+    admission_type: intake.admission_type,
+    enrollment_date: intake.enrollment_date,
+  })
+}

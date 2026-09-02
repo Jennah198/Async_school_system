@@ -140,6 +140,42 @@ export function StudentRegistrationForm({
   const chosen = classes.find((c) => String(c.id) === classId)
   const err = state.fieldErrors ?? {}
 
+  // Returning / re-admitted students already exist in the system — skip
+  // personal info entirely and go straight to creating a school.enrollment
+  // for the existing student, instead of registering a new one.
+  if (admissionType === 'returning' || admissionType === 'readmitted') {
+    return (
+      <div className="space-y-5">
+        <Field label="Admission type" htmlFor="admission_type">
+          <select
+            id="admission_type"
+            className={INPUT}
+            value={admissionType}
+            onChange={(event) => setAdmissionType(event.target.value)}
+          >
+            {admissionTypes.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <div className="rounded-[8px] border border-silver bg-paper px-4 py-3 text-[13px] text-graphite">
+          {formatSelection(admissionType)} students already exist in the system. Create an
+          enrolment for them instead of registering a new student.
+        </div>
+
+        
+          < a href="/enrollments/new"
+          className="inline-block rounded-[9999px] bg-ink px-5 py-2.5 text-[13px] font-medium text-white hover:bg-graphite"
+        >
+          Go to new enrolment →
+        </a>
+      </div>
+    )
+  }
+
   return (
     <form action={formAction} className="space-y-6" noValidate>
       {/* ------------------------------------------------ Student --- */}
