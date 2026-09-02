@@ -36,7 +36,7 @@ export function DocumentUpload({
     <div className="border-t border-silver py-3 first:border-0 first:pt-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[13px] font-medium text-graphite">{label}</span>
-        <span className="text-[12px] text-slate">
+        <span className="min-w-0 break-all text-[12px] text-slate">
           {attached ? attached : <span className="text-stone">Not attached</span>}
         </span>
       </div>

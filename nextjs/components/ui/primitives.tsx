@@ -341,7 +341,7 @@ export function DateText({
   if (ethiopian === DASH) return <span className="text-stone">{DASH}</span>
 
   return (
-    <span className="block whitespace-nowrap">
+    <span className="block">
       {ethiopian}
       {gregorian === ethiopian ? null : (
         <span className="block text-[11px] text-stone">{gregorian}</span>
