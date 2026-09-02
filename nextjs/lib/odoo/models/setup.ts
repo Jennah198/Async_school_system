@@ -51,17 +51,6 @@ export function listSetupClasses(): Promise<Page<ClassRow> | null> {
   return list<ClassRow>('school.class', ['name', 'academic_year_id'], 'academic_year_id desc, name')
 }
 
-/** The subjects already on a class curriculum, so the form opens pre-filled. */
-export async function classCurriculumSubjectIds(classId: number): Promise<number[]> {
-  const rows = await searchRead<{ subject_id: Many2one }>(
-    'school.grade.subject',
-    ['subject_id'],
-    { domain: [['class_id', '=', classId], ['active', '=', true]], limit: 200 },
-  )
-  return rows.rows
-    .map((row) => (Array.isArray(row.subject_id) ? row.subject_id[0] : null))
-    .filter((id): id is number => id !== null)
-}
 
 /* ---------------------------------------------------------- school setup --- */
 

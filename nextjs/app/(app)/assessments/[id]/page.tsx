@@ -47,12 +47,22 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
         title={assessment.name}
         subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${formatDualDate(assessment.date)}`}
         action={
-          <Link
-            href="/assessments"
-            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
-          >
-            Back to assessments
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {canWrite ? (
+              <Link
+                href={`/assessments/${assessment.id}/edit`}
+                className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+              >
+                Edit
+              </Link>
+            ) : null}
+            <Link
+              href="/assessments"
+              className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+            >
+              Back to assessments
+            </Link>
+          </div>
         }
       />
 

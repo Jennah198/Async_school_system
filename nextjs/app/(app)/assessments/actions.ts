@@ -5,7 +5,12 @@ import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
 import { changedRows } from '@/lib/mark-diff'
-import { createAssessment, saveMark, unlockAssessment } from '@/lib/odoo/models/assessment'
+import {
+  createAssessment,
+  saveMark,
+  unlockAssessment,
+  updateAssessment,
+} from '@/lib/odoo/models/assessment'
 
 export interface MarkListState {
   error?: string
@@ -195,4 +200,77 @@ export async function unlockAssessmentAction(
 
   revalidatePath(`/assessments/${assessmentId}`)
   return { ok: 'Reopened for correction.' }
+}
+
+/**
+ * Correct an assessment.
+ *
+ * Odoo splits this for us: `write` refuses `assessment_type`, `date`,
+ * `max_mark` and `weight` once the record is past draft, because the mark list
+ * was generated against exactly that scope. The name is not frozen, so this
+ * posts only what the form offered and lets Odoo have the last word.
+ *
+ * The class, subject and term are never sent — they come from the teacher
+ * assignment, and changing them means changing the assignment.
+ */
+export async function updateAssessmentAction(
+  _previous: AssessmentFormState,
+  form: FormData,
+): Promise<AssessmentFormState> {
+  await requireSession()
+
+  const id = Number(String(form.get('id') ?? '').trim())
+  if (!Number.isInteger(id) || id <= 0) {
+    return { error: 'That assessment could not be identified.' }
+  }
+
+  const read = (key: string) => String(form.get(key) ?? '').trim()
+  const values: Record<string, unknown> = {}
+  const fieldErrors: Record<string, string> = {}
+
+  const name = read('name')
+  if (!name) fieldErrors.name = 'The assessment needs a name.'
+  else values.name = name
+
+  if (form.has('assessment_type')) {
+    const type = read('assessment_type')
+    if (!type) fieldErrors.assessment_type = 'Choose an assessment type.'
+    else values.assessment_type = type
+  }
+
+  if (form.has('date')) {
+    const date = read('date')
+    if (!date) fieldErrors.date = 'An assessment date is required.'
+    else values.date = date
+  }
+
+  for (const [field, label] of [
+    ['max_mark', 'The maximum mark'],
+    ['weight', 'The weight'],
+  ] as const) {
+    if (!form.has(field)) continue
+    const parsed = Number(read(field))
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      fieldErrors[field] = `${label} must be greater than zero.`
+      continue
+    }
+    values[field] = parsed
+  }
+
+  const echo = Object.fromEntries(
+    ['name', 'assessment_type', 'date', 'max_mark', 'weight'].map((f) => [f, read(f)]),
+  )
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors, values: echo }
+
+  try {
+    await updateAssessment(id, values)
+  } catch (cause) {
+    // "Assessment setup is frozen once the mark list is generated.", the
+    // date-outside-term rule, and the total-weight-per-subject cap.
+    return { error: toOdooError(cause).message, values: echo }
+  }
+
+  revalidatePath(`/assessments/${id}`)
+  revalidatePath('/assessments')
+  redirect(`/assessments/${id}`)
 }

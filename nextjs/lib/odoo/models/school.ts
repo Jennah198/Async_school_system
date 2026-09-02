@@ -1,5 +1,5 @@
 import 'server-only'
-import { create, readOne, searchCount, searchRead } from '@/lib/odoo/client'
+import { callKw, create, readOne, searchCount, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { ethiopianYearOf } from '@/lib/ethiopian-date'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
@@ -319,6 +319,67 @@ export function listSubjects(options: ListOptions = {}): Promise<Page<SubjectRow
   })
 }
 
+/* ------------------------------------------------- classes: read/write --- */
+
+export interface ClassDetail extends ClassRow {
+  room_id: Many2one
+  shift_id: Many2one
+  stream_id: Many2one
+  campus_id: Many2one
+  homeroom_teacher_id: Many2one
+  is_entry_level: boolean
+  min_age: number
+  max_age: number
+  active: boolean
+}
+
+const CLASS_DETAIL_FIELDS = [
+  'name', 'grade_id', 'section_id', 'academic_year_id', 'education_level',
+  'capacity', 'student_ids', 'room_id', 'shift_id', 'stream_id', 'campus_id',
+  'homeroom_teacher_id', 'is_entry_level', 'min_age', 'max_age', 'active',
+] as const
+
+export function getClass(id: number): Promise<ClassDetail | null> {
+  return orNullOnRefusal(readOne<ClassDetail>('school.class', id, CLASS_DETAIL_FIELDS))
+}
+
+export function createClass(values: Record<string, unknown>): Promise<number> {
+  return create('school.class', values)
+}
+
+/**
+ * `section_id` and `academic_year_id` are half of the uniqueness constraint
+ * and the scope every enrolled student was checked against, so Odoo, not this
+ * layer, decides whether a change to them is allowed.
+ */
+export function updateClass(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.class', [id], values)
+}
+
+/* ------------------------------------------------ subjects: read/write --- */
+
+export interface SubjectDetail extends SubjectRow {
+  sequence_code: string | false
+  short_name: string | false
+  credit_hours: number
+}
+
+export function getSubject(id: number): Promise<SubjectDetail | null> {
+  return orNullOnRefusal(
+    readOne<SubjectDetail>('school.subject', id, [
+      'name', 'code', 'short_name', 'sequence_code', 'subject_type', 'credit_hours', 'active',
+    ]),
+  )
+}
+
+export function createSubject(values: Record<string, unknown>): Promise<number> {
+  return create('school.subject', values)
+}
+
+export function updateSubject(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.subject', [id], values)
+}
+
 export interface AcademicYearRow {
   id: number
   name: string
@@ -389,6 +450,58 @@ export function createAcademicYear(intake: AcademicYearIntake): Promise<number> 
  * roles legitimately get AccessError on school.student and school.mark; a
  * dashboard tile should say "not available to your role", not crash the page.
  */
+/**
+ * Correct a draft or open academic year.
+ *
+ * The name follows the start date rather than being typed: `_check_year_name`
+ * requires it to be the four-digit Ethiopian year of `date_start`, so moving
+ * the start date without moving the name can only produce a refusal.
+ *
+ * Odoo's `write` makes closed and archived years read-only for everything but
+ * state, is_current and active — those need `correctAcademicYear`.
+ */
+export function updateAcademicYear(
+  id: number,
+  intake: AcademicYearIntake,
+): Promise<boolean> {
+  const year = ethiopianYearOf(intake.date_start)
+  if (year === null) throw new Error('The start date is not a valid date.')
+
+  return write('school.academic.year', [id], {
+    name: String(year),
+    date_start: intake.date_start,
+    date_end: intake.date_end,
+    is_current: intake.is_current,
+  })
+}
+
+export interface YearCorrectionIntake {
+  academicYearId: number
+  name: string
+  dateStart: string
+  dateEnd: string
+  reason: string
+}
+
+/**
+ * Change a closed or archived year through the authorized workflow.
+ *
+ * `action_confirm` re-checks the director group, writes with the
+ * `authorized_academic_correction` context that Odoo's `write` requires, and
+ * posts the reason to the record's chatter. Writing the fields directly would
+ * be refused, and bypassing the wizard would lose the audit trail.
+ */
+export async function correctAcademicYear(intake: YearCorrectionIntake): Promise<void> {
+  const wizardId = await create('school.academic.year.correction', {
+    academic_year_id: intake.academicYearId,
+    name: intake.name,
+    date_start: intake.dateStart,
+    date_end: intake.dateEnd,
+    reason: intake.reason,
+  })
+  await callKw('school.academic.year.correction', 'action_confirm', [[wizardId]])
+}
+
 export function safeCount(model: string, domain: Domain = []): Promise<number | null> {
   return orNullOnRefusal(searchCount(model, domain))
 }

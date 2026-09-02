@@ -82,15 +82,6 @@ export function listAssessmentsAwaitingEntry(limit = 6): Promise<Page<Assessment
 }
 
 /** Mark lists submitted and waiting on an exam officer. */
-export function listAssessmentsAwaitingApproval(limit = 6): Promise<Page<AssessmentRow> | null> {
-  return orNullOnRefusal(
-    searchRead<AssessmentRow>('school.assessment', ASSESSMENT_FIELDS, {
-      domain: [['state', '=', 'submitted']],
-      limit,
-      order: 'date desc',
-    }),
-  )
-}
 
 export function getAssessment(id: number): Promise<AssessmentRow | null> {
   return readOne<AssessmentRow>('school.assessment', id, ASSESSMENT_FIELDS)
@@ -208,6 +199,25 @@ export function listAssignmentOptions(): Promise<Page<AssignmentOption>> {
       order: 'class_id, subject_id',
     },
   )
+}
+
+/**
+ * Which fields Odoo freezes once the mark list exists.
+ *
+ * `school.assessment.write` refuses any of these on a record past draft —
+ * "Assessment setup is frozen once the mark list is generated." — because the
+ * rows were generated against exactly this scope and maximum. The name is not
+ * among them, so a typo stays correctable for the life of the assessment.
+ */
+export const ASSESSMENT_SETUP_FIELDS = [
+  'assessment_type', 'date', 'max_mark', 'weight',
+] as const
+
+export function updateAssessment(
+  id: number,
+  values: Record<string, unknown>,
+): Promise<boolean> {
+  return write('school.assessment', [id], values)
 }
 
 export interface AssessmentIntake {

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { formatSelection } from '@/lib/format'
 import { Card, CardHeader, ErrorState, PageHeader } from '@/components/ui'
@@ -39,6 +40,16 @@ export default async function AnnouncementDetailPage({ params }: PageProps<'/ann
       id={item.id}
       state={String(item.state || '')}
       canWrite={canWrite}
+      actions={
+        canWrite ? (
+          <Link
+            href={`/announcements/${item.id}/edit`}
+            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+          >
+            Edit
+          </Link>
+        ) : undefined
+      }
       revalidate={[`/announcements/${item.id}`, '/announcements']}
       note="Only published announcements inside their publication window reach their audience. A scheduled job refreshes that."
       fields={[

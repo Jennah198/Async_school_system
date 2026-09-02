@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
 import {
   createAnnouncement,
+  updateAnnouncement,
   type AnnouncementIntake,
   type AudienceType,
 } from '@/lib/odoo/models/operations'
@@ -107,6 +108,95 @@ export async function createAnnouncementAction(
     return { error: toOdooError(cause).message, values }
   }
 
+  revalidatePath('/announcements')
+  redirect(`/announcements/${id}`)
+}
+
+/**
+ * Correct an announcement.
+ *
+ * The audience is sent only while the announcement is still draft.
+ * `action_publish` resolves it into `recipient_user_ids` once, and the record
+ * rules read that stored set — so a later audience change would look like it
+ * worked and reach nobody new. The form hides those inputs after publication
+ * and this refuses to write them even if they arrive.
+ */
+export async function updateAnnouncementAction(
+  _previous: AnnouncementFormState,
+  form: FormData,
+): Promise<AnnouncementFormState> {
+  await requireSession()
+
+  const text = (key: string) => String(form.get(key) ?? '').trim()
+  const id = Number(text('id'))
+  if (!Number.isInteger(id) || id <= 0) {
+    return { error: 'That announcement could not be identified.' }
+  }
+
+  const name = text('name')
+  const message = text('message')
+  const category = text('category')
+  const priority = text('priority') || '0'
+  const link = text('link')
+  const publishDatetime = joinDateTime(text('publish_date'), text('publish_time'))
+  const expiryDatetime = joinDateTime(text('expiry_date'), text('expiry_time'))
+
+  const values = {
+    name,
+    message,
+    category,
+    priority,
+    audience_type: text('audience_type'),
+    publish_date: text('publish_date'),
+    publish_time: text('publish_time'),
+    expiry_date: text('expiry_date'),
+    expiry_time: text('expiry_time'),
+    link,
+  }
+
+  const fieldErrors: Record<string, string> = {}
+  if (!name) fieldErrors.name = 'A title is required.'
+  if (!message) fieldErrors.message = 'A message is required.'
+  if (!category) fieldErrors.category = 'Choose a category.'
+  if (expiryDatetime && publishDatetime && expiryDatetime <= publishDatetime) {
+    fieldErrors.expiry_date = 'The expiry must be after the publish time.'
+  }
+
+  // An audience arrives only from a draft's form; a published one posts none.
+  const audienceType = text('audience_type') as AudienceType
+  const editingAudience = form.has('audience_type')
+  const isRecordAudience = RECORD_AUDIENCES.has(audienceType)
+  const audienceValue: string | number[] = isRecordAudience
+    ? form.getAll('audience_ids').map(Number).filter(Number.isFinite)
+    : text('audience_code')
+
+  if (editingAudience) {
+    if (!audienceType) fieldErrors.audience_type = 'Choose an audience.'
+    if (audienceType && audienceType !== 'all_staff' && audienceValue.length === 0) {
+      fieldErrors.audience_value = 'Choose at least one audience value.'
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors, values }
+
+  try {
+    await updateAnnouncement(id, {
+      name,
+      message: `<p>${message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>')}</p>`,
+      category,
+      priority,
+      publish_datetime: publishDatetime || undefined,
+      expiry_datetime: expiryDatetime || undefined,
+      link: link || undefined,
+      ...(editingAudience
+        ? { audience_type: audienceType, audience_value: audienceValue }
+        : {}),
+    })
+  } catch (cause) {
+    return { error: toOdooError(cause).message, values }
+  }
+
+  revalidatePath(`/announcements/${id}`)
   revalidatePath('/announcements')
   redirect(`/announcements/${id}`)
 }

@@ -4,7 +4,11 @@ import Link from 'next/link'
 import { useActionState, useState } from 'react'
 import { EthiopianDateInput } from '@/components/ui/ethiopian-date-input'
 import type { AudienceChoices, AudienceRecordType } from '@/lib/odoo/models/operations'
-import { createAnnouncementAction, type AnnouncementFormState } from '../actions'
+import {
+  createAnnouncementAction,
+  updateAnnouncementAction,
+  type AnnouncementFormState,
+} from './actions'
 
 interface Option {
   value: string
@@ -63,7 +67,26 @@ function Field({
   )
 }
 
+export interface AnnouncementDefaults {
+  id: number
+  name: string
+  message: string
+  category: string
+  priority: string
+  audience_type: string
+  audience_code: string
+  audience_ids: string[]
+  publish_date: string
+  publish_time: string
+  expiry_date: string
+  expiry_time: string
+  link: string
+}
+
 export function AnnouncementForm({
+  mode = 'create',
+  announcement,
+  audienceLocked = false,
   categories,
   priorities,
   audienceTypes,
@@ -71,6 +94,14 @@ export function AnnouncementForm({
   responsibilities,
   audiences,
 }: {
+  mode?: 'create' | 'edit'
+  announcement?: AnnouncementDefaults
+  /**
+   * True once the announcement is published. `action_publish` resolved the
+   * audience into recipient_user_ids and the record rules read that stored
+   * set, so editing the audience now would change nothing anyone can see.
+   */
+  audienceLocked?: boolean
   categories: Option[]
   priorities: Option[]
   audienceTypes: Option[]
@@ -79,13 +110,26 @@ export function AnnouncementForm({
   audiences: AudienceChoices
 }) {
   const [state, formAction, pending] = useActionState<AnnouncementFormState, FormData>(
-    createAnnouncementAction,
+    mode === 'create' ? createAnnouncementAction : updateAnnouncementAction,
     {},
   )
 
-  const values = state.values ?? {}
+  // What was typed wins over what is stored, so a refused submit keeps the edit.
+  const stored = announcement
+  const values: Record<string, string> = {
+    name: state.values?.name ?? stored?.name ?? '',
+    message: state.values?.message ?? stored?.message ?? '',
+    category: state.values?.category ?? stored?.category ?? 'general',
+    priority: state.values?.priority ?? stored?.priority ?? '0',
+    audience_type: state.values?.audience_type ?? stored?.audience_type ?? 'all_staff',
+    publish_date: state.values?.publish_date ?? stored?.publish_date ?? '',
+    publish_time: state.values?.publish_time ?? stored?.publish_time ?? '',
+    expiry_date: state.values?.expiry_date ?? stored?.expiry_date ?? '',
+    expiry_time: state.values?.expiry_time ?? stored?.expiry_time ?? '',
+    link: state.values?.link ?? stored?.link ?? '',
+  }
   const errors = state.fieldErrors ?? {}
-  const [audienceType, setAudienceType] = useState(values.audience_type ?? 'all_staff')
+  const [audienceType, setAudienceType] = useState(values.audience_type)
 
   const codeOptions =
     audienceType === 'department'
@@ -98,9 +142,10 @@ export function AnnouncementForm({
 
   return (
     <form action={formAction} className="space-y-6" noValidate>
+      {stored ? <input type="hidden" name="id" value={stored.id} /> : null}
       <section className="space-y-4">
         <Field label="Title" htmlFor="name" required error={errors.name}>
-          <input id="name" name="name" className={INPUT} defaultValue={values.name ?? ''} />
+          <input id="name" name="name" className={INPUT} defaultValue={values.name} />
         </Field>
 
         <Field label="Message" htmlFor="message" required error={errors.message}>
@@ -109,7 +154,7 @@ export function AnnouncementForm({
             name="message"
             rows={5}
             className={INPUT}
-            defaultValue={values.message ?? ''}
+            defaultValue={values.message}
           />
         </Field>
 
@@ -119,7 +164,7 @@ export function AnnouncementForm({
               id="category"
               name="category"
               className={INPUT}
-              defaultValue={values.category ?? 'general'}
+              defaultValue={values.category}
             >
               {categories.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -134,7 +179,7 @@ export function AnnouncementForm({
               id="priority"
               name="priority"
               className={INPUT}
-              defaultValue={values.priority ?? '0'}
+              defaultValue={values.priority}
             >
               {priorities.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -150,10 +195,19 @@ export function AnnouncementForm({
         <div>
           <h2 className="text-[15px] leading-tight">Audience</h2>
           <p className="mt-0.5 text-[12px] text-slate">
-            Odoo resolves this into recipients when the announcement is published.
+            {audienceLocked
+              ? 'Fixed at publication. Odoo resolved the recipients then and the record rules read that stored set, so changing this now would reach nobody new.'
+              : 'Odoo resolves this into recipients when the announcement is published.'}
           </p>
         </div>
 
+        {audienceLocked ? (
+          <p className="rounded-[8px] border border-silver bg-paper px-3 py-2.5 text-[13px] text-slate">
+            {audienceTypes.find((option) => option.value === values.audience_type)?.label ??
+              values.audience_type}
+          </p>
+        ) : (
+          <>
         <Field label="Send to" htmlFor="audience_type" required error={errors.audience_type}>
           <select
             id="audience_type"
@@ -172,7 +226,12 @@ export function AnnouncementForm({
 
         {codeOptions ? (
           <Field label="Which one" htmlFor="audience_code" required error={errors.audience_value}>
-            <select id="audience_code" name="audience_code" className={INPUT} defaultValue="">
+            <select
+              id="audience_code"
+              name="audience_code"
+              className={INPUT}
+              defaultValue={stored?.audience_code ?? ''}
+            >
               <option value="">Choose…</option>
               {codeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -202,6 +261,7 @@ export function AnnouncementForm({
               size={Math.min(8, Math.max(4, records.length))}
               className={INPUT}
               disabled={records.length === 0}
+              defaultValue={stored?.audience_ids ?? []}
             >
               {records.map((record) => (
                 <option key={record.id} value={record.id}>
@@ -211,6 +271,8 @@ export function AnnouncementForm({
             </select>
           </Field>
         ) : null}
+          </>
+        )}
       </section>
 
       <section className="space-y-4 border-t border-silver pt-5">
@@ -226,7 +288,7 @@ export function AnnouncementForm({
             <EthiopianDateInput
               id="publish_date"
               name="publish_date"
-              defaultValue={values.publish_date ?? ''}
+              defaultValue={values.publish_date}
             />
           </Field>
 
@@ -236,7 +298,7 @@ export function AnnouncementForm({
               name="publish_time"
               type="time"
               className={INPUT}
-              defaultValue={values.publish_time ?? ''}
+              defaultValue={values.publish_time}
             />
           </Field>
 
@@ -244,7 +306,7 @@ export function AnnouncementForm({
             <EthiopianDateInput
               id="expiry_date"
               name="expiry_date"
-              defaultValue={values.expiry_date ?? ''}
+              defaultValue={values.expiry_date}
             />
           </Field>
 
@@ -254,7 +316,7 @@ export function AnnouncementForm({
               name="expiry_time"
               type="time"
               className={INPUT}
-              defaultValue={values.expiry_time ?? ''}
+              defaultValue={values.expiry_time}
             />
           </Field>
         </div>
@@ -265,7 +327,7 @@ export function AnnouncementForm({
             name="link"
             type="url"
             className={INPUT}
-            defaultValue={values.link ?? ''}
+            defaultValue={values.link}
             placeholder="https://"
           />
         </Field>

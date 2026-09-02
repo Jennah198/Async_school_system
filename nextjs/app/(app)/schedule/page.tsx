@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
@@ -35,11 +36,19 @@ export default async function SchedulePage({ searchParams }: PageProps<'/schedul
         { key: 'status', label: 'Status', options: states.length ? states : types },
       ]}
       action={
-        canBuild ? (
-          <LinkButton href="/schedule/build" variant="primary" icon="plus">
-            Build a day
-          </LinkButton>
-        ) : undefined
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/schedule/grid"
+            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+          >
+            Grid view
+          </Link>
+          {canBuild ? (
+            <LinkButton href="/schedule/build" variant="primary" icon="plus">
+              Build a day
+            </LinkButton>
+          ) : null}
+        </div>
       }
       load={(query) =>
         listSchedule({
