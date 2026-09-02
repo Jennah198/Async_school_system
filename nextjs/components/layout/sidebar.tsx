@@ -61,9 +61,12 @@ export function Sidebar(props: SidebarProps) {
       <aside
         id="primary-navigation"
         aria-label="Main"
+        // Read by the server-rendered footer, which cannot see this state
+        // directly but can style against it.
+        data-collapsed={collapsed ? 'true' : 'false'}
         style={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
         className={cx(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-silver bg-white',
+          'group fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-silver bg-white',
           'transition-[width] duration-200 ease-out lg:flex',
         )}
       >
@@ -84,9 +87,11 @@ export function Sidebar(props: SidebarProps) {
         id="mobile-navigation"
         aria-label="Main"
         inert={mobileOpen ? undefined : true}
+        // The drawer is always the full-width variant; see below.
+        data-collapsed="false"
         style={{ width: EXPANDED_WIDTH }}
         className={cx(
-          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-silver bg-white',
+          'group fixed inset-y-0 left-0 z-50 flex flex-col border-r border-silver bg-white',
           'transition-transform duration-200 ease-out lg:hidden',
           mobileOpen ? 'translate-x-0 shadow-[var(--shadow-raised)]' : '-translate-x-full',
         )}
