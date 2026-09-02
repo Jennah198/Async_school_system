@@ -8,6 +8,7 @@ import {
   PageHeader,
   Row,
 } from '@/components/ui'
+import { formatDate, formatSelection } from '@/lib/format'
 import { toOdooError } from '@/lib/odoo/errors'
 import { listConfig, listCurriculum, listTerms, type SimpleRow } from '@/lib/odoo/models/operations'
 import { m2oLabel, type Many2one } from '@/lib/odoo/types'
@@ -46,7 +47,7 @@ function VocabularyCard({
       ) : rows.rows.length === 0 ? (
         <EmptyState title={`No ${title.toLowerCase()} recorded`} />
       ) : (
-        <DataTable head={head}>
+        <DataTable columns={head}>
           {rows.rows.map((row) => (
             <Row key={row.id}>{render(row)}</Row>
           ))}
@@ -103,13 +104,13 @@ export default async function ConfigurationPage() {
           {terms.rows.length === 0 ? (
             <EmptyState title="No terms recorded" />
           ) : (
-            <DataTable head={['Term', 'Academic year', 'Starts', 'Ends', 'Sequence']}>
+            <DataTable columns={['Term', 'Academic year', 'Starts', 'Ends', 'Sequence']}>
               {terms.rows.map((row) => (
                 <Row key={row.id}>
                   <Cell strong>{row.name}</Cell>
                   <Cell>{m2oLabel(row.academic_year_id)}</Cell>
-                  <Cell>{row.date_start}</Cell>
-                  <Cell>{row.date_end}</Cell>
+                  <Cell>{formatDate(row.date_start)}</Cell>
+                  <Cell>{formatDate(row.date_end)}</Cell>
                   <Cell numeric>{row.sequence}</Cell>
                 </Row>
               ))}
@@ -208,12 +209,12 @@ export default async function ConfigurationPage() {
           {curriculum.rows.length === 0 ? (
             <EmptyState title="No curriculum recorded" />
           ) : (
-            <DataTable head={['Class', 'Subject', 'Type', 'Maximum', 'Pass mark', 'Active']}>
+            <DataTable columns={['Class', 'Subject', 'Type', 'Maximum', 'Pass mark', 'Active']}>
               {curriculum.rows.map((row) => (
                 <Row key={row.id}>
                   <Cell strong>{m2oLabel(row.class_id as Many2one)}</Cell>
                   <Cell>{m2oLabel(row.subject_id as Many2one)}</Cell>
-                  <Cell>{String(row.subject_type || '—').replace(/_/g, ' ')}</Cell>
+                  <Cell>{formatSelection(row.subject_type)}</Cell>
                   <Cell numeric>{row.maximum_mark}</Cell>
                   <Cell numeric>{row.pass_mark}</Cell>
                   <Cell>{row.active ? 'Yes' : 'No'}</Cell>

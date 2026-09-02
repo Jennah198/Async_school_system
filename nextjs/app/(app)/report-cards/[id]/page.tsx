@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { formatSelection } from '@/lib/format'
 import {
   Card,
   CardHeader,
@@ -59,12 +60,12 @@ export default async function ReportCardDetailPage({ params }: PageProps<'/repor
         { label: 'Term', value: m2oLabel(card.term_id) },
         { label: 'Overall percentage', value: num(card.overall_percentage, 2) },
         { label: 'Overall grade', value: card.overall_grade || '—' },
-        { label: 'Result', value: String(card.result_status || '—') },
+        { label: 'Result', value: formatSelection(card.result_status) },
         { label: 'Class rank', value: card.class_rank || '—' },
         { label: 'Present', value: card.attendance_present ?? '—' },
         { label: 'Absent', value: card.attendance_absent ?? '—' },
         { label: 'Attendance %', value: num(card.attendance_percentage) },
-        { label: 'Promotion decision', value: String(card.promotion_decision || '—') },
+        { label: 'Promotion decision', value: formatSelection(card.promotion_decision) },
         { label: 'Published at', value: card.published_at || '—' },
       ]}
     >
@@ -77,7 +78,7 @@ export default async function ReportCardDetailPage({ params }: PageProps<'/repor
         ) : lines.rows.length === 0 ? (
           <EmptyState title="No subject lines" hint="Generate the report card to populate them." />
         ) : (
-          <DataTable head={['Subject', 'Score', 'Out of', 'Percent', 'Grade']}>
+          <DataTable columns={['Subject', 'Score', 'Out of', 'Percent', 'Grade']}>
             {lines.rows.map((line) => (
               <Row key={line.id}>
                 <Cell strong>{m2oLabel(line.subject_id)}</Cell>

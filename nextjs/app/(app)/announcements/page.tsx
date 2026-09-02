@@ -1,11 +1,14 @@
 import Link from 'next/link'
-import { Badge } from '@/components/ui'
+import { formatDateTime, formatSelection } from '@/lib/format'
+import {
+  Badge,
+  StatusBadge,
+} from '@/components/ui'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listAnnouncements } from '@/lib/odoo/models/operations'
 
 export const metadata = { title: 'Announcements · Async School' }
 
-const TONE = { published: 'live', archived: 'muted', draft: 'muted' } as const
 const PRIORITY = { '0': 'Normal', '1': 'Important', '2': 'Urgent' } as const
 
 export default function AnnouncementsPage() {
@@ -24,16 +27,14 @@ export default function AnnouncementsPage() {
               {row.name}
             </Link>
           </Cell>
-          <Cell>{String(row.category || '—').replace(/_/g, ' ')}</Cell>
-          <Cell>{String(row.audience_type || '—').replace(/_/g, ' ')}</Cell>
+          <Cell>{formatSelection(row.category)}</Cell>
+          <Cell>{formatSelection(row.audience_type)}</Cell>
           <Cell>{PRIORITY[String(row.priority) as keyof typeof PRIORITY] ?? '—'}</Cell>
-          <Cell>{row.publish_datetime || '—'}</Cell>
-          <Cell>{row.expiry_datetime || '—'}</Cell>
+          <Cell>{formatDateTime(row.publish_datetime)}</Cell>
+          <Cell>{formatDateTime(row.expiry_datetime)}</Cell>
           <Cell>{row.is_live ? <Badge tone="live">Live</Badge> : null}</Cell>
           <Cell>
-            <Badge tone={TONE[row.state as keyof typeof TONE] ?? 'neutral'}>
-              {String(row.state || '—')}
-            </Badge>
+            <StatusBadge state={row.state} />
           </Cell>
         </>
       )}

@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { Badge } from '@/components/ui'
+import {
+  StatusBadge,
+} from '@/components/ui'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listReportCards } from '@/lib/odoo/models/assessment'
 import { m2oLabel } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Report cards · Async School' }
 
-const TONE = { published: 'solid', approved: 'live', superseded: 'muted', draft: 'muted' } as const
 
 export default function ReportCardsPage() {
   return (
@@ -29,9 +30,7 @@ export default function ReportCardsPage() {
           <Cell>{m2oLabel(row.term_id)}</Cell>
           <Cell>{m2oLabel(row.academic_year_id)}</Cell>
           <Cell>
-            <Badge tone={TONE[row.state as keyof typeof TONE] ?? 'neutral'}>
-              {String(row.state || '—')}
-            </Badge>
+            <StatusBadge state={row.state} />
           </Cell>
         </>
       )}

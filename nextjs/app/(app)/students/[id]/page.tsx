@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { formatDate, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
 import {
   Badge,
@@ -6,10 +7,12 @@ import {
   CardHeader,
   Cell,
   DataTable,
+  DetailField,
   EmptyState,
   ErrorState,
   PageHeader,
   Row,
+  StatusBadge,
 } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
@@ -27,21 +30,6 @@ import { availableTransitions } from '@/lib/odoo/workflows'
 
 export const metadata = { title: 'Student · Async School' }
 
-const REG_TONE = {
-  approved: 'solid',
-  submitted: 'live',
-  pending_verification: 'neutral',
-  rejected: 'muted',
-} as const
-
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] tracking-wide text-stone uppercase">{label}</dt>
-      <dd className="mt-0.5 text-[13px] text-graphite">{value || '—'}</dd>
-    </div>
-  )
-}
 
 const Restricted = () => <span className="text-stone">Restricted to your role</span>
 
@@ -92,32 +80,32 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
           <Card>
             <CardHeader title="Registration" />
             <dl className="grid gap-4 sm:grid-cols-3">
-              <Detail label="Student ID" value={student.regno || '—'} />
-              <Detail label="Admission number" value={student.admission_number || '—'} />
-              <Detail label="Admission type" value={String(student.admission_type || '—')} />
-              <Detail label="Registered on" value={student.registration_date || '—'} />
-              <Detail label="Academic year" value={m2oLabel(student.academic_year_id)} />
-              <Detail label="Class" value={m2oLabel(student.class_id)} />
-              <Detail label="Section" value={m2oLabel(student.section_id)} />
-              <Detail label="Stream" value={m2oLabel(student.stream_id)} />
-              <Detail
+              <DetailField label="Student ID" value={student.regno || '—'} />
+              <DetailField label="Admission number" value={student.admission_number || '—'} />
+              <DetailField label="Admission type" value={formatSelection(student.admission_type)} />
+              <DetailField label="Registered on" value={formatDate(student.registration_date)} />
+              <DetailField label="Academic year" value={m2oLabel(student.academic_year_id)} />
+              <DetailField label="Class" value={m2oLabel(student.class_id)} />
+              <DetailField label="Section" value={m2oLabel(student.section_id)} />
+              <DetailField label="Stream" value={m2oLabel(student.stream_id)} />
+              <DetailField
                 label="Education level"
-                value={String(student.education_level || '—').replace(/_/g, ' ')}
+                value={formatSelection(student.education_level)}
               />
-              <Detail label="Gender" value={String(student.gender || '—')} />
-              <Detail
+              <DetailField label="Gender" value={formatSelection(student.gender)} />
+              <DetailField
                 label="Date of birth"
                 value={personal ? personal.date_of_birth || '—' : <Restricted />}
               />
-              <Detail label="Age" value={personal ? personal.age : <Restricted />} />
-              <Detail
+              <DetailField label="Age" value={personal ? personal.age : <Restricted />} />
+              <DetailField
                 label="FAN (National ID)"
                 value={personal ? personal.fan_number || '—' : <Restricted />}
               />
-              <Detail label="Previous school" value={student.previous_school || '—'} />
-              <Detail
+              <DetailField label="Previous school" value={student.previous_school || '—'} />
+              <DetailField
                 label="Lifecycle"
-                value={String(student.lifecycle_status || '—').replace(/_/g, ' ')}
+                value={formatSelection(student.lifecycle_status)}
               />
             </dl>
           </Card>
@@ -137,11 +125,11 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
                 hint={`Intake contact: ${student.guardian_name || '—'} · ${student.guardian_phone || '—'}`}
               />
             ) : (
-              <DataTable head={['Guardian', 'Relationship', 'Primary', 'Phone', 'Occupation']}>
+              <DataTable columns={['Guardian', 'Relationship', 'Primary', 'Phone', 'Occupation']}>
                 {guardians.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>{row.name || m2oLabel(row.partner_id)}</Cell>
-                    <Cell>{String(row.relationship || '—').replace(/_/g, ' ')}</Cell>
+                    <Cell>{formatSelection(row.relationship)}</Cell>
                     <Cell>{row.is_primary ? <Badge tone="solid">Primary</Badge> : null}</Cell>
                     <Cell>{row.phone || '—'}</Cell>
                     <Cell>{row.occupation || '—'}</Cell>
@@ -193,7 +181,7 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
                 hint="Approving the registration creates and activates the first enrolment."
               />
             ) : (
-              <DataTable head={['Enrolment', 'Class', 'Year', 'Roll', 'From', 'Status']}>
+              <DataTable columns={['Enrolment', 'Class', 'Year', 'Roll', 'From', 'Status']}>
                 {enrollments.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>
@@ -204,11 +192,9 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
                     <Cell>{m2oLabel(row.class_id)}</Cell>
                     <Cell>{m2oLabel(row.academic_year_id)}</Cell>
                     <Cell numeric>{row.roll_number || '—'}</Cell>
-                    <Cell>{row.enrollment_date}</Cell>
+                    <Cell>{formatDate(row.enrollment_date)}</Cell>
                     <Cell>
-                      <Badge tone={row.state === 'active' ? 'live' : 'muted'}>
-                        {String(row.state || '—')}
-                      </Badge>
+                      <StatusBadge state={row.state} />
                     </Cell>
                   </Row>
                 ))}
@@ -221,9 +207,7 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
           <Card>
             <CardHeader title="Registration status" />
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <Badge tone={REG_TONE[status as keyof typeof REG_TONE] ?? 'neutral'}>
-                {status.replace(/_/g, ' ') || '—'}
-              </Badge>
+              <StatusBadge state={status} model="school.student" />
               {!student.active ? <Badge tone="muted">Archived</Badge> : null}
             </div>
             <WorkflowPanel

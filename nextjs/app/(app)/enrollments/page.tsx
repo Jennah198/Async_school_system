@@ -1,12 +1,14 @@
 import Link from 'next/link'
-import { Badge } from '@/components/ui'
+import { formatDate } from '@/lib/format'
+import {
+  StatusBadge,
+} from '@/components/ui'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listEnrollments } from '@/lib/odoo/models/student'
 import { m2oLabel } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Enrolments · Async School' }
 
-const TONE = { active: 'live', completed: 'solid', withdrawn: 'muted', transferred: 'neutral' } as const
 
 export default function EnrollmentsPage() {
   return (
@@ -28,11 +30,9 @@ export default function EnrollmentsPage() {
           <Cell>{m2oLabel(row.class_id)}</Cell>
           <Cell>{m2oLabel(row.academic_year_id)}</Cell>
           <Cell numeric>{row.roll_number || '—'}</Cell>
-          <Cell>{row.enrollment_date}</Cell>
+          <Cell>{formatDate(row.enrollment_date)}</Cell>
           <Cell>
-            <Badge tone={TONE[row.state as keyof typeof TONE] ?? 'muted'}>
-              {String(row.state || '—')}
-            </Badge>
+            <StatusBadge state={row.state} />
           </Cell>
         </>
       )}

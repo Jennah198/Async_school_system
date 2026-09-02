@@ -1,4 +1,8 @@
-import { Badge } from '@/components/ui'
+import {
+  Badge,
+  StatusBadge,
+} from '@/components/ui'
+import { formatDate } from '@/lib/format'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listAcademicYears } from '@/lib/odoo/models/school'
 
@@ -16,13 +20,11 @@ export default function AcademicYearsPage() {
       renderRow={(row) => (
         <>
           <Cell strong>{row.name}</Cell>
-          <Cell>{row.date_start}</Cell>
-          <Cell>{row.date_end}</Cell>
+          <Cell>{formatDate(row.date_start)}</Cell>
+          <Cell>{formatDate(row.date_end)}</Cell>
           <Cell numeric>{row.class_count}</Cell>
           <Cell>
-            <Badge tone={row.state === 'open' ? 'solid' : 'muted'}>
-              {String(row.state || '—')}
-            </Badge>
+            <StatusBadge state={row.state} />
           </Cell>
           <Cell>{row.is_current ? <Badge tone="live">Current</Badge> : null}</Cell>
         </>

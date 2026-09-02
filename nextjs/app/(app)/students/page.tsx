@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import {
-  Badge,
   Card,
   Cell,
   DataTable,
@@ -8,6 +7,7 @@ import {
   ErrorState,
   PageHeader,
   Row,
+  StatusBadge,
 } from '@/components/ui'
 import { listStudents } from '@/lib/odoo/models/school'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -19,11 +19,6 @@ export const metadata = { title: 'Students · Async School' }
 
 const PAGE_SIZE = 25
 
-const STATUS_TONE = {
-  approved: 'solid',
-  submitted: 'live',
-  rejected: 'muted',
-} as const
 
 /**
  * Filtering and paging are pushed into Odoo's domain/limit/offset rather than
@@ -85,7 +80,7 @@ export default async function StudentsPage({ searchParams }: PageProps<'/student
             }
           />
         ) : (
-          <DataTable head={['Name', 'Student ID', 'Class', 'Academic year', 'Registration']}>
+          <DataTable columns={['Name', 'Student ID', 'Class', 'Academic year', 'Registration']}>
             {result.rows.map((row) => (
               <Row key={row.id}>
                 <Cell strong>
@@ -97,13 +92,7 @@ export default async function StudentsPage({ searchParams }: PageProps<'/student
                 <Cell>{m2oLabel(row.class_id)}</Cell>
                 <Cell>{m2oLabel(row.academic_year_id)}</Cell>
                 <Cell>
-                  <Badge
-                    tone={
-                      STATUS_TONE[row.registration_status as keyof typeof STATUS_TONE] ?? 'neutral'
-                    }
-                  >
-                    {String(row.registration_status || '—').replace(/_/g, ' ')}
-                  </Badge>
+                  <StatusBadge state={row.registration_status} model="school.student" />
                 </Cell>
               </Row>
             ))}

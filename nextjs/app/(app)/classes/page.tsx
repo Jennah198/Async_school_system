@@ -1,4 +1,5 @@
 import { Cell, ResourceList } from '@/components/resource-list'
+import { formatSelection } from '@/lib/format'
 import { listClasses } from '@/lib/odoo/models/school'
 import { m2oLabel } from '@/lib/odoo/types'
 
@@ -17,7 +18,7 @@ export default function ClassesPage() {
           <Cell>{m2oLabel(row.grade_id)}</Cell>
           <Cell>{m2oLabel(row.section_id)}</Cell>
           <Cell>{m2oLabel(row.academic_year_id)}</Cell>
-          <Cell>{String(row.education_level || '—').replace(/_/g, ' ')}</Cell>
+          <Cell>{formatSelection(row.education_level)}</Cell>
           <Cell numeric>{row.student_ids.length}</Cell>
           <Cell numeric>{row.capacity || 'Unlimited'}</Cell>
         </>

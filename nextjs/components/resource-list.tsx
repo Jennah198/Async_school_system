@@ -56,7 +56,7 @@ export async function ResourceList<T extends { id: number }>({
         {result.rows.length === 0 ? (
           <EmptyState title={emptyTitle} hint={emptyHint} />
         ) : (
-          <DataTable head={columns}>
+          <DataTable columns={columns}>
             {result.rows.map((row) => (
               <Row key={row.id}>{renderRow(row)}</Row>
             ))}

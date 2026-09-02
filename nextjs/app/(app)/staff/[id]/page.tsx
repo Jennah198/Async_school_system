@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
 import {
   Badge,
@@ -6,10 +7,12 @@ import {
   CardHeader,
   Cell,
   DataTable,
+  DetailField,
   EmptyState,
   ErrorState,
   PageHeader,
   Row,
+  StatusBadge,
 } from '@/components/ui'
 import { toOdooError } from '@/lib/odoo/errors'
 import { hasAccess } from '@/lib/odoo/client'
@@ -28,16 +31,6 @@ import { availableTransitions } from '@/lib/odoo/workflows'
 
 export const metadata = { title: 'Staff record · Async School' }
 
-const STATE_TONE = { active: 'solid', draft: 'muted', suspended: 'neutral' } as const
-
-function Detail({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] tracking-wide text-stone uppercase">{label}</dt>
-      <dd className="mt-0.5 text-[13px] text-graphite">{value || '—'}</dd>
-    </div>
-  )
-}
 
 export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]'>) {
   const id = Number((await params).id)
@@ -71,7 +64,7 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
     <>
       <PageHeader
         title={staff.name || 'Unnamed staff member'}
-        subtitle={`${staff.staff_id || 'No staff ID yet'} · ${String(staff.department || '—')}`}
+        subtitle={`${staff.staff_id || 'No staff ID yet'} · ${formatSelection(staff.department)}`}
         action={
           <Link
             href="/staff"
@@ -87,27 +80,27 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
           <Card>
             <CardHeader title="Details" />
             <dl className="grid gap-4 sm:grid-cols-3">
-              <Detail label="Job title" value={m2oLabel(staff.job_title_id)} />
-              <Detail
+              <DetailField label="Job title" value={m2oLabel(staff.job_title_id)} />
+              <DetailField
                 label="Primary responsibility"
-                value={String(staff.primary_responsibility || '—').replace(/_/g, ' ')}
+                value={formatSelection(staff.primary_responsibility)}
               />
-              <Detail label="Employment status" value={String(staff.employment_status || '—')} />
-              <Detail label="Employment type" value={String(staff.employment_type || '—').replace(/_/g, ' ')} />
-              <Detail label="Hire date" value={staff.hire_date || '—'} />
-              <Detail label="End date" value={staff.end_date || '—'} />
-              <Detail label="Phone" value={staff.phone || '—'} />
-              <Detail label="Mobile" value={staff.mobile || '—'} />
-              <Detail label="Email" value={staff.email || '—'} />
-              <Detail
+              <DetailField label="Employment status" value={formatSelection(staff.employment_status)} />
+              <DetailField label="Employment type" value={formatSelection(staff.employment_type)} />
+              <DetailField label="Hire date" value={formatDate(staff.hire_date)} />
+              <DetailField label="End date" value={formatDate(staff.end_date)} />
+              <DetailField label="Phone" value={staff.phone || '—'} />
+              <DetailField label="Mobile" value={staff.mobile || '—'} />
+              <DetailField label="Email" value={staff.email || '—'} />
+              <DetailField
                 label="Linked employee"
                 value={links ? m2oLabel(links.employee_id) : <span className="text-stone">Restricted</span>}
               />
-              <Detail
+              <DetailField
                 label="Odoo login"
                 value={links ? m2oLabel(links.user_id) : <span className="text-stone">Restricted</span>}
               />
-              <Detail
+              <DetailField
                 label="Date of birth"
                 value={
                   personal ? (
@@ -117,7 +110,7 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                   )
                 }
               />
-              <Detail
+              <DetailField
                 label="Fayda ID"
                 value={
                   personal ? (
@@ -141,14 +134,14 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
             {responsibilities.rows.length === 0 ? (
               <EmptyState title="No responsibilities recorded" />
             ) : (
-              <DataTable head={['Responsibility', 'Primary', 'Department', 'From', 'To', 'Active']}>
+              <DataTable columns={['Responsibility', 'Primary', 'Department', 'From', 'To', 'Active']}>
                 {responsibilities.rows.map((row) => (
                   <Row key={row.id}>
-                    <Cell strong>{String(row.responsibility || '—').replace(/_/g, ' ')}</Cell>
+                    <Cell strong>{formatSelection(row.responsibility)}</Cell>
                     <Cell>{row.is_primary ? <Badge tone="solid">Primary</Badge> : null}</Cell>
-                    <Cell>{String(row.department || '—')}</Cell>
-                    <Cell>{row.start_date}</Cell>
-                    <Cell>{row.end_date || '—'}</Cell>
+                    <Cell>{formatSelection(row.department)}</Cell>
+                    <Cell>{formatDate(row.start_date)}</Cell>
+                    <Cell>{formatDate(row.end_date)}</Cell>
                     <Cell>{row.active ? 'Yes' : 'No'}</Cell>
                   </Row>
                 ))}
@@ -174,13 +167,13 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                 hint="Odoo creates these as employment periods are recorded."
               />
             ) : (
-              <DataTable head={['Job title', 'Responsibility', 'Manager', 'From', 'To']}>
+              <DataTable columns={['Job title', 'Responsibility', 'Manager', 'From', 'To']}>
                 {employment.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>{m2oLabel(row.job_title_id)}</Cell>
-                    <Cell>{String(row.responsibility || '—').replace(/_/g, ' ')}</Cell>
+                    <Cell>{formatSelection(row.responsibility)}</Cell>
                     <Cell>{m2oLabel(row.manager_id)}</Cell>
-                    <Cell>{row.date_start}</Cell>
+                    <Cell>{formatDate(row.date_start)}</Cell>
                     <Cell>{row.date_end || 'Current'}</Cell>
                   </Row>
                 ))}
@@ -206,13 +199,13 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                 hint="The scheduled job records these once the staff member is active."
               />
             ) : (
-              <DataTable head={['Date', 'Status', 'Check in', 'Check out', 'Hours']}>
+              <DataTable columns={['Date', 'Status', 'Check in', 'Check out', 'Hours']}>
                 {dailyStatus.rows.map((row) => (
                   <Row key={row.id}>
-                    <Cell strong>{row.date}</Cell>
-                    <Cell>{String(row.status || '—').replace(/_/g, ' ')}</Cell>
-                    <Cell>{row.check_in || '—'}</Cell>
-                    <Cell>{row.check_out || '—'}</Cell>
+                    <Cell strong>{formatDate(row.date)}</Cell>
+                    <Cell>{formatSelection(row.status)}</Cell>
+                    <Cell>{formatDateTime(row.check_in)}</Cell>
+                    <Cell>{formatDateTime(row.check_out)}</Cell>
                     <Cell numeric>{row.worked_hours?.toFixed(2)}</Cell>
                   </Row>
                 ))}
@@ -225,9 +218,7 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
           <Card>
             <CardHeader title="Status" />
             <div className="mb-4 flex items-center gap-2">
-              <Badge tone={STATE_TONE[staff.state as keyof typeof STATE_TONE] ?? 'neutral'}>
-                {String(staff.state || '—')}
-              </Badge>
+              <StatusBadge state={staff.state} />
               {!staff.active ? <Badge tone="muted">Archived</Badge> : null}
             </div>
             <WorkflowPanel

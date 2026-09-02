@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { Badge } from '@/components/ui'
+import {
+  StatusBadge,
+} from '@/components/ui'
 import { Cell, ResourceList } from '@/components/resource-list'
 import { listPromotionBatches } from '@/lib/odoo/models/assessment'
 import { m2oLabel } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Promotion · Async School' }
 
-const TONE = { done: 'solid', approved: 'live', calculated: 'neutral', draft: 'muted' } as const
 
 export default function PromotionPage() {
   return (
@@ -30,9 +31,7 @@ export default function PromotionPage() {
           <Cell numeric>{row.promoted_count}</Cell>
           <Cell numeric>{row.retained_count}</Cell>
           <Cell>
-            <Badge tone={TONE[row.state as keyof typeof TONE] ?? 'neutral'}>
-              {String(row.state || '—')}
-            </Badge>
+            <StatusBadge state={row.state} />
           </Cell>
         </>
       )}

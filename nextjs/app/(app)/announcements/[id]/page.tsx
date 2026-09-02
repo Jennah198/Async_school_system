@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { formatSelection } from '@/lib/format'
 import { Card, CardHeader, ErrorState, PageHeader } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
@@ -31,7 +32,7 @@ export default async function AnnouncementDetailPage({ params }: PageProps<'/ann
   return (
     <WorkflowDetail
       title={item.name}
-      subtitle={`${String(item.category || '')} · ${String(item.audience_type || '').replace(/_/g, ' ')}`}
+      subtitle={`${String(item.category || '')} · ${formatSelection(item.audience_type)}`}
       backHref="/announcements"
       backLabel="Back to announcements"
       workflow="announcement"
@@ -41,8 +42,8 @@ export default async function AnnouncementDetailPage({ params }: PageProps<'/ann
       revalidate={[`/announcements/${item.id}`, '/announcements']}
       note="Only published announcements inside their publication window reach their audience. A scheduled job refreshes that."
       fields={[
-        { label: 'Category', value: String(item.category || '—') },
-        { label: 'Audience', value: String(item.audience_type || '—').replace(/_/g, ' ') },
+        { label: 'Category', value: formatSelection(item.category) },
+        { label: 'Audience', value: formatSelection(item.audience_type) },
         { label: 'Author', value: m2oLabel(item.author_id) },
         { label: 'Publishes', value: item.publish_datetime || '—' },
         { label: 'Expires', value: item.expiry_datetime || '—' },
