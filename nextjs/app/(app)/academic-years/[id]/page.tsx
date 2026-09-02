@@ -1,10 +1,15 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { Badge, DateText, ErrorState, PageHeader } from '@/components/ui'
+import { YearCorrectionForm } from './correction-form'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { formatCount, formatEthiopianDateRange } from '@/lib/format'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
 import { getAcademicYear } from '@/lib/odoo/models/school'
+
+/** Odoo's write refuses every field but state, is_current and active on these. */
+const LOCKED_STATES = ['closed', 'archived']
 
 export const metadata = { title: 'Academic year · Async School' }
 
@@ -48,6 +53,25 @@ export default async function AcademicYearDetailPage({
       revalidate={[`/academic-years/${year.id}`, '/academic-years']}
       meta={year.is_current ? <Badge tone="live">Current</Badge> : undefined}
       note="Closing a year makes it read-only. Creating the next year copies nothing — it opens an empty year to build classes in."
+      actions={
+        canWrite ? (
+          LOCKED_STATES.includes(String(year.state)) ? (
+            <YearCorrectionForm
+              yearId={year.id}
+              name={year.name}
+              dateStart={year.date_start}
+              dateEnd={year.date_end}
+            />
+          ) : (
+            <Link
+              href={`/academic-years/${year.id}/edit`}
+              className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+            >
+              Edit dates
+            </Link>
+          )
+        ) : undefined
+      }
       fields={[
         { label: 'Name', value: year.name },
         { label: 'Starts', value: <DateText value={year.date_start} /> },

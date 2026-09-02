@@ -1,6 +1,5 @@
 import { LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
-import { RowLink } from '@/components/ui/table'
 import { hasAccess } from '@/lib/odoo/client'
 import {
   listAllGuardians,
@@ -9,7 +8,7 @@ import {
 import { selectionOptions } from '@/lib/odoo/selections'
 import { toOdooOrder } from '@/lib/list-query'
 import { formatText } from '@/lib/format'
-import { m2oLabel } from '@/lib/odoo/types'
+import { m2oId, m2oLabel } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Guardians · Async School' }
 
@@ -54,6 +53,7 @@ export default async function GuardiansPage({
           </LinkButton>
         ) : undefined
       }
+      rowHref={(row) => `/students/${m2oId(row.student_id) ?? 0}`}
       emptyTitle="No guardians visible"
       emptyHint="Odoo scopes this list to the records your role may see."
       emptyAction={

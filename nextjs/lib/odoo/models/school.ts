@@ -1,5 +1,5 @@
 import 'server-only'
-import { create, readOne, searchCount, searchRead, write } from '@/lib/odoo/client'
+import { callKw, create, readOne, searchCount, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { ethiopianYearOf } from '@/lib/ethiopian-date'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
@@ -450,6 +450,58 @@ export function createAcademicYear(intake: AcademicYearIntake): Promise<number> 
  * roles legitimately get AccessError on school.student and school.mark; a
  * dashboard tile should say "not available to your role", not crash the page.
  */
+/**
+ * Correct a draft or open academic year.
+ *
+ * The name follows the start date rather than being typed: `_check_year_name`
+ * requires it to be the four-digit Ethiopian year of `date_start`, so moving
+ * the start date without moving the name can only produce a refusal.
+ *
+ * Odoo's `write` makes closed and archived years read-only for everything but
+ * state, is_current and active — those need `correctAcademicYear`.
+ */
+export function updateAcademicYear(
+  id: number,
+  intake: AcademicYearIntake,
+): Promise<boolean> {
+  const year = ethiopianYearOf(intake.date_start)
+  if (year === null) throw new Error('The start date is not a valid date.')
+
+  return write('school.academic.year', [id], {
+    name: String(year),
+    date_start: intake.date_start,
+    date_end: intake.date_end,
+    is_current: intake.is_current,
+  })
+}
+
+export interface YearCorrectionIntake {
+  academicYearId: number
+  name: string
+  dateStart: string
+  dateEnd: string
+  reason: string
+}
+
+/**
+ * Change a closed or archived year through the authorized workflow.
+ *
+ * `action_confirm` re-checks the director group, writes with the
+ * `authorized_academic_correction` context that Odoo's `write` requires, and
+ * posts the reason to the record's chatter. Writing the fields directly would
+ * be refused, and bypassing the wizard would lose the audit trail.
+ */
+export async function correctAcademicYear(intake: YearCorrectionIntake): Promise<void> {
+  const wizardId = await create('school.academic.year.correction', {
+    academic_year_id: intake.academicYearId,
+    name: intake.name,
+    date_start: intake.dateStart,
+    date_end: intake.dateEnd,
+    reason: intake.reason,
+  })
+  await callKw('school.academic.year.correction', 'action_confirm', [[wizardId]])
+}
+
 export function safeCount(model: string, domain: Domain = []): Promise<number | null> {
   return orNullOnRefusal(searchCount(model, domain))
 }

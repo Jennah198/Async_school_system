@@ -4,7 +4,11 @@ import Link from 'next/link'
 import { useActionState, useState } from 'react'
 import { EthiopianDateInput } from '@/components/ui/ethiopian-date-input'
 import { ethiopianYearOf } from '@/lib/ethiopian-date'
-import { createAcademicYearAction, type AcademicYearFormState } from '../actions'
+import {
+  createAcademicYearAction,
+  updateAcademicYearAction,
+  type AcademicYearFormState,
+} from './actions'
 
 function Field({
   label,
@@ -45,15 +49,34 @@ function Field({
   )
 }
 
-export function AcademicYearForm() {
+export interface AcademicYearFormValues {
+  id: number
+  date_start: string
+  date_end: string
+  is_current: boolean
+}
+
+export function AcademicYearForm({
+  mode = 'create',
+  year,
+}: {
+  mode?: 'create' | 'edit'
+  year?: AcademicYearFormValues
+} = {}) {
   const [state, formAction, pending] = useActionState<AcademicYearFormState, FormData>(
-    createAcademicYearAction,
+    mode === 'create' ? createAcademicYearAction : updateAcademicYearAction,
     {},
   )
 
-  const values = state.values ?? {}
+  // What the user typed wins over the stored value, so a refused submit does
+  // not throw the edit away.
+  const values = {
+    date_start: state.values?.date_start ?? year?.date_start ?? '',
+    date_end: state.values?.date_end ?? year?.date_end ?? '',
+    is_current: state.values?.is_current ?? (year?.is_current ? 'on' : ''),
+  }
   const errors = state.fieldErrors ?? {}
-  const [dateStart, setDateStart] = useState(values.date_start ?? '')
+  const [dateStart, setDateStart] = useState(values.date_start)
 
   // Odoo requires the name to be the Ethiopian year of the start date, so the
   // form derives it and shows what it will be rather than asking for it twice.
@@ -61,6 +84,8 @@ export function AcademicYearForm() {
 
   return (
     <form action={formAction} className="space-y-6" noValidate>
+      {year ? <input type="hidden" name="id" value={year.id} /> : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label="Starts on"
@@ -72,7 +97,7 @@ export function AcademicYearForm() {
           <EthiopianDateInput
             id="date_start"
             name="date_start"
-            defaultValue={values.date_start ?? ''}
+            defaultValue={values.date_start}
             describedBy="date_start-hint"
             onChange={setDateStart}
           />
@@ -82,14 +107,14 @@ export function AcademicYearForm() {
           <EthiopianDateInput
             id="date_end"
             name="date_end"
-            defaultValue={values.date_end ?? ''}
+            defaultValue={values.date_end}
           />
         </Field>
       </div>
 
       <div className="rounded-[8px] border border-silver bg-paper px-3 py-2.5">
         <p className="text-[12px] text-slate">
-          This year will be named{' '}
+          {mode === 'edit' ? 'This year will be renamed to' : 'This year will be named'}{' '}
           <span className="font-medium text-graphite">
             {derivedName ?? '—'}
           </span>
@@ -125,11 +150,17 @@ export function AcademicYearForm() {
           disabled={pending}
           className="rounded-[9999px] bg-ink px-5 py-2.5 text-[13px] font-medium text-white hover:bg-graphite disabled:opacity-50"
         >
-          {pending ? 'Creating…' : 'Create academic year'}
+          {pending
+            ? mode === 'create'
+              ? 'Creating…'
+              : 'Saving…'
+            : mode === 'create'
+              ? 'Create academic year'
+              : 'Save changes'}
         </button>
 
         <Link
-          href="/academic-years"
+          href={year ? `/academic-years/${year.id}` : '/academic-years'}
           className="rounded-[9999px] border border-silver px-5 py-2.5 text-[13px] hover:bg-paper"
         >
           Cancel

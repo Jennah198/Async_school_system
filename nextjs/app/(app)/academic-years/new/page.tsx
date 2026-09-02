@@ -1,7 +1,7 @@
 import { Card, ErrorState, LinkButton, PageHeader } from '@/components/ui'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
-import { AcademicYearForm } from './academic-year-form'
+import { AcademicYearForm } from '../academic-year-form'
 
 export const metadata = { title: 'New academic year · Async School' }
 
