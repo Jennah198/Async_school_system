@@ -135,13 +135,37 @@ export const WORKFLOWS = {
     ],
   },
 
-  /* ----------------------------------------------------- report card --- */
+  /*
+    ----------------------------------------------------- report card ---
+
+    This table previously described a machine the model does not have.
+
+    `school.report.card` is declared twice in the addon: once in
+    models/school_report_card.py and once in models/school_results.py. Only the
+    second is imported by models/__init__.py — the first is dead code — so the
+    effective states are draft → approved → published, plus superseded, and
+    there is no `generated` state and no `action_generate` on the record at all.
+
+    The consequence was that `generate` called a method that does not exist,
+    and `approve` was gated on a state a card can never hold, so a report card
+    could not be approved through this application at any point. Verified
+    against a running Odoo 19:
+
+        _fields['state'].selection -> draft, approved, published, superseded
+        hasattr(card, 'action_generate') -> False
+        action_approve filters on state == 'draft'
+
+    Generating a report card is the `school.report.card.generate` wizard, which
+    creates the record; see lib/odoo/models/assessment.ts.
+  */
   reportCard: {
     model: 'school.report.card',
     stateField: 'state',
     transitions: [
-      { key: 'generate', method: 'action_generate', label: 'Generate', from: ['draft', 'generated'] },
-      { key: 'approve', method: 'action_approve', label: 'Approve', from: ['generated'] },
+      {
+        key: 'approve', method: 'action_approve', label: 'Approve', from: ['draft'],
+        confirm: 'Approve this report card? Only an Exam Officer may approve, and Odoo re-checks that.',
+      },
       {
         key: 'publish', method: 'action_publish', label: 'Publish', from: ['approved'],
         confirm: 'Publish this report card? Any previous published version is superseded.',

@@ -180,8 +180,15 @@ export function promotionsAwaitingApproval(): Promise<number | null> {
   return safeCount('school.promotion.batch', [['state', '=', 'calculated']])
 }
 
+/**
+ * Report cards waiting on an Exam Officer.
+ *
+ * `draft`, not `generated`: the effective model has no `generated` state — see
+ * the note on `reportCard` in lib/odoo/workflows.ts. This counted zero for
+ * every school until that was traced.
+ */
 export function reportCardsAwaitingApproval(): Promise<number | null> {
-  return safeCount('school.report.card', [['state', '=', 'generated']])
+  return safeCount('school.report.card', [['state', '=', 'draft']])
 }
 
 export function assessmentsAwaitingApproval(): Promise<number | null> {

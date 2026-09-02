@@ -1,5 +1,5 @@
 import 'server-only'
-import { callKw, readOne, searchRead, write } from '@/lib/odoo/client'
+import { callKw, create, hasAccess, readOne, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
 import type { Many2one, Page, Selection } from '@/lib/odoo/types'
@@ -179,6 +179,23 @@ export function saveMark(
 
 /* --------------------------------------------------------- report card --- */
 
+/*
+  Written against `models/school_results.py`, which is the only definition of
+  `school.report.card` that Odoo loads.
+
+  `models/school_report_card.py` declares the same model with a different shape
+  — a `generated` state, an `overall_percentage`, a `school.report.card.line`
+  one2many — but it is absent from `models/__init__.py` and therefore dead. The
+  services here previously described that dead shape, which is why the detail
+  page answered 404 for every card and every role: ten of the nineteen fields it
+  asked for do not exist, `read` raised, and the refusal handler turned that
+  into "no such record".
+
+  The live model keeps subject results in a JSON snapshot rather than in child
+  records, taken at generation time so a published card cannot drift when a
+  mark is later corrected.
+*/
+
 export interface ReportCardRow {
   id: number
   name: string
@@ -187,50 +204,70 @@ export interface ReportCardRow {
   term_id: Many2one
   academic_year_id: Many2one
   state: Selection
+  result: Selection
+  overall_average: number
+  version: number
 }
+
+const REPORT_CARD_LIST_FIELDS = [
+  'name',
+  'student_id',
+  'class_id',
+  'term_id',
+  'academic_year_id',
+  'state',
+  'result',
+  'overall_average',
+  'version',
+] as const
 
 export const REPORT_CARD_FILTERS = {
   status: { field: 'state' },
-  result: { field: 'result_status' },
+  result: { field: 'result' },
   class: { field: 'class_id', kind: 'many2one' },
   term: { field: 'term_id', kind: 'many2one' },
 } as const
 
 export function listReportCards(options: ListOptions = {}): Promise<Page<ReportCardRow>> {
-  return searchRead<ReportCardRow>(
-    'school.report.card',
-    ['name', 'student_id', 'class_id', 'term_id', 'academic_year_id', 'state'],
-    {
-      domain: listDomain(options, {
-        searchFields: ['name', 'student_id.name'],
-        filters: REPORT_CARD_FILTERS,
-      }),
-      limit: options.limit ?? 25,
-      offset: options.offset ?? 0,
-      order: options.order ?? 'id desc',
-    },
-  )
+  return searchRead<ReportCardRow>('school.report.card', REPORT_CARD_LIST_FIELDS, {
+    domain: listDomain(options, {
+      searchFields: ['name', 'student_id.name'],
+      filters: REPORT_CARD_FILTERS,
+    }),
+    limit: options.limit ?? 25,
+    offset: options.offset ?? 0,
+    order: options.order ?? 'id desc',
+  })
 }
 
-/**
- * Report-card detail.
- *
- * `school.report.card` is defined in two module files, so the merged model
- * carries both generations of fields. Anything not present simply comes back
- * absent, and the whole read degrades to null rather than failing the page.
- */
+/** One subject inside `result_snapshot`, as Odoo writes it at generation. */
+export interface SubjectResult {
+  subject: string
+  raw_total: number
+  maximum_total: number
+  percentage: number
+  grade: string | false
+  pass: boolean
+}
+
 export interface ReportCardDetail extends ReportCardRow {
-  overall_percentage: number
-  overall_grade: string | false
-  result_status: Selection
+  /** Frozen at generation; the source of the subject table. */
+  result_snapshot: SubjectResult[] | false
+  /** Attendance status counts for the term, as `{status: count}`. */
+  attendance_summary: Record<string, number> | false
+  conduct: Selection
   class_rank: number
-  attendance_present: number
-  attendance_absent: number
-  attendance_late: number
-  attendance_total: number
-  attendance_percentage: number
-  promotion_decision: Selection
-  generated_at: string | false
+  class_size: number
+  grade_rank: number
+  grade_size: number
+  homeroom_remarks: string | false
+  principal_remarks: string | false
+  correction_reason: string | false
+  grading_scheme_id: Many2one
+  enrollment_id: Many2one
+  supersedes_id: Many2one
+  superseded_by_id: Many2one
+  approved_by_id: Many2one
   approved_at: string | false
   published_at: string | false
 }
@@ -238,46 +275,52 @@ export interface ReportCardDetail extends ReportCardRow {
 export function getReportCard(id: number): Promise<ReportCardDetail | null> {
   return orNullOnRefusal(
     readOne<ReportCardDetail>('school.report.card', id, [
-      'name',
-      'student_id',
-      'class_id',
-      'term_id',
-      'academic_year_id',
-      'state',
-      'overall_percentage',
-      'overall_grade',
-      'result_status',
+      ...REPORT_CARD_LIST_FIELDS,
+      'result_snapshot',
+      'attendance_summary',
+      'conduct',
       'class_rank',
-      'attendance_present',
-      'attendance_absent',
-      'attendance_late',
-      'attendance_total',
-      'attendance_percentage',
-      'promotion_decision',
-      'generated_at',
+      'class_size',
+      'grade_rank',
+      'grade_size',
+      'homeroom_remarks',
+      'principal_remarks',
+      'correction_reason',
+      'grading_scheme_id',
+      'enrollment_id',
+      'supersedes_id',
+      'superseded_by_id',
+      'approved_by_id',
       'approved_at',
       'published_at',
     ]),
   )
 }
 
-export interface ReportCardLineRow {
-  id: number
-  subject_id: Many2one
-  score: number
-  maximum: number
-  percentage: number
-  grade: string | false
+/**
+ * The subject rows, straight out of the snapshot.
+ *
+ * No arithmetic happens here. Odoo applied the grading scheme and the
+ * assessment weights when it generated the card, and re-deriving any of it in
+ * TypeScript would be a second, divergent implementation of the school's
+ * grading policy.
+ */
+export function subjectResults(card: ReportCardDetail): SubjectResult[] {
+  return Array.isArray(card.result_snapshot) ? card.result_snapshot : []
 }
 
-export function listReportCardLines(cardId: number): Promise<Page<ReportCardLineRow> | null> {
-  return orNullOnRefusal(
-    searchRead<ReportCardLineRow>(
-      'school.report.card.line',
-      ['subject_id', 'score', 'maximum', 'percentage', 'grade'],
-      { domain: [['report_card_id', '=', cardId]], limit: 50 },
-    ),
-  )
+/** Attendance counts for the term, ordered with the meaningful states first. */
+export function attendanceBreakdown(card: ReportCardDetail): Array<{ status: string; count: number }> {
+  const summary = card.attendance_summary
+  if (!summary || typeof summary !== 'object') return []
+  const order = ['present', 'absent', 'late', 'excused', 'sick', 'official_duty', 'half_day']
+  return Object.entries(summary)
+    .map(([status, count]) => ({ status, count: Number(count) || 0 }))
+    .sort((a, b) => {
+      const ai = order.indexOf(a.status)
+      const bi = order.indexOf(b.status)
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+    })
 }
 
 /* ----------------------------------------------------------- promotion --- */
@@ -374,4 +417,47 @@ export function overridePromotionOutcome(
     final_outcome: outcome,
     override_reason: reason,
   })
+}
+
+/* ------------------------------------------------ report card generator --- */
+
+/**
+ * Generate report cards.
+ *
+ * This is the only way a report card comes into existence — `school.report.card`
+ * has no create form and no `action_generate` on the record. Generation is the
+ * `school.report.card.generate` wizard, which reads the published marks for a
+ * term and mints a versioned card per student, superseding any previous one.
+ *
+ * The wizard is a TransientModel, so this follows the same shape as the
+ * attendance roster: create the record, then call its action. The model and
+ * method names are constants in this file — the browser supplies only the
+ * class, student and term ids, exactly as it does for every other call.
+ *
+ * Odoo re-checks that the caller is an Administrator or Exam Officer inside
+ * `action_generate`, and raises if a grading scheme is not configured. Neither
+ * check is repeated here.
+ */
+export async function generateReportCards(input: {
+  mode: 'class' | 'student'
+  classId?: number
+  studentId?: number
+  termId: number
+  correctionReason?: string
+}): Promise<void> {
+  const values: Record<string, unknown> = {
+    generation_mode: input.mode,
+    term_id: input.termId,
+  }
+  if (input.mode === 'class' && input.classId) values.class_id = input.classId
+  if (input.mode === 'student' && input.studentId) values.student_id = input.studentId
+  if (input.correctionReason) values.correction_reason = input.correctionReason
+
+  const wizardId = await create('school.report.card.generate', values)
+  await callKw('school.report.card.generate', 'action_generate', [[wizardId]])
+}
+
+/** Whether the signed-in user may generate report cards, per Odoo's own ACL. */
+export function canGenerateReportCards(): Promise<boolean> {
+  return hasAccess('school.report.card.generate', 'create')
 }

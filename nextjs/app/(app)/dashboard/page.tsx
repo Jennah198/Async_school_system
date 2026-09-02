@@ -141,9 +141,9 @@ async function GeneralDashboard({ user, roles }: { user: CurrentUser; roles: Sch
                 icon: 'assessments',
               },
               {
-                label: 'Report cards generated, not approved',
+                label: 'Report cards awaiting approval',
                 count: pendingCards,
-                href: '/report-cards?status=generated',
+                href: '/report-cards?status=draft',
                 icon: 'reportCards',
               },
             ]}
