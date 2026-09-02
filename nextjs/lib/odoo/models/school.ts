@@ -200,8 +200,10 @@ const ASSIGNMENT_FIELDS = [
 export const ASSIGNMENT_FILTERS = {
   status: { field: 'state' },
   responsibility: { field: 'responsibility' },
+  teacher: { field: 'teacher_id', kind: 'many2one' },
   class: { field: 'class_id', kind: 'many2one' },
   subject: { field: 'subject_id', kind: 'many2one' },
+  term: { field: 'term_id', kind: 'many2one' },
 } as const
 
 export function listAssignments(options: ListOptions = {}): Promise<Page<AssignmentRow>> {
