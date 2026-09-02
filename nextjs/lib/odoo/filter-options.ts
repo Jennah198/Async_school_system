@@ -74,3 +74,23 @@ export function documentTypeOptions(): Promise<FilterOption[]> {
     ['active', '=', true],
   ])
 }
+
+/**
+ * Students, for the single-student report card correction.
+ *
+ * Capped at 200 and restricted to approved registrations, which is the same
+ * domain the Odoo wizard applies — a card cannot be generated for somebody
+ * whose registration was never approved.
+ */
+export function studentOptions(): Promise<FilterOption[]> {
+  return options(
+    'school.student',
+    ['name', 'regno'],
+    'name',
+    (row) => (row.regno ? `${row.name} · ${row.regno}` : String(row.name)),
+    [
+      ['registration_status', '=', 'approved'],
+      ['active', '=', true],
+    ],
+  )
+}
