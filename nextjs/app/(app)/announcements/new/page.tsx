@@ -4,7 +4,7 @@ import { toOdooError } from '@/lib/odoo/errors'
 import { audienceChoices } from '@/lib/odoo/models/operations'
 import { selectionOptions } from '@/lib/odoo/selections'
 
-import { AnnouncementForm } from './announcement-form'
+import { AnnouncementForm } from '../announcement-form'
 
 export const metadata = { title: 'New announcement · Async School' }
 

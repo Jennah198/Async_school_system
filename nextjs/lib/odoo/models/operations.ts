@@ -334,6 +334,64 @@ export function createAnnouncement(intake: AnnouncementIntake): Promise<number> 
   return create('school.announcement', values)
 }
 
+/** The audience fields, read back so an edit form can open on what is set. */
+export interface AnnouncementAudience {
+  department: Selection
+  responsibility: Selection
+  teacher_ids: number[]
+  subject_ids: number[]
+  class_ids: number[]
+  campus_ids: number[]
+  staff_ids: number[]
+}
+
+export function getAnnouncementAudience(id: number): Promise<AnnouncementAudience | null> {
+  return orNullOnRefusal(
+    readOne<AnnouncementAudience>('school.announcement', id, [
+      'department', 'responsibility', 'teacher_ids', 'subject_ids',
+      'class_ids', 'campus_ids', 'staff_ids',
+    ]),
+  )
+}
+
+/**
+ * Correct an announcement.
+ *
+ * The audience is only written while the announcement is still draft.
+ * `action_publish` resolves the audience into `recipient_user_ids` once and
+ * record rules read that stored set, so changing the audience afterwards would
+ * look like it worked and reach nobody new. Refusing to send it is honest;
+ * silently writing a field with no effect is not.
+ */
+export function updateAnnouncement(
+  id: number,
+  intake: Omit<AnnouncementIntake, 'audience_type' | 'audience_value'> &
+    Partial<Pick<AnnouncementIntake, 'audience_type' | 'audience_value'>>,
+): Promise<boolean> {
+  const values: Record<string, unknown> = {
+    name: intake.name,
+    message: intake.message,
+    category: intake.category,
+    priority: intake.priority,
+    publish_datetime: intake.publish_datetime || false,
+    expiry_datetime: intake.expiry_datetime || false,
+    link: intake.link || false,
+  }
+
+  if (intake.audience_type) {
+    values.audience_type = intake.audience_type
+    const field =
+      intake.audience_type === 'all_staff' ? null : AUDIENCE_VALUE_FIELDS[intake.audience_type]
+    if (field) {
+      values[field] = Array.isArray(intake.audience_value)
+        ? [[6, 0, intake.audience_value]]
+        : intake.audience_value
+    }
+  }
+
+  return write('school.announcement', [id], values)
+}
+
 /* --------------------------------------------------------------- program --- */
 
 export interface ProgramRow {
