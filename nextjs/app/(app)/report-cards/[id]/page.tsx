@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { Badge, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Row, StatusBadge, TableCard } from '@/components/ui'
+import { Badge, Cell, DataTable, DateText, EmptyState, ErrorState, LinkButton, PageHeader, Row, StatusBadge, TableCard } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -11,6 +11,9 @@ import {
 import { formatPercent, formatText, trimNumber } from '@/lib/format'
 import { statusLabel } from '@/lib/status'
 import { m2oLabel } from '@/lib/odoo/types'
+
+/** Odoo's own form offers Print on these states and no others. */
+const PRINTABLE_STATES = new Set(['published', 'superseded'])
 
 export const metadata = { title: 'Report card · Async School' }
 
@@ -62,6 +65,19 @@ export default async function ReportCardDetailPage({ params }: PageProps<'/repor
             </Badge>
           ) : null}
         </>
+      }
+      actions={
+        PRINTABLE_STATES.has(String(card.state || '')) ? (
+          <LinkButton
+            href={`/api/report-cards/${card.id}/report`}
+            variant="primary"
+            icon="documents"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Print
+          </LinkButton>
+        ) : undefined
       }
       backHref="/report-cards"
       backLabel="Back to report cards"
