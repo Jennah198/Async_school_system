@@ -2,7 +2,7 @@ import 'server-only'
 import { callKw, create, hasAccess, readOne, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
-import type { Many2one, Page, Selection } from '@/lib/odoo/types'
+import { m2oId, type Many2one, type Page, type Selection } from '@/lib/odoo/types'
 
 /**
  * Assessments, mark entry and report cards.
@@ -174,6 +174,86 @@ export function saveMark(
 ): Promise<boolean> {
   return callKw<boolean>('school.mark', 'write', [[markId], values], {
     context: reason ? { correction_reason: reason } : {},
+  })
+}
+
+export interface AssignmentOption {
+  id: number
+  teacher_id: Many2one
+  subject_id: Many2one
+  class_id: Many2one
+  term_id: Many2one
+  start_date: string
+  end_date: string | false
+}
+
+/**
+ * The assignments an assessment may be created against.
+ *
+ * An assessment must name the *exact* applicable assignment — Odoo checks that
+ * its class, subject and term all match, that it is active, and that the
+ * assessment date falls inside its window. Picking the assignment therefore
+ * settles the scope in one choice instead of three that can disagree.
+ */
+export function listAssignmentOptions(): Promise<Page<AssignmentOption>> {
+  return searchRead<AssignmentOption>(
+    'school.teacher.assignment',
+    ['teacher_id', 'subject_id', 'class_id', 'term_id', 'start_date', 'end_date'],
+    {
+      domain: [
+        ['state', '=', 'active'],
+        ['active', '=', true],
+      ],
+      limit: 200,
+      order: 'class_id, subject_id',
+    },
+  )
+}
+
+export interface AssessmentIntake {
+  assignmentId: number
+  name: string
+  assessment_type: string
+  date: string
+  max_mark: number
+  weight: number
+}
+
+/**
+ * Create an assessment in draft.
+ *
+ * The class, subject and term are read back from the assignment rather than
+ * taken from the form: Odoo rejects any disagreement, and a client-sent scope
+ * is never trusted for a record this one authorises against. The mark list is
+ * not created here — `action_open` generates it from the subject enrolments
+ * valid on the assessment date, which is the only way rows may come into
+ * existence.
+ */
+export async function createAssessment(intake: AssessmentIntake): Promise<number> {
+  const assignment = await readOne<AssignmentOption>(
+    'school.teacher.assignment',
+    intake.assignmentId,
+    ['class_id', 'subject_id', 'term_id', 'start_date', 'end_date'],
+  )
+  if (!assignment) throw new Error('That teacher assignment is no longer available.')
+
+  const classId = m2oId(assignment.class_id)
+  const subjectId = m2oId(assignment.subject_id)
+  const termId = m2oId(assignment.term_id)
+  if (classId === null || subjectId === null || termId === null) {
+    throw new Error('That assignment is missing its class, subject or term.')
+  }
+
+  return create('school.assessment', {
+    name: intake.name,
+    assessment_type: intake.assessment_type,
+    date: intake.date,
+    max_mark: intake.max_mark,
+    weight: intake.weight,
+    teacher_assignment_id: intake.assignmentId,
+    class_id: classId,
+    subject_id: subjectId,
+    term_id: termId,
   })
 }
 

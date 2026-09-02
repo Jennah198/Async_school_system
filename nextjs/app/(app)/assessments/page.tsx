@@ -1,22 +1,24 @@
-import { DateText, StatusBadge } from '@/components/ui'
+import { DateText, LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
 import { formatSelection } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
 import { classOptions, subjectOptions, termOptions } from '@/lib/odoo/filter-options'
 import { listAssessments } from '@/lib/odoo/models/assessment'
+import { hasAccess } from '@/lib/odoo/client'
 import { selectionOptions } from '@/lib/odoo/selections'
 import { m2oLabel } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Assessments · Async School' }
 
 export default async function AssessmentsPage({ searchParams }: PageProps<'/assessments'>) {
-  const [states, types, classes, subjects, terms] = await Promise.all([
+  const [states, types, classes, subjects, terms, canCreate] = await Promise.all([
     selectionOptions('school.assessment', 'state'),
     selectionOptions('school.assessment', 'assessment_type'),
     classOptions(),
     subjectOptions(),
     termOptions(),
+    hasAccess('school.assessment', 'create'),
   ])
 
   return (
@@ -45,6 +47,13 @@ export default async function AssessmentsPage({ searchParams }: PageProps<'/asse
         })
       }
       rowHref={(row) => `/assessments/${row.id}`}
+      action={
+        canCreate ? (
+          <LinkButton href="/assessments/new" variant="primary" icon="plus">
+            New assessment
+          </LinkButton>
+        ) : undefined
+      }
       emptyTitle="No assessments visible"
       emptyHint="A teacher sees assessments for their own exact assignment only."
       columns={[

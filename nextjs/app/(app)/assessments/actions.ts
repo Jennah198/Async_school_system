@@ -1,10 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
 import { changedRows } from '@/lib/mark-diff'
-import { saveMark } from '@/lib/odoo/models/assessment'
+import { createAssessment, saveMark } from '@/lib/odoo/models/assessment'
 
 export interface MarkListState {
   error?: string
@@ -87,4 +88,75 @@ export async function saveMarksAction(
   }
 
   return { ok: `Saved ${saved} ${saved === 1 ? 'mark' : 'marks'}.` }
+}
+
+export interface AssessmentFormState {
+  error?: string
+  fieldErrors?: Record<string, string>
+  values?: Record<string, string>
+}
+
+/**
+ * Create an assessment in draft.
+ *
+ * Odoo owns the hard rules — the date must fall inside the term, the term must
+ * belong to the class's academic year, the assignment must be the exact
+ * applicable one, and the assessment weights for a subject in a term may not
+ * exceed 100. Those messages are written for the person filling this in, so
+ * they are surfaced unchanged rather than pre-empted here.
+ */
+export async function createAssessmentAction(
+  _previous: AssessmentFormState,
+  form: FormData,
+): Promise<AssessmentFormState> {
+  await requireSession()
+
+  const text = (key: string) => String(form.get(key) ?? '').trim()
+  const assignmentId = Number(form.get('assignmentId'))
+  const name = text('name')
+  const assessmentType = text('assessment_type')
+  const date = text('date')
+  const maxMark = Number(text('max_mark'))
+  const weight = Number(text('weight'))
+
+  const values = {
+    name,
+    assessment_type: assessmentType,
+    date,
+    max_mark: text('max_mark'),
+    weight: text('weight'),
+    assignmentId: text('assignmentId'),
+  }
+
+  const fieldErrors: Record<string, string> = {}
+  if (!Number.isInteger(assignmentId) || assignmentId <= 0) {
+    fieldErrors.assignmentId = 'Choose the teaching assignment this assessment belongs to.'
+  }
+  if (!name) fieldErrors.name = 'A name is required.'
+  if (!assessmentType) fieldErrors.assessment_type = 'Choose a type.'
+  if (!date) fieldErrors.date = 'An assessment date is required.'
+  if (!Number.isFinite(maxMark) || maxMark <= 0) {
+    fieldErrors.max_mark = 'The maximum mark must be greater than zero.'
+  }
+  if (!Number.isFinite(weight) || weight < 0) {
+    fieldErrors.weight = 'The weight cannot be negative.'
+  }
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors, values }
+
+  let id: number
+  try {
+    id = await createAssessment({
+      assignmentId,
+      name,
+      assessment_type: assessmentType,
+      date,
+      max_mark: maxMark,
+      weight,
+    })
+  } catch (cause) {
+    return { error: toOdooError(cause).message, values }
+  }
+
+  revalidatePath('/assessments')
+  redirect(`/assessments/${id}`)
 }
