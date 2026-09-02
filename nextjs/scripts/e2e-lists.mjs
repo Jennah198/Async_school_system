@@ -86,7 +86,11 @@ check('students load', allStudents !== null && allStudents > 0, `total=${allStud
 const firstName = (await page.locator('main tbody tr td').first().textContent())?.trim() ?? ''
 const term = firstName.split(' ')[0]
 await page.fill('main input[type="search"]', term)
-await page.waitForTimeout(900)
+// Wait for the query to land in the URL rather than for a fixed interval:
+// the debounce is 300ms but the round trip to Odoo is not, and against a
+// remote staging instance a fixed sleep is just a flaky test.
+await page.waitForURL(/[?&]q=/, { timeout: 30_000 }).catch(() => {})
+await page.waitForLoadState('networkidle').catch(() => {})
 const searched = await total(page)
 check('search reduces the total', searched !== null && searched <= allStudents, `→ ${searched}`)
 check('search is in the URL', page.url().includes('q='), page.url())
@@ -105,7 +109,8 @@ const options = await statusSelect.locator('option').evaluateAll((nodes) =>
 )
 if (options.length) {
   await statusSelect.selectOption(options[0])
-  await page.waitForTimeout(800)
+  await page.waitForURL(/[?&]status=/, { timeout: 30_000 }).catch(() => {})
+  await page.waitForLoadState('networkidle').catch(() => {})
   const filtered = await total(page)
   check('filter reduces the total', filtered !== null && filtered <= allStudents, `→ ${filtered}`)
   check('filter is in the URL', /[?&]status=/.test(page.url()), page.url())
