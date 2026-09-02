@@ -158,6 +158,70 @@ if (offered.length === 0) {
     const [edited] = await odoo(sid, 'school.teacher', 'read', [[teacher.id], ['specialization']])
     check('Odoo stored the edit', edited.specialization === 'Physics', String(edited.specialization))
 
+    /* ------------------------------------------- the login actually works --- */
+
+    console.log(String.fromCharCode(10) + 'the provisioned login can sign in')
+    /*
+      This is the check that was missing. The first version of this feature
+      created the account and left it with no password, relying on Odoo to
+      email a set-password link — and this deployment has no mail server, so
+      nobody could ever sign in. Creating the account is not the same as the
+      teacher being able to use it.
+    */
+    const mailServers = await odoo(sid, 'ir.mail_server', 'search_count', [[]]).catch(() => 0)
+    const [beforePw] = await odoo(sid, 'school.teacher', 'read', [[teacher.id], ['user_id']])
+    if (beforePw.user_id) {
+      const probePassword = `Probe-${Date.now().toString().slice(-6)}!aA`
+      await page.goto(`${BASE}/teachers/${teacher.id}`, { waitUntil: 'domcontentloaded' })
+      const reset = page.locator('main button:has-text("Reset password")')
+      check('a password can be set from the profile', (await reset.count()) === 1,
+        `mail servers configured: ${mailServers}`)
+      if (await reset.count()) {
+        await reset.click()
+        await page.waitForTimeout(300)
+        await page.fill('main input[name="login_password"]', probePassword)
+        await page.locator('main button:has-text("Set password")').click()
+        await page.waitForTimeout(3000)
+
+        // The real proof: authenticate against Odoo as that teacher.
+        const login = beforePw.user_id[1]
+        const users = await odoo(sid, 'res.users', 'search_read', [], {
+          domain: [['id', '=', beforePw.user_id[0]]], fields: ['login'], limit: 1,
+        })
+        let signedIn = false
+        try {
+          await odooLogin(users[0].login)
+          signedIn = false // wrong password would have thrown; this used the shared one
+        } catch { /* expected */ }
+        const direct = await fetch(`${ODOO}/web/session/authenticate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', method: 'call',
+            params: { db: DB, login: users[0].login, password: probePassword },
+          }),
+        })
+        const body = await direct.json()
+        signedIn = Boolean(body.result?.uid)
+        check('the teacher can now authenticate against Odoo', signedIn,
+          signedIn ? `uid ${body.result.uid}` : (body.error?.data?.message ?? 'refused'))
+      }
+
+      // And a weak password must be refused by the module's own policy.
+      await page.goto(`${BASE}/teachers/${teacher.id}`, { waitUntil: 'domcontentloaded' })
+      if (await page.locator('main button:has-text("Reset password")').count()) {
+        await page.locator('main button:has-text("Reset password")').click()
+        await page.waitForTimeout(300)
+        await page.fill('main input[name="login_password"]', 'weak')
+        await page.locator('main button:has-text("Set password")').click()
+        await page.waitForTimeout(1500)
+        const shown = (await page.locator('main').innerText()) ?? ''
+        check('a weak password is refused with the policy',
+          /8 characters|uppercase/i.test(shown),
+          shown.split(String.fromCharCode(10)).find((l) => /8 characters|uppercase/i.test(l))?.slice(0, 70) ?? '')
+      }
+    }
+
     /* ---------------------------------------------------------- login --- */
 
     console.log('\nlogin provisioning is Odoo\'s')
