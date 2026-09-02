@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { DateText, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
@@ -24,6 +25,14 @@ export default async function ProgramsPage({ searchParams }: PageProps<'/program
       searchParams={searchParams}
       subtitle="Events and activities on the school calendar."
       search={{ placeholder: 'Program name or location' }}
+      action={
+        <Link
+          href="/programs/calendar"
+          className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+        >
+          Calendar
+        </Link>
+      }
       filters={[
         { key: 'status', label: 'Status', options: states },
         { key: 'type', label: 'Type', options: types },
