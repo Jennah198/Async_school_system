@@ -42,9 +42,14 @@ export default async function StaffPage({ searchParams }: PageProps<'/staff'>) {
       }
       action={
         canCreate ? (
-          <LinkButton href="/staff/new" variant="primary" icon="plus">
-            Register staff
-          </LinkButton>
+          <span className="flex items-center gap-2">
+            <LinkButton href="/staff/import" icon="documents">
+              Import CSV
+            </LinkButton>
+            <LinkButton href="/staff/new" variant="primary" icon="plus">
+              Register staff
+            </LinkButton>
+          </span>
         ) : undefined
       }
       rowHref={(row) => `/staff/${row.id}`}

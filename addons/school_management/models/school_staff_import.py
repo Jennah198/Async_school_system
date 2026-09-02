@@ -1,8 +1,10 @@
+import base64
 import csv
+import io
 import logging
 
 from odoo import api, models
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 from odoo.tools import file_open
 
 from .school_staff import FAYDA_ID_PATTERN
@@ -86,6 +88,39 @@ class SchoolStaffImport(models.AbstractModel):
     def _read_source(self):
         with file_open(SOURCE_FILE, mode='r') as handle:
             return list(csv.DictReader(handle))
+
+    @api.model
+    def _rows_from_upload(self, content):
+        """An uploaded CSV, in the same row shape `_read_source` returns.
+
+        utf-8-sig because a spreadsheet export usually carries a BOM, and the
+        first column header is what every row is keyed by.
+        """
+        try:
+            text = base64.b64decode(content).decode('utf-8-sig')
+        except (ValueError, UnicodeDecodeError) as error:
+            raise ValidationError(
+                'That file could not be read as UTF-8 CSV.') from error
+        rows = list(csv.DictReader(io.StringIO(text)))
+        if not rows:
+            raise ValidationError('That file has a header but no rows.')
+        return rows
+
+    @api.model
+    def dry_run_upload(self, content):
+        """Analyse an uploaded CSV without writing anything."""
+        self._require_importer()
+        return self._analyse(rows=self._rows_from_upload(content))
+
+    @api.model
+    def run_import_upload(self, content):
+        """Import an uploaded CSV, on exactly the terms `run_import` uses."""
+        return self.run_import(rows=self._rows_from_upload(content))
+
+    @api.model
+    def _require_importer(self):
+        if not self.env.user.has_group('base.group_system'):
+            raise AccessError('Only a system administrator can import staff data.')
 
     @api.model
     def _existing_record(self, source_id):
@@ -208,7 +243,7 @@ class SchoolStaffImport(models.AbstractModel):
         }
 
     @api.model
-    def run_import(self):
+    def run_import(self, rows=None):
         """Create the staff the dry run cleared. Nothing is updated or deleted:
         a row already imported, or one the dry run held back, is left alone.
 
@@ -216,11 +251,11 @@ class SchoolStaffImport(models.AbstractModel):
         phone number, a job title and a responsibility, none of which the source
         carries, and inventing them is exactly what an import must not do.
         """
-        if not self.env.user.has_group('base.group_system'):
-            raise AccessError('Only a system administrator can import staff data.')
+        self._require_importer()
 
-        report = self._analyse()
-        rows = {r['staff_id'].strip(): r for r in self._read_source()}
+        source = self._read_source() if rows is None else rows
+        report = self._analyse(rows=source)
+        rows = {r['staff_id'].strip(): r for r in source}
         created = []
 
         for source_id in report['importable']:
