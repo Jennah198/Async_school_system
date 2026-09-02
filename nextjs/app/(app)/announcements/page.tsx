@@ -1,19 +1,21 @@
-import { Badge, StatusBadge } from '@/components/ui'
+import { Badge, DateText, LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
-import { formatDateTime, formatSelection } from '@/lib/format'
+import { formatSelection } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
+import { hasAccess } from '@/lib/odoo/client'
 import { listAnnouncements } from '@/lib/odoo/models/operations'
 import { selectionOptions } from '@/lib/odoo/selections'
 
 export const metadata = { title: 'Announcements · Async School' }
 
 export default async function AnnouncementsPage({ searchParams }: PageProps<'/announcements'>) {
-  const [states, categories, audiences, priorities] = await Promise.all([
+  const [states, categories, audiences, priorities, canCreate] = await Promise.all([
     selectionOptions('school.announcement', 'state'),
     selectionOptions('school.announcement', 'category'),
     selectionOptions('school.announcement', 'audience_type'),
     selectionOptions('school.announcement', 'priority'),
+    hasAccess('school.announcement', 'create'),
   ])
   const priorityLabel = new Map(priorities.map((option) => [option.value, option.label]))
 
@@ -42,6 +44,13 @@ export default async function AnnouncementsPage({ searchParams }: PageProps<'/an
         })
       }
       rowHref={(row) => `/announcements/${row.id}`}
+      action={
+        canCreate ? (
+          <LinkButton href="/announcements/new" variant="primary" icon="plus">
+            New announcement
+          </LinkButton>
+        ) : undefined
+      }
       emptyTitle="No announcements visible"
       emptyHint="You see the ones you authored and the ones addressed to you."
       columns={[
@@ -75,7 +84,7 @@ export default async function AnnouncementsPage({ searchParams }: PageProps<'/an
           label: 'Published',
           sortField: 'publish_datetime',
           hideBelow: 'md',
-          render: (row) => formatDateTime(row.publish_datetime),
+          render: (row) => <DateText value={row.publish_datetime} withTime />,
         },
         {
           key: 'live',

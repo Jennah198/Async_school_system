@@ -234,6 +234,106 @@ export function getAnnouncement(
   return readOne('school.announcement', id, [...ANNOUNCEMENT_FIELDS, 'message', 'link'])
 }
 
+/**
+ * Which field carries the audience for each audience type.
+ *
+ * This mirrors `AUDIENCE_VALUE_FIELDS` in the addon, and Odoo's
+ * `_check_audience_values` rejects a create where the matching field is empty —
+ * so every type but `all_staff` needs a value chosen.
+ */
+const AUDIENCE_VALUE_FIELDS = {
+  department: 'department',
+  responsibility: 'responsibility',
+  teacher_group: 'teacher_ids',
+  subject_group: 'subject_ids',
+  class_section: 'class_ids',
+  branch_campus: 'campus_ids',
+  selected_staff: 'staff_ids',
+} as const
+
+export type AudienceType = keyof typeof AUDIENCE_VALUE_FIELDS | 'all_staff'
+
+/** The record-backed audience types, and the model each one picks from. */
+const AUDIENCE_RECORD_MODELS = {
+  teacher_group: 'school.teacher',
+  subject_group: 'school.subject',
+  class_section: 'school.class',
+  branch_campus: 'school.campus',
+  selected_staff: 'school.staff',
+} as const
+
+export type AudienceRecordType = keyof typeof AUDIENCE_RECORD_MODELS
+
+export type AudienceChoices = Record<AudienceRecordType, SimpleRow[]>
+
+/**
+ * The pickable records behind every record-backed audience type.
+ *
+ * Each one degrades to an empty list rather than failing the page: a teacher
+ * authoring an announcement cannot read `school.staff`, and that is correct —
+ * they simply do not get the "selected staff" audience.
+ */
+export async function audienceChoices(): Promise<AudienceChoices> {
+  const keys = Object.keys(AUDIENCE_RECORD_MODELS) as AudienceRecordType[]
+  const pages = await Promise.all(
+    keys.map((key) =>
+      orNullOnRefusal(
+        searchRead<SimpleRow>(AUDIENCE_RECORD_MODELS[key], ['name'], {
+          limit: 200,
+          order: 'name',
+        }),
+      ),
+    ),
+  )
+  return Object.fromEntries(
+    keys.map((key, index) => [key, pages[index]?.rows ?? []]),
+  ) as AudienceChoices
+}
+
+export interface AnnouncementIntake {
+  name: string
+  message: string
+  category: string
+  priority: string
+  audience_type: AudienceType
+  /** A selection code for department/responsibility, record ids for the rest. */
+  audience_value: string | number[]
+  publish_datetime?: string
+  expiry_datetime?: string
+  link?: string
+}
+
+/**
+ * Create an announcement in draft.
+ *
+ * Publishing is a separate, allowlisted transition — `action_publish` resolves
+ * the recipients and stamps the visibility window, and writing `state` here
+ * would skip all of it.
+ */
+export function createAnnouncement(intake: AnnouncementIntake): Promise<number> {
+  const values: Record<string, unknown> = {
+    name: intake.name,
+    message: intake.message,
+    category: intake.category,
+    priority: intake.priority,
+    audience_type: intake.audience_type,
+    publish_datetime: intake.publish_datetime || false,
+    expiry_datetime: intake.expiry_datetime || false,
+    link: intake.link || false,
+  }
+
+  const field =
+    intake.audience_type === 'all_staff' ? null : AUDIENCE_VALUE_FIELDS[intake.audience_type]
+  if (field) {
+    // Odoo's many2many write command: 6 replaces the whole set.
+    values[field] = Array.isArray(intake.audience_value)
+      ? [[6, 0, intake.audience_value]]
+      : intake.audience_value
+  }
+
+  return create('school.announcement', values)
+}
+
 /* --------------------------------------------------------------- program --- */
 
 export interface ProgramRow {
