@@ -1,5 +1,4 @@
 'use server'
-import { addResponsibility, endResponsibility, type ResponsibilityIntake } from '@/lib/odoo/models/staff'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
@@ -206,6 +205,7 @@ export async function updateStaffAction(_previous: FormState, form: FormData): P
 export interface ResponsibilityState {
   error?: string
   ok?: string
+  fieldErrors?: Record<string, string>
 }
 
 /**
@@ -289,12 +289,6 @@ export async function setPrimaryResponsibilityAction(
   return { ok: 'Primary responsibility updated.' }
 }
 
-export interface ResponsibilityState {
-  error?: string
-  ok?: string
-  fieldErrors?: Record<string, string>
-}
-
 export async function assignResponsibilityAction(
   _previous: ResponsibilityState,
   form: FormData,
@@ -326,7 +320,7 @@ export async function assignResponsibilityAction(
     return { fieldErrors }
   }
 
-  const values: ResponsibilityIntake = {
+  const values = {
     responsibility,
     start_date: startDate,
     is_primary: isPrimary,
@@ -345,30 +339,4 @@ export async function assignResponsibilityAction(
 
   revalidatePath(`/staff/${staffId}`)
   return { ok: 'Responsibility assigned.' }
-}
-
-export async function endResponsibilityAction(
-  _previous: ResponsibilityState,
-  form: FormData,
-): Promise<ResponsibilityState> {
-  await requireSession()
-
-  const id = Number(form.get('id'))
-  const staffId = Number(form.get('staffId'))
-  const endDate = String(form.get('end_date') ?? '').trim() || new Date().toISOString().slice(0, 10)
-
-  if (!Number.isFinite(id) || id <= 0) {
-    return { error: 'Missing responsibility record.' }
-  }
-
-  try {
-    await endResponsibility(id, endDate)
-  } catch (cause) {
-    return { error: toOdooError(cause).message }
-  }
-
-  if (Number.isFinite(staffId) && staffId > 0) {
-    revalidatePath(`/staff/${staffId}`)
-  }
-  return { ok: 'Responsibility ended.' }
 }
