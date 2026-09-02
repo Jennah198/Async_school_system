@@ -11,34 +11,57 @@ import { orNullOnRefusal } from './errors'
  * adds a state — which has happened three times already in this module. Asking
  * `fields_get` costs one small call and also returns Odoo's own labels, which
  * are the translated ones.
- *
- * `cache` dedupes within a single request, so a screen that filters on three
- * selection fields of the same model still makes one call per field, not per
- * component that asks.
  */
-export const selectionOptions = cache(
-  async (model: string, field: string): Promise<Array<{ value: string; label: string }>> => {
+
+/**
+ * Every selection field on one model, in one call.
+ *
+ * Keyed by model rather than by field on purpose. A screen that filters on
+ * three selection fields of the same model used to make three round trips for
+ * one dictionary; the dashboard, which groups by a dozen selection fields
+ * across seven models, made a dozen. Asking for the whole model's metadata
+ * costs no more than asking for one field of it — `attributes: ['selection']`
+ * keeps the response to the selections themselves — so the call count is now
+ * the number of models involved rather than the number of questions asked.
+ *
+ * `cache` dedupes within a single request, so this is one call per model per
+ * render however many components ask.
+ */
+const selectionsFor = cache(
+  async (model: string): Promise<Record<string, Array<{ value: string; label: string }>>> => {
     const meta = await orNullOnRefusal(
-      callKw<Record<string, { selection?: Array<[string, string]> }>>(
-        model,
-        'fields_get',
-        [[field]],
-        { attributes: ['selection'] },
-      ),
+      callKw<Record<string, { selection?: Array<[string, string]> }>>(model, 'fields_get', [], {
+        attributes: ['selection'],
+      }),
     )
-    // A role that cannot read the model gets no filter rather than an error;
+    // A role that cannot read the model gets no options rather than an error;
     // the list itself will already be explaining the refusal.
-    return (meta?.[field]?.selection ?? []).map(([value, label]) => ({ value, label }))
+    if (!meta) return {}
+
+    return Object.fromEntries(
+      Object.entries(meta)
+        .filter(([, field]) => Array.isArray(field.selection))
+        .map(([name, field]) => [
+          name,
+          (field.selection ?? []).map(([value, label]) => ({ value, label })),
+        ]),
+    )
   },
 )
 
-/** Several selection fields of one model, in one place. */
+/** The choices one selection field accepts, with Odoo's own labels. */
+export async function selectionOptions(
+  model: string,
+  field: string,
+): Promise<Array<{ value: string; label: string }>> {
+  return (await selectionsFor(model))[field] ?? []
+}
+
+/** Several selection fields of one model, in one place — and now one call. */
 export async function selectionFilters(
   model: string,
   fields: readonly string[],
 ): Promise<Record<string, Array<{ value: string; label: string }>>> {
-  const entries = await Promise.all(
-    fields.map(async (field) => [field, await selectionOptions(model, field)] as const),
-  )
-  return Object.fromEntries(entries)
+  const all = await selectionsFor(model)
+  return Object.fromEntries(fields.map((field) => [field, all[field] ?? []]))
 }
