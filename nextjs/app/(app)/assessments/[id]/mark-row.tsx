@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { saveMarkAction, type MarkState } from '../actions'
 
 /**
@@ -40,6 +40,21 @@ export function MarkRow({
   requiresReason: boolean
 }) {
   const [state, formAction, pending] = useActionState<MarkState, FormData>(saveMarkAction, {})
+  const [localScore, setLocalScore] = useState(String(score ?? ''))
+  const [clientError, setClientError] = useState<string | null>(null)
+
+  const handleFormSubmit = (formData: FormData) => {
+    const val = formData.get('score')
+    if (val !== null && val !== '') {
+      const num = Number(val)
+      if (num < 0 || num > maxScore) {
+        setClientError(`Score must be between 0 and ${maxScore}`)
+        return
+      }
+    }
+    setClientError(null)
+    formAction(formData)
+  }
 
   const cell = 'px-4 py-2 align-middle'
   const input =
@@ -49,7 +64,7 @@ export function MarkRow({
     <tr className="border-b border-silver/70 last:border-0">
       <td className={`${cell} font-medium text-graphite`}>{student}</td>
       <td className={cell} colSpan={5}>
-        <form action={formAction} className="flex flex-wrap items-center gap-2">
+        <form action={handleFormSubmit} className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="markId" value={markId} />
           <input type="hidden" name="assessmentId" value={assessmentId} />
 
@@ -63,7 +78,8 @@ export function MarkRow({
             step="0.01"
             min={0}
             max={maxScore}
-            defaultValue={score}
+            value={localScore}
+            onChange={(e) => setLocalScore(e.target.value)}
             disabled={!editable}
             className={input}
           />
@@ -121,12 +137,17 @@ export function MarkRow({
             </button>
           ) : null}
 
-          {state.error ? (
+          {clientError ? (
+            <span role="alert" className="text-[11px] text-danger">
+              {clientError}
+            </span>
+          ) : null}
+          {state.error && !clientError ? (
             <span role="alert" className="text-[11px] text-danger">
               {state.error}
             </span>
           ) : null}
-          {state.ok ? (
+          {state.ok && !clientError ? (
             <span role="status" className="text-[11px] text-action-blue">
               {state.ok}
             </span>
