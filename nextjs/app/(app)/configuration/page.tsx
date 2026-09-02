@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Card, CardHeader, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Row } from '@/components/ui'
 import { formatSelection } from '@/lib/format'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -112,6 +113,14 @@ export default async function ConfigurationPage() {
       <PageHeader
         title="Configuration"
         subtitle="The academic structure every other screen draws on. Odoo owns the constraints between these."
+        action={
+          <Link
+            href="/configuration/grading"
+            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+          >
+            Grading schemes
+          </Link>
+        }
       />
 
       <div className="space-y-4">
