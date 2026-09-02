@@ -1,14 +1,15 @@
 import Link from 'next/link'
-import { Card, CardHeader, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Pagination, Row, Toolbar } from '@/components/ui'
+import { Card, CardHeader, EmptyState, ErrorState, PageHeader, Pagination, Toolbar } from '@/components/ui'
 import { DateFilter, FilterSelect, SearchField } from '@/components/list-toolbar'
-import { formatSelection, formatText, pluralise, todayIso } from '@/lib/format'
+import { pluralise, todayIso } from '@/lib/format'
 import { listHrefs, parseListQuery, toOdooOrder } from '@/lib/list-query'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
 import { classOptions } from '@/lib/odoo/filter-options'
 import { attendanceStatusOptions, listAttendance } from '@/lib/odoo/models/operations'
 import { m2oLabel } from '@/lib/odoo/types'
-import { AttendanceStatus, RosterForm } from './roster-form'
+import { AttendanceList } from './attendance-list'
+import { RosterForm } from './roster-form'
 
 export const metadata = { title: 'Attendance · Async School' }
 
@@ -108,35 +109,19 @@ export default async function AttendancePage({ searchParams }: PageProps<'/atten
             }
           />
         ) : (
-          <DataTable
-            caption="Attendance register"
-            columns={[
-              { key: 'date', label: 'Date' },
-              { key: 'student', label: 'Student' },
-              { key: 'class', label: 'Class', hideBelow: 'sm' },
-              { key: 'type', label: 'Type', hideBelow: 'lg' },
-              { key: 'period', label: 'Period', hideBelow: 'lg' },
-              { key: 'status', label: 'Status' },
-            ]}
-          >
-            {attendance.rows.map((row) => (
-              <Row key={row.id}>
-                <Cell strong>{<DateText value={row.date} />}</Cell>
-                <Cell>{m2oLabel(row.student_id)}</Cell>
-                <Cell hideBelow="sm">{m2oLabel(row.class_id)}</Cell>
-                <Cell hideBelow="lg">{formatSelection(row.attendance_type)}</Cell>
-                <Cell hideBelow="lg">{formatText(row.period)}</Cell>
-                <Cell>
-                  <AttendanceStatus
-                    id={row.id}
-                    status={String(row.status || '')}
-                    options={statuses}
-                    editable={canWrite}
-                  />
-                </Cell>
-              </Row>
-            ))}
-          </DataTable>
+          <AttendanceList
+            rows={attendance.rows.map((row) => ({
+              id: row.id,
+              date: row.date,
+              student: m2oLabel(row.student_id),
+              className: m2oLabel(row.class_id),
+              attendanceType: row.attendance_type,
+              period: row.period,
+              status: String(row.status || ''),
+            }))}
+            statuses={statuses}
+            editable={canWrite}
+          />
         )}
 
         <Pagination
