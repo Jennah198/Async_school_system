@@ -20,18 +20,48 @@ const ROLES = {
 
 /** Panels each role's dashboard must offer, by heading. */
 const EXPECTED = {
-  teacher: ["Today's lessons", 'Waiting on you', 'Mark lists open to you', 'Attendance today'],
-  registrar: ['Waiting on you', 'Registration pipeline', 'Recent registrations'],
-  director: ['Awaiting approval', 'Student lifecycle'],
+  teacher: [
+    "Today's lessons",
+    'Waiting on you',
+    'Mark lists open to you',
+    'Attendance today',
+    'My assignments',
+    'My classes and subjects',
+  ],
+  registrar: [
+    'Waiting on you',
+    'Registration pipeline',
+    'Students by grade',
+    'Latest registrations',
+    'School structure',
+  ],
+  director: ['Waiting on a decision', 'Average by grade', 'Report cards'],
   frontoffice: ['Find a student', 'Live announcements'],
 }
 
-/** Panels a role must NOT see, because the screen belongs to somebody else. */
+/*
+  Panels a role must NOT see, because the screen belongs to somebody else.
+
+  This is the point of having separate dashboards rather than one screen with
+  things hidden: a teacher is not shown the school's registration funnel, and a
+  director is not shown a timetable they have no part in.
+*/
 const FORBIDDEN = {
-  teacher: ['Registration pipeline', 'Awaiting approval'],
-  registrar: ["Today's lessons"],
-  director: ["Today's lessons", 'Find a student'],
-  frontoffice: ['Registration pipeline', "Today's lessons"],
+  teacher: ['Registration pipeline', 'School structure', 'Staff by department'],
+  registrar: ["Today's lessons", 'My assignments'],
+  director: ["Today's lessons", 'Find a student', 'My assignments'],
+  frontoffice: ['Registration pipeline', "Today's lessons", 'My assignments'],
+}
+
+/*
+  Bands each role's page is divided into, as an h2. Matched on the DOM text,
+  not what is painted: the band titles are upper-cased in CSS, so asserting on
+  "TODAY" would pass or fail on a stylesheet rather than on the markup.
+*/
+const BANDS = {
+  teacher: ['Today', 'My classes', 'My work'],
+  registrar: ['Your queue', 'The roll', 'The school'],
+  director: ['Outcomes', 'Approvals'],
 }
 
 /*
@@ -59,6 +89,14 @@ for (const [role, login] of Object.entries(ROLES)) {
   await page.fill('#password', PASSWORD)
   await page.click('#submit-login')
   await page.waitForURL('**/dashboard', { timeout: 90_000 })
+  /*
+    The dashboard streams: Next sends a skeleton immediately and swaps the real
+    page in when Odoo answers. Landing on the URL is therefore not the same as
+    the content being there, and reading `main` too early captures the
+    placeholder. The heading only exists on the real page, so waiting for it
+    waits for exactly the right thing.
+  */
+  await page.waitForSelector('main h1', { timeout: 90_000 })
 
   console.log(`\n${role} (${login})`)
   const visible = (await page.locator('main').innerText()) ?? ''
@@ -72,15 +110,35 @@ for (const [role, login] of Object.entries(ROLES)) {
   )
 
   for (const panel of EXPECTED[role] ?? []) {
-    check(`shows "${panel}"`, (await page.locator(`main h2:text-is("${panel}")`).count()) > 0)
+    check(`shows "${panel}"`, (await page.locator(`main h3:text-is("${panel}")`).count()) > 0)
   }
   for (const panel of FORBIDDEN[role] ?? []) {
-    check(`does not show "${panel}"`, (await page.locator(`main h2:text-is("${panel}")`).count()) === 0)
+    check(`does not show "${panel}"`, (await page.locator(`main h3:text-is("${panel}")`).count()) === 0)
   }
+  for (const band of BANDS[role] ?? []) {
+    check(`is divided into "${band}"`, (await page.locator(`main h2:text-is("${band}")`).count()) > 0)
+  }
+
+  /*
+    Headings have to nest: the page is one h1, each band an h2, each panel an
+    h3. A dashboard of thirty equal headings is navigable by sight and by
+    nothing else.
+  */
+  const levels = await page.evaluate(() =>
+    [...document.querySelectorAll('main h1, main h2, main h3')].map((node) =>
+      Number(node.tagName[1]),
+    ),
+  )
+  check('there is exactly one h1', levels.filter((level) => level === 1).length === 1)
+  check(
+    'no heading level is skipped',
+    levels.every((level, index) => index === 0 || level <= levels[index - 1] + 1),
+    levels.join(''),
+  )
 
   // Every tile is a real figure or an explicit dash, never a zero standing in
   // for a refusal.
-  const tiles = await page.locator('main a[href] p.tabular, main div p.tabular').allTextContents()
+  const tiles = await page.locator('main .tabular').allTextContents()
   const dashes = tiles.filter((t) => t.trim() === '—').length
   const restrictedNotes = await page.locator('main :text("Not available to your role")').count()
   check(

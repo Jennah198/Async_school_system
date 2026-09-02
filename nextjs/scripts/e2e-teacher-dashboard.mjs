@@ -86,6 +86,14 @@ async function dashboardFor(login) {
   await page.fill('#password', PASSWORD)
   await page.click('#submit-login')
   await page.waitForURL('**/dashboard', { timeout: 90_000 })
+/*
+  The dashboard streams: Next sends a skeleton immediately and swaps the real
+  page in when Odoo answers. Landing on the URL is therefore not the same as
+  the content being there, and reading `main` too early captures the
+  placeholder. The heading only exists on the real page, so waiting for it
+  waits for exactly the right thing.
+*/
+await page.waitForSelector('main h1', { timeout: 90_000 })
   const text = (await page.locator('main').innerText()) ?? ''
   const chips = await page.locator('main dd span').allTextContents()
   const assignmentRows = await page
