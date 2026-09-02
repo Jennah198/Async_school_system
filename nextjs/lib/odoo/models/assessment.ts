@@ -82,15 +82,6 @@ export function listAssessmentsAwaitingEntry(limit = 6): Promise<Page<Assessment
 }
 
 /** Mark lists submitted and waiting on an exam officer. */
-export function listAssessmentsAwaitingApproval(limit = 6): Promise<Page<AssessmentRow> | null> {
-  return orNullOnRefusal(
-    searchRead<AssessmentRow>('school.assessment', ASSESSMENT_FIELDS, {
-      domain: [['state', '=', 'submitted']],
-      limit,
-      order: 'date desc',
-    }),
-  )
-}
 
 export function getAssessment(id: number): Promise<AssessmentRow | null> {
   return readOne<AssessmentRow>('school.assessment', id, ASSESSMENT_FIELDS)

@@ -65,9 +65,6 @@ export async function attendanceStatusOptions(): Promise<Array<{ value: string; 
   return (meta.status?.selection ?? []).map(([value, label]) => ({ value, label }))
 }
 
-export function setAttendanceStatus(id: number, status: string): Promise<boolean> {
-  return write('school.attendance', [id], { status })
-}
 
 /**
  * Build the roster for one class and date.
@@ -484,25 +481,7 @@ export function getDocument(id: number): Promise<DocumentRow | null> {
   return readOne<DocumentRow>('school.document', id, DOCUMENT_FIELDS)
 }
 
-export interface DocumentTypeRow {
-  id: number
-  name: string
-  code: string | false
-  owner_type: Selection
-  expires: boolean
-  sensitive: boolean
-  active: boolean
-}
 
-export function listDocumentTypes(): Promise<Page<DocumentTypeRow> | null> {
-  return orNullOnRefusal(
-    searchRead<DocumentTypeRow>(
-      'school.document.type',
-      ['name', 'code', 'owner_type', 'expires', 'sensitive', 'active'],
-      { limit: 100, order: 'name' },
-    ),
-  )
-}
 
 /* --------------------------------------------------------- configuration --- */
 
