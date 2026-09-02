@@ -1,12 +1,14 @@
+import { PromoteForm } from './promote-form'
 import Link from 'next/link'
 import { formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
 import { Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
+import { listAcademicYears } from '@/lib/odoo/models/school'
 import { toOdooError } from '@/lib/odoo/errors'
-import { getEnrollment, listPlacements, listStudentSubjects } from '@/lib/odoo/models/student'
-import { m2oLabel } from '@/lib/odoo/types'
+import { listPromotionTargets, getEnrollment, listPlacements, listStudentSubjects } from '@/lib/odoo/models/student'
+import { m2oId, m2oLabel } from '@/lib/odoo/types'
 import { availableTransitions } from '@/lib/odoo/workflows'
 
 export const metadata = { title: 'Enrolment · Async School' }
@@ -16,13 +18,15 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
   const id = Number((await params).id)
   if (!Number.isFinite(id)) notFound()
 
-  let enrollment, subjects, placements, canWrite
+  let enrollment, subjects, placements, canWrite, years, targets
   try {
-    ;[enrollment, subjects, placements, canWrite] = await Promise.all([
+    ;[enrollment, subjects, placements, canWrite, years, targets] = await Promise.all([
       getEnrollment(id),
       listStudentSubjects(id),
       listPlacements(id),
       hasAccess('school.enrollment', 'write'),
+      listAcademicYears({ limit: 50, order: 'date_start' }),
+      listPromotionTargets(),
     ])
   } catch (cause) {
     return (
@@ -160,6 +164,19 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
               revalidate={[`/enrollments/${enrollment.id}`, '/enrollments']}
               canWrite={canWrite}
             />
+            {canWrite && state === 'active' ? (
+              <div className="mt-3">
+                <PromoteForm
+                  enrollmentId={enrollment.id}
+                  years={years.rows.map((year) => ({ id: year.id, name: year.name }))}
+                  classes={targets.rows.map((row) => ({
+                    id: row.id,
+                    name: m2oLabel(row.academic_year_id) + ' · ' + row.name,
+                    yearId: m2oId(row.academic_year_id),
+                  }))}
+                />
+              </div>
+            ) : null}
             <p className="mt-4 border-t border-silver pt-3 text-[11px] text-stone">
               Activation checks class capacity, allocates the roll number, records the placement and
               derives the subjects — all inside Odoo.
