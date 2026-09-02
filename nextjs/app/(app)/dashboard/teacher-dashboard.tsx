@@ -9,7 +9,6 @@ import {
   TileGrid,
 } from '@/components/dashboard/panels'
 import {
-  formatDate,
   formatEthiopianDate,
   formatSelection,
   formatTimeRange,
