@@ -5,15 +5,11 @@ import { Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, E
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
-import {
-  getAssessment,
-  listAssessmentEvents,
-  listAssessmentMarks,
-  markStatusOptions,
-} from '@/lib/odoo/models/assessment'
+import { UNLOCKABLE_STATES, getAssessment, listAssessmentEvents, listAssessmentMarks, markStatusOptions } from '@/lib/odoo/models/assessment'
 import { m2oLabel } from '@/lib/odoo/types'
 import { availableTransitions } from '@/lib/odoo/workflows'
 import { MarkList } from './mark-list'
+import { UnlockForm } from './unlock-form'
 
 export const metadata = { title: 'Assessment · Async School' }
 
@@ -162,6 +158,11 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
               revalidate={[`/assessments/${assessment.id}`, '/assessments', '/marks']}
               canWrite={canWrite}
             />
+            {canWrite && UNLOCKABLE_STATES.has(state) ? (
+              <div className="mt-3">
+                <UnlockForm assessmentId={assessment.id} />
+              </div>
+            ) : null}
             <p className="mt-4 border-t border-silver pt-3 text-[11px] text-stone">
               Approve, lock, publish and return are Exam Officer actions — Odoo re-checks that on
               every call, including a direct field write.

@@ -1,8 +1,17 @@
 import { Card, CardHeader, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Row } from '@/components/ui'
 import { formatSelection } from '@/lib/format'
 import { toOdooError } from '@/lib/odoo/errors'
+import { hasAccess } from '@/lib/odoo/client'
+import { listAcademicYears } from '@/lib/odoo/models/school'
 import { listConfig, listCurriculum, listTerms, type SimpleRow } from '@/lib/odoo/models/operations'
-import { m2oLabel, type Many2one } from '@/lib/odoo/types'
+import {
+  listSetupClasses,
+  listSetupGrades,
+  listSetupSections,
+  listSetupSubjects,
+} from '@/lib/odoo/models/setup'
+import { ClassSubjectsForm, GradeSectionsForm, SchoolSetupForm } from './setup-forms'
+import { m2oId, m2oLabel, type Many2one } from '@/lib/odoo/types'
 import type { Page } from '@/lib/odoo/types'
 
 export const metadata = { title: 'Configuration · Async School' }
@@ -57,6 +66,7 @@ const time = (value: unknown) => {
 
 export default async function ConfigurationPage() {
   let grades, sections, streams, shifts, campuses, rooms, terms, curriculum
+  let setupGrades, setupSections, setupSubjects, setupClasses, setupYears, canSetUp
   try {
     ;[grades, sections, streams, shifts, campuses, rooms, terms, curriculum] = await Promise.all([
       listConfig('grades'),
@@ -68,6 +78,15 @@ export default async function ConfigurationPage() {
       listTerms(),
       listCurriculum(),
     ])
+    ;[setupGrades, setupSections, setupSubjects, setupClasses, setupYears, canSetUp] =
+      await Promise.all([
+        listSetupGrades(),
+        listSetupSections(),
+        listSetupSubjects(),
+        listSetupClasses(),
+        listAcademicYears({ limit: 50, order: 'date_start desc' }),
+        hasAccess('school.class', 'create'),
+      ])
   } catch (cause) {
     return (
       <>
@@ -77,6 +96,17 @@ export default async function ConfigurationPage() {
     )
   }
 
+  const currentByClass: Record<number, number[]> = {}
+  for (const row of curriculum.rows) {
+    const classId = m2oId(row.class_id)
+    const subjectId = m2oId(row.subject_id)
+    if (classId === null || subjectId === null) continue
+    ;(currentByClass[classId] ??= []).push(subjectId)
+  }
+
+  const named = (rows: Array<{ id: number; name: string }> | undefined) =>
+    (rows ?? []).map((row) => ({ id: row.id, name: row.name }))
+
   return (
     <>
       <PageHeader
@@ -85,6 +115,51 @@ export default async function ConfigurationPage() {
       />
 
       <div className="space-y-4">
+        {canSetUp ? (
+          <>
+            <Card padded={false}>
+              <div className="p-6 pb-4">
+                <CardHeader
+                  title="Open an academic year"
+                  hint="Creates the year, splits it into terms, and builds one class per grade and section."
+                />
+              </div>
+              <SchoolSetupForm grades={named(setupGrades?.rows)} />
+            </Card>
+
+            <Card padded={false}>
+              <div className="p-6 pb-4">
+                <CardHeader
+                  title="Add sections to a grade"
+                  hint="For a grade that gained a stream or an extra class mid-year."
+                />
+              </div>
+              <GradeSectionsForm
+                grades={named(setupGrades?.rows)}
+                years={setupYears.rows.map((year) => ({ id: year.id, name: year.name }))}
+                sections={named(setupSections?.rows)}
+              />
+            </Card>
+
+            <Card padded={false}>
+              <div className="p-6 pb-4">
+                <CardHeader
+                  title="Set the subjects a class studies"
+                  hint="The curriculum every mark list and report card is generated from."
+                />
+              </div>
+              <ClassSubjectsForm
+                classes={(setupClasses?.rows ?? []).map((row) => ({
+                  id: row.id,
+                  name: `${m2oLabel(row.academic_year_id)} · ${row.name}`,
+                }))}
+                subjects={named(setupSubjects?.rows)}
+                currentByClass={currentByClass}
+              />
+            </Card>
+          </>
+        ) : null}
+
         <Card padded={false}>
           <div className="p-6 pb-0">
             <CardHeader

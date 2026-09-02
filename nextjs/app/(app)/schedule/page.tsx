@@ -1,9 +1,10 @@
-import { StatusBadge } from '@/components/ui'
+import { LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
 import { formatSelection, formatTimeRange, weekdayName } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
 import { classOptions, subjectOptions } from '@/lib/odoo/filter-options'
+import { hasAccess } from '@/lib/odoo/client'
 import { listSchedule } from '@/lib/odoo/models/operations'
 import { selectionOptions } from '@/lib/odoo/selections'
 import { m2oLabel } from '@/lib/odoo/types'
@@ -11,12 +12,13 @@ import { m2oLabel } from '@/lib/odoo/types'
 export const metadata = { title: 'Timetable · Async School' }
 
 export default async function SchedulePage({ searchParams }: PageProps<'/schedule'>) {
-  const [states, days, types, classes, subjects] = await Promise.all([
+  const [states, days, types, classes, subjects, canBuild] = await Promise.all([
     selectionOptions('school.class.schedule', 'state'),
     selectionOptions('school.class.schedule', 'day_of_week'),
     selectionOptions('school.class.schedule', 'schedule_type'),
     classOptions(),
     subjectOptions(),
+    hasAccess('school.class.schedule', 'create'),
   ])
 
   return (
@@ -32,6 +34,13 @@ export default async function SchedulePage({ searchParams }: PageProps<'/schedul
         { key: 'subject', label: 'Subject', options: subjects },
         { key: 'status', label: 'Status', options: states.length ? states : types },
       ]}
+      action={
+        canBuild ? (
+          <LinkButton href="/schedule/build" variant="primary" icon="plus">
+            Build a day
+          </LinkButton>
+        ) : undefined
+      }
       load={(query) =>
         listSchedule({
           filters: query.filters,

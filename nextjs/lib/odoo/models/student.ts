@@ -1,5 +1,5 @@
 import 'server-only'
-import { create, readOne, searchRead, write } from '@/lib/odoo/client'
+import { callKw, create, readOne, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
 import type { Many2one, Page, Selection } from '@/lib/odoo/types'
@@ -511,4 +511,60 @@ export function listAllGuardians(
       order: options.order ?? 'student_id',
     },
   )
+}
+
+/* ------------------------------------------------------------ promotion --- */
+
+export interface PromotionTarget {
+  id: number
+  name: string
+  academic_year_id: Many2one
+}
+
+/**
+ * The classes a student can be promoted into, with the year each belongs to so
+ * the form can narrow them once a year is chosen.
+ */
+export function listPromotionTargets(): Promise<Page<PromotionTarget>> {
+  return searchRead<PromotionTarget>('school.class', ['name', 'academic_year_id'], {
+    domain: [['active', '=', true]],
+    limit: 300,
+    order: 'academic_year_id desc, name',
+  })
+}
+
+export interface PromotionIntake {
+  enrollmentId: number
+  nextYearId: number
+  /** Omitted moves the student up one grade, keeping their section. */
+  nextClassId?: number
+  effectiveDate: string
+}
+
+/**
+ * Promote one student into the next academic year.
+ *
+ * `school.promotion.wizard` is a transient: create it, then `action_confirm`
+ * resolves the destination class (creating it with the leaving class's
+ * subjects if it does not exist yet), completes the current enrolment, creates
+ * the next one and activates it. Every rule behind that — no duplicate
+ * enrolment for the year, no effective date before the current enrolment
+ * started, no promotion inside the same year — is Odoo's.
+ *
+ * Odoo answers with an act_window pointing at the enrolment it created, which
+ * is the id returned here.
+ */
+export async function promoteEnrollment(intake: PromotionIntake): Promise<number | null> {
+  const wizardId = await create('school.promotion.wizard', {
+    enrollment_id: intake.enrollmentId,
+    next_academic_year_id: intake.nextYearId,
+    next_class_id: intake.nextClassId ?? false,
+    effective_date: intake.effectiveDate,
+  })
+  const action = await callKw<{ res_id?: number } | false>(
+    'school.promotion.wizard',
+    'action_confirm',
+    [[wizardId]],
+  )
+  return action && typeof action.res_id === 'number' ? action.res_id : null
 }
