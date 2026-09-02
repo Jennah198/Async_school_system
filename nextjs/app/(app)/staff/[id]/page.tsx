@@ -1,19 +1,7 @@
 import Link from 'next/link'
-import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
+import { formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
-import {
-  Badge,
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailField,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-} from '@/components/ui'
+import { Badge, Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { toOdooError } from '@/lib/odoo/errors'
 import { hasAccess } from '@/lib/odoo/client'
 import {
@@ -87,8 +75,8 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
               />
               <DetailField label="Employment status" value={formatSelection(staff.employment_status)} />
               <DetailField label="Employment type" value={formatSelection(staff.employment_type)} />
-              <DetailField label="Hire date" value={formatDate(staff.hire_date)} />
-              <DetailField label="End date" value={formatDate(staff.end_date)} />
+              <DetailField label="Hire date" value={<DateText value={staff.hire_date} />} />
+              <DetailField label="End date" value={<DateText value={staff.end_date} />} />
               <DetailField label="Phone" value={staff.phone || '—'} />
               <DetailField label="Mobile" value={staff.mobile || '—'} />
               <DetailField label="Email" value={staff.email || '—'} />
@@ -140,8 +128,8 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                     <Cell strong>{formatSelection(row.responsibility)}</Cell>
                     <Cell>{row.is_primary ? <Badge tone="solid">Primary</Badge> : null}</Cell>
                     <Cell>{formatSelection(row.department)}</Cell>
-                    <Cell>{formatDate(row.start_date)}</Cell>
-                    <Cell>{formatDate(row.end_date)}</Cell>
+                    <Cell>{<DateText value={row.start_date} />}</Cell>
+                    <Cell>{<DateText value={row.end_date} />}</Cell>
                     <Cell>{row.active ? 'Yes' : 'No'}</Cell>
                   </Row>
                 ))}
@@ -173,7 +161,7 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                     <Cell strong>{m2oLabel(row.job_title_id)}</Cell>
                     <Cell>{formatSelection(row.responsibility)}</Cell>
                     <Cell>{m2oLabel(row.manager_id)}</Cell>
-                    <Cell>{formatDate(row.date_start)}</Cell>
+                    <Cell>{<DateText value={row.date_start} />}</Cell>
                     <Cell>{row.date_end || 'Current'}</Cell>
                   </Row>
                 ))}
@@ -202,10 +190,10 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
               <DataTable columns={['Date', 'Status', 'Check in', 'Check out', 'Hours']}>
                 {dailyStatus.rows.map((row) => (
                   <Row key={row.id}>
-                    <Cell strong>{formatDate(row.date)}</Cell>
+                    <Cell strong>{<DateText value={row.date} />}</Cell>
                     <Cell>{formatSelection(row.status)}</Cell>
-                    <Cell>{formatDateTime(row.check_in)}</Cell>
-                    <Cell>{formatDateTime(row.check_out)}</Cell>
+                    <Cell>{<DateText value={row.check_in} withTime />}</Cell>
+                    <Cell>{<DateText value={row.check_out} withTime />}</Cell>
                     <Cell numeric>{row.worked_hours?.toFixed(2)}</Cell>
                   </Row>
                 ))}

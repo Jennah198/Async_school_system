@@ -1,6 +1,14 @@
 import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { Icon, type IconName } from '@/components/icons'
+import {
+  DASH,
+  formatDate,
+  formatDateTime,
+  formatEthiopianDate,
+  formatEthiopianDateTime,
+  type OdooValue,
+} from '@/lib/format'
 import { statusMeta, type StatusTone } from '@/lib/status'
 
 /*
@@ -308,4 +316,36 @@ export function StatusBadge({
 
 export function Skeleton({ className }: { className?: string }) {
   return <div aria-hidden className={cx('animate-pulse rounded-[8px] bg-silver/60', className)} />
+}
+
+/* ------------------------------------------------------------ DateText --- */
+
+/**
+ * A date in both calendars: Ethiopian first, Gregorian beneath it.
+ *
+ * The school works in the Ethiopian calendar, but Odoo stores, validates and
+ * displays Gregorian in its own backend, so dropping it would leave anyone
+ * cross-checking the two systems guessing. The pair is one component so the
+ * whole app changes together if that judgement ever changes.
+ */
+export function DateText({
+  value,
+  withTime = false,
+}: {
+  value: OdooValue<string>
+  withTime?: boolean
+}) {
+  const ethiopian = withTime ? formatEthiopianDateTime(value) : formatEthiopianDate(value)
+  const gregorian = withTime ? formatDateTime(value) : formatDate(value)
+
+  if (ethiopian === DASH) return <span className="text-stone">{DASH}</span>
+
+  return (
+    <span className="block whitespace-nowrap">
+      {ethiopian}
+      {gregorian === ethiopian ? null : (
+        <span className="block text-[11px] text-stone">{gregorian}</span>
+      )}
+    </span>
+  )
 }

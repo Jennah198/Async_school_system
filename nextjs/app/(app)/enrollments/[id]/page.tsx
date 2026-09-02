@@ -1,18 +1,7 @@
 import Link from 'next/link'
-import { formatDate, formatSelection } from '@/lib/format'
+import { formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
-import {
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailField,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-} from '@/components/ui'
+import { Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -86,8 +75,8 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
               <DetailField label="Academic year" value={m2oLabel(enrollment.academic_year_id)} />
               <DetailField label="Roll number" value={enrollment.roll_number || '—'} />
               <DetailField label="Admission type" value={formatSelection(enrollment.admission_type)} />
-              <DetailField label="Enrolled on" value={formatDate(enrollment.enrollment_date)} />
-              <DetailField label="Ended on" value={formatDate(enrollment.end_date)} />
+              <DetailField label="Enrolled on" value={<DateText value={enrollment.enrollment_date} />} />
+              <DetailField label="Ended on" value={<DateText value={enrollment.end_date} />} />
             </dl>
           </Card>
 
@@ -111,8 +100,8 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
                   <Row key={row.id}>
                     <Cell strong>{m2oLabel(row.subject_id)}</Cell>
                     <Cell>{formatSelection(row.subject_type)}</Cell>
-                    <Cell>{formatDate(row.date_start)}</Cell>
-                    <Cell>{formatDate(row.date_end)}</Cell>
+                    <Cell>{<DateText value={row.date_start} />}</Cell>
+                    <Cell>{<DateText value={row.date_end} />}</Cell>
                     <Cell>
                       <StatusBadge state={row.state} />
                     </Cell>
@@ -141,7 +130,7 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
                     <Cell>{m2oLabel(row.shift_id)}</Cell>
                     <Cell>{m2oLabel(row.stream_id)}</Cell>
                     <Cell numeric>{row.roll_number || '—'}</Cell>
-                    <Cell>{formatDate(row.date_start)}</Cell>
+                    <Cell>{<DateText value={row.date_start} />}</Cell>
                     <Cell>{row.date_end || 'Current'}</Cell>
                   </Row>
                 ))}

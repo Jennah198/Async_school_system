@@ -1,7 +1,7 @@
-import { StatusBadge } from '@/components/ui'
+import { DateText, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
-import { formatDate, formatSelection } from '@/lib/format'
+import { formatSelection } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
 import { classOptions, subjectOptions, termOptions } from '@/lib/odoo/filter-options'
 import { listAssessments } from '@/lib/odoo/models/assessment'
@@ -68,7 +68,7 @@ export default async function AssessmentsPage({ searchParams }: PageProps<'/asse
           label: 'Date',
           sortField: 'date',
           hideBelow: 'sm',
-          render: (row) => formatDate(row.date),
+          render: (row) => <DateText value={row.date} />,
         },
         {
           key: 'marks',

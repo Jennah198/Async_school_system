@@ -1,19 +1,7 @@
 import Link from 'next/link'
-import { formatDate, formatSelection } from '@/lib/format'
+import { formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
-import {
-  Badge,
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailField,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-} from '@/components/ui'
+import { Badge, Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -96,7 +84,7 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
               <DetailField label="Student ID" value={student.regno || '—'} />
               <DetailField label="Admission number" value={student.admission_number || '—'} />
               <DetailField label="Admission type" value={formatSelection(student.admission_type)} />
-              <DetailField label="Registered on" value={formatDate(student.registration_date)} />
+              <DetailField label="Registered on" value={<DateText value={student.registration_date} />} />
               <DetailField label="Academic year" value={m2oLabel(student.academic_year_id)} />
               <DetailField label="Class" value={m2oLabel(student.class_id)} />
               <DetailField label="Section" value={m2oLabel(student.section_id)} />
@@ -208,7 +196,7 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
                     <Cell>{m2oLabel(row.class_id)}</Cell>
                     <Cell>{m2oLabel(row.academic_year_id)}</Cell>
                     <Cell numeric>{row.roll_number || '—'}</Cell>
-                    <Cell>{formatDate(row.enrollment_date)}</Cell>
+                    <Cell>{<DateText value={row.enrollment_date} />}</Cell>
                     <Cell>
                       <StatusBadge state={row.state} />
                     </Cell>

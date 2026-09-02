@@ -15,6 +15,8 @@
  * Client components import this too, so it must stay free of `server-only`.
  */
 
+import { isoToEthiopianLabel } from '@/lib/ethiopian-date'
+
 const MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -138,4 +140,52 @@ export function weekdayName(code: OdooValue<string | number>): string {
 export function todayWeekdayCode(): string {
   // JavaScript weeks start on Sunday; Odoo's selection starts on Monday.
   return String((new Date().getDay() + 6) % 7)
+}
+
+/* ------------------------------------------------- Ethiopian calendar --- */
+
+/**
+ * The school runs on the Ethiopian calendar, so that is the date a user reads
+ * first. Odoo stores and validates Gregorian, and its own backend UI shows
+ * Gregorian, so every screen carries the Gregorian date alongside — see
+ * `DateText` in `@/components/ui`, which renders the pair.
+ *
+ * These stay pure string helpers for the places that need a date inside a
+ * sentence, a subtitle or a page title.
+ */
+
+/** `2026-09-11` → `Meskerem 1, 2019`. Anything unparseable is returned as-is. */
+export function formatEthiopianDate(value: OdooValue<string>): string {
+  if (isBlank(value)) return DASH
+  return isoToEthiopianLabel(String(value)) ?? String(value)
+}
+
+/** `2026-09-11 14:30:00` → `Meskerem 1, 2019, 14:30`. Stored UTC, shown unshifted. */
+export function formatEthiopianDateTime(value: OdooValue<string>): string {
+  if (isBlank(value)) return DASH
+  const raw = String(value)
+  const date = formatEthiopianDate(raw)
+  const time = /[ T](\d{2}):(\d{2})/.exec(raw)
+  if (!time || date === raw) return date
+  return `${date}, ${time[1]}:${time[2]}`
+}
+
+/** Both calendars in one string, for titles and subtitles that cannot nest markup. */
+export function formatDualDate(value: OdooValue<string>): string {
+  if (isBlank(value)) return DASH
+  const ethiopian = formatEthiopianDate(value)
+  const gregorian = formatDate(value)
+  return ethiopian === gregorian ? gregorian : `${ethiopian} (${gregorian})`
+}
+
+export function formatEthiopianDateRange(
+  start: OdooValue<string>,
+  end: OdooValue<string>,
+): string {
+  if (isBlank(start) && isBlank(end)) return DASH
+  if (isBlank(end)) return `From ${formatEthiopianDate(start)}`
+  if (isBlank(start)) return `Until ${formatEthiopianDate(end)}`
+  const from = formatEthiopianDate(start)
+  const to = formatEthiopianDate(end)
+  return from === to ? from : `${from} – ${to}`
 }

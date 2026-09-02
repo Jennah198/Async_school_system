@@ -1,18 +1,7 @@
 import Link from 'next/link'
-import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
+import { formatDualDate, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
-import {
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailField,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-} from '@/components/ui'
+import { Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -60,7 +49,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
     <>
       <PageHeader
         title={assessment.name}
-        subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${formatDate(assessment.date)}`}
+        subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${formatDualDate(assessment.date)}`}
         action={
           <Link
             href="/assessments"
@@ -81,7 +70,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
               <DetailField label="Subject" value={m2oLabel(assessment.subject_id)} />
               <DetailField label="Term" value={m2oLabel(assessment.term_id)} />
               <DetailField label="Academic year" value={m2oLabel(assessment.academic_year_id)} />
-              <DetailField label="Date" value={formatDate(assessment.date)} />
+              <DetailField label="Date" value={<DateText value={assessment.date} />} />
               <DetailField label="Maximum mark" value={assessment.max_mark} />
               <DetailField label="Weight" value={assessment.weight} />
               <DetailField
@@ -164,7 +153,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
                   <Row key={row.id}>
                     <Cell strong>{formatSelection(row.event_type)}</Cell>
                     <Cell>{m2oLabel(row.actor_id)}</Cell>
-                    <Cell>{formatDateTime(row.occurred_at)}</Cell>
+                    <Cell>{<DateText value={row.occurred_at} withTime />}</Cell>
                     <Cell>{row.reason || '—'}</Cell>
                   </Row>
                 ))}

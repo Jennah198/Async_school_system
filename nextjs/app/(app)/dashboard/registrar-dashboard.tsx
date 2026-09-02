@@ -1,4 +1,4 @@
-import { Cell, DataTable, Row, RowLink, StatusBadge } from '@/components/ui'
+import { Cell, DataTable, DateText, Row, RowLink, StatusBadge } from '@/components/ui'
 import {
   ActionList,
   CountTile,
@@ -8,7 +8,6 @@ import {
   StateBreakdown,
   TileGrid,
 } from '@/components/dashboard/panels'
-import { formatDate } from '@/lib/format'
 import {
   documentsAwaitingVerification,
   groupCount,
@@ -146,7 +145,7 @@ export async function RegistrarDashboard({ user }: { user: CurrentUser }) {
                     <span className="tabular">{student.regno || '—'}</span>
                   </Cell>
                   <Cell>{m2oLabel(student.class_id)}</Cell>
-                  <Cell hideBelow="md">{formatDate(student.registration_date)}</Cell>
+                  <Cell hideBelow="md">{<DateText value={student.registration_date} />}</Cell>
                   <Cell>
                     <StatusBadge
                       state={student.registration_status}

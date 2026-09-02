@@ -1,18 +1,7 @@
 import Link from 'next/link'
-import {
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Pagination,
-  Row,
-  Toolbar,
-} from '@/components/ui'
+import { Card, CardHeader, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Pagination, Row, Toolbar } from '@/components/ui'
 import { DateFilter, FilterSelect, SearchField } from '@/components/list-toolbar'
-import { formatDate, formatSelection, formatText, pluralise, todayIso } from '@/lib/format'
+import { formatSelection, formatText, pluralise, todayIso } from '@/lib/format'
 import { listHrefs, parseListQuery, toOdooOrder } from '@/lib/list-query'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -132,7 +121,7 @@ export default async function AttendancePage({ searchParams }: PageProps<'/atten
           >
             {attendance.rows.map((row) => (
               <Row key={row.id}>
-                <Cell strong>{formatDate(row.date)}</Cell>
+                <Cell strong>{<DateText value={row.date} />}</Cell>
                 <Cell>{m2oLabel(row.student_id)}</Cell>
                 <Cell hideBelow="sm">{m2oLabel(row.class_id)}</Cell>
                 <Cell hideBelow="lg">{formatSelection(row.attendance_type)}</Cell>

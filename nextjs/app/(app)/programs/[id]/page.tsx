@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { formatDateTime, formatSelection } from '@/lib/format'
+import { formatDualDate, formatSelection } from '@/lib/format'
 import { ErrorState, PageHeader } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
@@ -29,7 +29,7 @@ export default async function ProgramDetailPage({ params }: PageProps<'/programs
   return (
     <WorkflowDetail
       title={program.name}
-      subtitle={`${String(program.program_type || '')} · ${formatDateTime(program.start_datetime)}`}
+      subtitle={`${String(program.program_type || '')} · ${formatDualDate(program.start_datetime)}`}
       backHref="/programs"
       backLabel="Back to programs"
       workflow="program"

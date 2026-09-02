@@ -1,15 +1,5 @@
 import { notFound } from 'next/navigation'
-import {
-  Badge,
-  Cell,
-  DataTable,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-  TableCard,
-} from '@/components/ui'
+import { Badge, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Row, StatusBadge, TableCard } from '@/components/ui'
 import { WorkflowDetail } from '@/components/workflow-detail'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -18,7 +8,7 @@ import {
   getReportCard,
   subjectResults,
 } from '@/lib/odoo/models/assessment'
-import { formatDateTime, formatPercent, formatText, trimNumber } from '@/lib/format'
+import { formatPercent, formatText, trimNumber } from '@/lib/format'
 import { statusLabel } from '@/lib/status'
 import { m2oLabel } from '@/lib/odoo/types'
 
@@ -93,8 +83,8 @@ export default async function ReportCardDetailPage({ params }: PageProps<'/repor
         { label: 'Grade rank', value: rank(card.grade_rank, card.grade_size) },
         { label: 'Grading scheme', value: m2oLabel(card.grading_scheme_id) },
         { label: 'Approved by', value: m2oLabel(card.approved_by_id) },
-        { label: 'Approved at', value: formatDateTime(card.approved_at) },
-        { label: 'Published at', value: formatDateTime(card.published_at) },
+        { label: 'Approved at', value: <DateText value={card.approved_at} withTime /> },
+        { label: 'Published at', value: <DateText value={card.published_at} withTime /> },
         { label: 'Supersedes', value: m2oLabel(card.supersedes_id) },
         { label: 'Superseded by', value: m2oLabel(card.superseded_by_id) },
         { label: 'Correction reason', value: formatText(card.correction_reason) },

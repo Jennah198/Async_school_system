@@ -1,14 +1,5 @@
-import {
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-} from '@/components/ui'
-import { formatDate, formatSelection } from '@/lib/format'
+import { Card, CardHeader, Cell, DataTable, DateText, EmptyState, ErrorState, PageHeader, Row } from '@/components/ui'
+import { formatSelection } from '@/lib/format'
 import { toOdooError } from '@/lib/odoo/errors'
 import { listConfig, listCurriculum, listTerms, type SimpleRow } from '@/lib/odoo/models/operations'
 import { m2oLabel, type Many2one } from '@/lib/odoo/types'
@@ -109,8 +100,8 @@ export default async function ConfigurationPage() {
                 <Row key={row.id}>
                   <Cell strong>{row.name}</Cell>
                   <Cell>{m2oLabel(row.academic_year_id)}</Cell>
-                  <Cell>{formatDate(row.date_start)}</Cell>
-                  <Cell>{formatDate(row.date_end)}</Cell>
+                  <Cell>{<DateText value={row.date_start} />}</Cell>
+                  <Cell>{<DateText value={row.date_end} />}</Cell>
                   <Cell numeric>{row.sequence}</Cell>
                 </Row>
               ))}
