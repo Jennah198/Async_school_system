@@ -1,3 +1,5 @@
+import base64
+
 from odoo.exceptions import ValidationError
 from odoo.tests.common import TransactionCase
 
@@ -188,3 +190,56 @@ class TestStaffImportOutcome(ImportCase):
         outsider.invalidate_recordset()
         self.assertTrue(outsider.active)
         self.assertEqual(outsider.employment_status, 'on_leave')
+
+
+class TestStaffImportUpload(ImportCase):
+    """An uploaded file goes through exactly the same analysis as the bundled
+    source. These cover the parsing that is new; the mapping and validation are
+    already covered above and are deliberately not duplicated."""
+
+    def _upload(self, text):
+        return base64.b64encode(text.encode('utf-8')).decode('ascii')
+
+    def test_an_uploaded_csv_is_analysed_like_the_bundled_source(self):
+        report = self.Import.dry_run_upload(self._upload(
+            'staff_id,first_name,last_name,gender,department,employment_status,hire_date\n'
+            'UP001,Selam,Kebede,Female,Mathematics,Active,2026-01-15\n'))
+        self.assertEqual(report['source_rows'], 1)
+        self.assertEqual(report['importable'], ['UP001'])
+
+    def test_an_unknown_department_is_reported_and_skipped(self):
+        report = self.Import.dry_run_upload(self._upload(
+            'staff_id,first_name,last_name,gender,department,employment_status,hire_date\n'
+            'UP002,Selam,Kebede,Female,Astrophysics,Active,2026-01-15\n'))
+        self.assertFalse(report['importable'])
+        self.assertTrue(report['unknown_department'])
+
+    def test_a_column_with_nowhere_to_go_is_named(self):
+        report = self.Import.dry_run_upload(self._upload(
+            'staff_id,first_name,last_name,gender,department,employment_status,hire_date,nickname\n'
+            'UP003,Selam,Kebede,Female,Mathematics,Active,2026-01-15,Sela\n'))
+        self.assertIn('nickname', report['unmapped_source_columns'])
+
+    def test_a_byte_order_mark_does_not_break_the_first_column(self):
+        text = ('staff_id,first_name,last_name,gender,department,employment_status,hire_date\n'
+                'UP004,Selam,Kebede,Female,Mathematics,Active,2026-01-15\n')
+        payload = base64.b64encode(('﻿' + text).encode('utf-8')).decode('ascii')
+        self.assertEqual(self.Import.dry_run_upload(payload)['importable'], ['UP004'])
+
+    def test_a_header_with_no_rows_is_refused(self):
+        with self.assertRaises(ValidationError):
+            self.Import.dry_run_upload(self._upload('staff_id,first_name\n'))
+
+    def test_a_file_that_is_not_utf8_is_refused(self):
+        with self.assertRaises(ValidationError):
+            self.Import.dry_run_upload(base64.b64encode(b'\xff\xfe\x00bad').decode('ascii'))
+
+    def test_uploading_creates_only_the_rows_the_analysis_cleared(self):
+        payload = self._upload(
+            'staff_id,first_name,last_name,gender,department,employment_status,hire_date\n'
+            'UP005,Selam,Kebede,Female,Mathematics,Active,2026-01-15\n'
+            'UP006,Hanna,Girma,Female,Astrophysics,Active,2026-01-15\n')
+        report = self.Import.run_import_upload(payload)
+        self.assertEqual(report['created'], ['UP005'])
+        staff = self.env['school.staff'].search([('last_name', '=', 'Kebede')])
+        self.assertEqual(staff.state, 'draft')

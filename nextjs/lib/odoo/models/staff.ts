@@ -433,3 +433,51 @@ export async function setPrimaryResponsibility(staffId: number, id: number): Pro
   }
   return write('school.staff.responsibility', [id], { is_primary: true })
 }
+
+
+/* --------------------------------------------------------- dataset import --- */
+
+/**
+ * What `school.staff.import._analyse` reports back.
+ *
+ * Every list holds source `staff_id` values, except the column and name lists.
+ * Nothing is written by a dry run.
+ */
+export interface StaffImportReport {
+  source_rows: number
+  importable: string[]
+  already_imported: string[]
+  unknown_department: string[]
+  unknown_employment_status: string[]
+  unknown_gender: string[]
+  invalid_fayda: string[]
+  name_matches_existing: string[]
+  unmapped_source_columns: string[]
+  duplicate_source_ids: string[]
+  duplicate_source_names: string[]
+  teaching_staff: string[]
+  created?: string[]
+}
+
+/**
+ * Analyse an uploaded CSV without writing anything.
+ *
+ * The file is parsed and validated by Odoo against the live vocabularies —
+ * department, employment status, gender, Fayda format — and against staff that
+ * already exist. Reimplementing any of that here would let the preview and the
+ * import disagree.
+ */
+export function dryRunStaffImport(base64Csv: string): Promise<StaffImportReport> {
+  return callKw<StaffImportReport>('school.staff.import', 'dry_run_upload', [base64Csv])
+}
+
+/**
+ * Import an uploaded CSV.
+ *
+ * Only the rows the analysis cleared are created, and they land in Draft:
+ * activation needs a birth date, phone, job title and responsibility that no
+ * source file carries. Odoo requires a system administrator for this.
+ */
+export function runStaffImport(base64Csv: string): Promise<StaffImportReport> {
+  return callKw<StaffImportReport>('school.staff.import', 'run_import_upload', [base64Csv])
+}

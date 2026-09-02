@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
 import { changedRows } from '@/lib/mark-diff'
-import { createAssessment, saveMark } from '@/lib/odoo/models/assessment'
+import { createAssessment, saveMark, unlockAssessment } from '@/lib/odoo/models/assessment'
 
 export interface MarkListState {
   error?: string
@@ -159,4 +159,40 @@ export async function createAssessmentAction(
 
   revalidatePath('/assessments')
   redirect(`/assessments/${id}`)
+}
+
+export interface UnlockState {
+  error?: string
+  ok?: string
+}
+
+/**
+ * Reopen a locked assessment for correction.
+ *
+ * The reason is required because Odoo requires it — it lands on the audit
+ * trail as an `unlocked` event, which is the whole point of BR-11/AC-13. The
+ * Exam Officer check is Odoo's and is re-run on the call.
+ */
+export async function unlockAssessmentAction(
+  _previous: UnlockState,
+  form: FormData,
+): Promise<UnlockState> {
+  await requireSession()
+
+  const assessmentId = Number(form.get('assessmentId'))
+  const reason = String(form.get('reason') ?? '').trim()
+
+  if (!Number.isInteger(assessmentId) || assessmentId <= 0) {
+    return { error: 'That assessment could not be identified.' }
+  }
+  if (!reason) return { error: 'A reason is required — it goes on the audit trail.' }
+
+  try {
+    await unlockAssessment(assessmentId, reason)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/assessments/${assessmentId}`)
+  return { ok: 'Reopened for correction.' }
 }

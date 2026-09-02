@@ -94,6 +94,15 @@ export default async function StudentDetailPage({
               Print
             </Link>
 
+            {canWrite ? (
+              <Link
+                href={`/students/${student.id}/edit`}
+                className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+              >
+                Edit
+              </Link>
+            ) : null}
+
             <Link
               href="/students"
               className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"

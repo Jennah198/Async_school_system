@@ -8,7 +8,12 @@ import {
   StateBreakdown,
   TileGrid,
 } from '@/components/dashboard/panels'
-import { formatDate, formatSelection, formatTimeRange, weekdayName } from '@/lib/format'
+import {
+  formatEthiopianDate,
+  formatSelection,
+  formatTimeRange,
+  weekdayName,
+} from '@/lib/format'
 import {
   academicContext,
   attendanceTodayByStatus,

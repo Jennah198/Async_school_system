@@ -12,6 +12,7 @@ import {
   createStudent,
   isUploadable,
   updateGuardian,
+  updateStudent,
   uploadStudentDocument,
   type ClassScope,
   type GuardianIntake,
@@ -814,4 +815,121 @@ export async function editGuardianAction(
   )
 
   return {}
+}
+// =======================================================
+// Student edit
+// =======================================================
+
+/**
+ * Every field the edit form may offer.
+ *
+ * Placement (`class_id`, `academic_year_id`, `section_id`, `stream_id`,
+ * `education_level`) is absent on purpose — those five have to move together
+ * or `_check_registration_scope` refuses the write, and moving a student
+ * between classes belongs to the transfer wizard. `regno` and
+ * `admission_number` are minted on approval, and the two status fields belong
+ * to the workflow panel.
+ */
+const EDITABLE_STUDENT_FIELDS = [
+  'first_name', 'middle_name', 'last_name', 'gender', 'date_of_birth',
+  'place_of_birth', 'primary_language', 'email',
+  'fan_number', 'national_id', 'regional_id',
+  'guardian_name', 'guardian_phone', 'guardian_relationship', 'guardian_occupation',
+  'emergency_contact_name', 'emergency_contact_phone',
+  'admission_type', 'previous_school', 'transfer_reference',
+  'registration_date', 'support_need',
+] as const
+
+const BOOLEAN_STUDENT_FIELDS = new Set<string>(['support_need'])
+
+/**
+ * A cleared checkbox posts nothing, which is indistinguishable from a field
+ * the form never rendered. The edit form pairs each checkbox with a hidden
+ * input of the same name, so the last value posted is the real one.
+ */
+function checked(form: FormData, key: string): boolean {
+  return String(form.getAll(key).at(-1) ?? '') === 'true'
+}
+
+function submittedStudent(form: FormData): Record<string, string> {
+  return Object.fromEntries(
+    EDITABLE_STUDENT_FIELDS.map((f) => [
+      f,
+      BOOLEAN_STUDENT_FIELDS.has(f)
+        ? String(checked(form, f))
+        : String(form.get(f) ?? ''),
+    ]),
+  )
+}
+
+/** Mirrors school.student's own required fields so the user hears sooner. */
+const REQUIRED_STUDENT_FIELDS: Record<string, string> = {
+  first_name: 'First name is required.',
+  date_of_birth: 'Date of birth is required.',
+  registration_date: 'Registration date is required.',
+  guardian_name: 'Parent or guardian name is required.',
+  guardian_phone: 'Guardian phone is required.',
+  emergency_contact_name: 'Emergency contact name is required.',
+  emergency_contact_phone: 'Emergency contact phone is required.',
+}
+
+/**
+ * Correct an existing registration.
+ *
+ * Only the fields the form actually rendered are written. The page builds that
+ * list from `fields_get`, so a role without the registrar groups never posts
+ * `fan_number` or `national_id` and the write never mentions them.
+ */
+export async function updateStudentAction(
+  _previous: StudentFormState,
+  form: FormData,
+): Promise<StudentFormState> {
+  await requireSession()
+
+  const id = Number(text(form, 'id'))
+  if (!Number.isInteger(id) || id <= 0) {
+    return { error: 'That student could not be identified.' }
+  }
+
+  const fieldErrors: Record<string, string> = {}
+  const values: Record<string, unknown> = {}
+
+  for (const field of EDITABLE_STUDENT_FIELDS) {
+    if (!form.has(field)) continue
+    if (BOOLEAN_STUDENT_FIELDS.has(field)) {
+      values[field] = checked(form, field)
+      continue
+    }
+    const raw = text(form, field)
+    if (!raw && REQUIRED_STUDENT_FIELDS[field]) {
+      fieldErrors[field] = REQUIRED_STUDENT_FIELDS[field]
+    }
+    values[field] = raw || false
+  }
+
+  const fan = text(form, 'fan_number')
+  if (form.has('fan_number') && fan && !/^[0-9]{16}$/.test(fan)) {
+    fieldErrors.fan_number = 'FAN must be exactly 16 digits.'
+  }
+
+  const email = text(form, 'email')
+  if (form.has('email') && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    fieldErrors.email = 'Enter a valid email address.'
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values: submittedStudent(form) }
+  }
+
+  try {
+    await updateStudent(id, values)
+  } catch (cause) {
+    // The age-for-grade rule, the duplicate FAN, the phone format — Odoo's
+    // own wording, which names the record and the rule.
+    return { error: toOdooError(cause).message, values: submittedStudent(form) }
+  }
+
+  revalidatePath(`/students/${id}`)
+  revalidatePath('/students')
+  redirect(`/students/${id}`)
 }

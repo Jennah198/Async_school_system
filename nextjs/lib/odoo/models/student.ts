@@ -1,5 +1,5 @@
 import 'server-only'
-import { create, readOne, searchRead, write } from '@/lib/odoo/client'
+import { callKw, create, readOne, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
 import type { Many2one, Page, Selection } from '@/lib/odoo/types'
@@ -48,6 +48,10 @@ export interface StudentDetail {
 
   guardian_name: string | false
   guardian_phone: string | false
+  guardian_relationship: Selection
+  guardian_occupation: string | false
+  emergency_contact_name: string | false
+  emergency_contact_phone: string | false
   previous_school: string | false
   enrollment_count: number
   active: boolean
@@ -83,6 +87,8 @@ const STUDENT_DETAIL_FIELDS = [
   'guardian_phone',
   'guardian_relationship',
   'guardian_occupation',
+  'emergency_contact_name',
+  'emergency_contact_phone',
 
   // Admission information
   'previous_school',
@@ -319,6 +325,53 @@ export function createStudent(intake: StudentIntake): Promise<number> {
   return create('school.student', values)
 }
 
+export interface StudentFieldMeta {
+  readonly: boolean
+  selection?: Array<{ value: string; label: string }>
+}
+
+/**
+ * What the signed-in user may actually touch on school.student.
+ *
+ * `fields_get` runs as that user and omits anything behind a group they lack,
+ * so a field's presence here is the permission check. `national_id`,
+ * `regional_id` and `fan_number` are registrar-only; a role without those
+ * groups gets no such input rather than a form whose write Odoo would refuse.
+ */
+export async function studentFieldMeta(): Promise<Record<string, StudentFieldMeta>> {
+  const raw = await callKw<Record<string, Record<string, unknown>>>(
+    'school.student',
+    'fields_get',
+    [],
+    { attributes: ['readonly', 'selection'] },
+  )
+  return Object.fromEntries(
+    Object.entries(raw).map(([name, meta]) => [
+      name,
+      {
+        readonly: Boolean(meta.readonly),
+        selection: Array.isArray(meta.selection)
+          ? (meta.selection as Array<[string, string]>).map(([value, label]) => ({ value, label }))
+          : undefined,
+      },
+    ]),
+  )
+}
+
+/**
+ * Correct a registration in place.
+ *
+ * Deliberately not a placement change: `class_id`, `academic_year_id`,
+ * `section_id`, `stream_id` and `education_level` have to move together or
+ * `_check_registration_scope` rejects the write, and moving a student between
+ * classes is what `school.enrollment.transfer` exists for. The registration
+ * and lifecycle states are the workflow panel's, since approval is what mints
+ * the student number and creates the enrolment.
+ */
+export function updateStudent(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.student', [id], values)
+}
+
 /**
  * Attach a document to a student.
  *
@@ -512,6 +565,7 @@ export function listAllGuardians(
     },
   )
 }
+
 /* -------------------------------------------------------------- search --- */
 
 export interface StudentSearchRow {
@@ -569,4 +623,60 @@ export function createEnrollment(intake: EnrollmentIntake): Promise<number> {
     admission_type: intake.admission_type,
     enrollment_date: intake.enrollment_date,
   })
+}
+
+/* ------------------------------------------------------------ promotion --- */
+
+export interface PromotionTarget {
+  id: number
+  name: string
+  academic_year_id: Many2one
+}
+
+/**
+ * The classes a student can be promoted into, with the year each belongs to so
+ * the form can narrow them once a year is chosen.
+ */
+export function listPromotionTargets(): Promise<Page<PromotionTarget>> {
+  return searchRead<PromotionTarget>('school.class', ['name', 'academic_year_id'], {
+    domain: [['active', '=', true]],
+    limit: 300,
+    order: 'academic_year_id desc, name',
+  })
+}
+
+export interface PromotionIntake {
+  enrollmentId: number
+  nextYearId: number
+  /** Omitted moves the student up one grade, keeping their section. */
+  nextClassId?: number
+  effectiveDate: string
+}
+
+/**
+ * Promote one student into the next academic year.
+ *
+ * `school.promotion.wizard` is a transient: create it, then `action_confirm`
+ * resolves the destination class (creating it with the leaving class's
+ * subjects if it does not exist yet), completes the current enrolment, creates
+ * the next one and activates it. Every rule behind that — no duplicate
+ * enrolment for the year, no effective date before the current enrolment
+ * started, no promotion inside the same year — is Odoo's.
+ *
+ * Odoo answers with an act_window pointing at the enrolment it created, which
+ * is the id returned here.
+ */
+export async function promoteEnrollment(intake: PromotionIntake): Promise<number | null> {
+  const wizardId = await create('school.promotion.wizard', {
+    enrollment_id: intake.enrollmentId,
+    next_academic_year_id: intake.nextYearId,
+    next_class_id: intake.nextClassId ?? false,
+    effective_date: intake.effectiveDate,
+  })
+  const action = await callKw<{ res_id?: number } | false>(
+    'school.promotion.wizard',
+    'action_confirm',
+    [[wizardId]],
+  )
+  return action && typeof action.res_id === 'number' ? action.res_id : null
 }
