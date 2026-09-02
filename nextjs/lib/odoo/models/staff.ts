@@ -310,9 +310,34 @@ export function updateStaff(id: number, values: Record<string, unknown>): Promis
 
 /* ------------------------------------------------------- state machine --- */
 
+export interface ResponsibilityIntake {
+  responsibility: string
+  is_primary?: boolean
+  department?: string
+  campus_id?: number
+  manager_id?: number
+  start_date: string
+  end_date?: string
+  active?: boolean
+}
+
 export function addResponsibility(
   staffId: number,
-  values: { responsibility: string; is_primary: boolean; department?: string; start_date: string },
+  values: ResponsibilityIntake,
 ): Promise<number> {
-  return create('school.staff.responsibility', { staff_id: staffId, ...values })
+  return create('school.staff.responsibility', {
+    staff_id: staffId,
+    is_primary: values.is_primary ?? false,
+    active: values.active ?? true,
+    ...values,
+  })
+}
+export function endResponsibility(
+  id: number,
+  endDate: string,
+): Promise<boolean> {
+  return write('school.staff.responsibility', [id], {
+    end_date: endDate,
+    active: false,
+  })
 }

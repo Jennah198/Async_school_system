@@ -1,5 +1,6 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -10,13 +11,6 @@ export interface AttendanceState {
   ok?: string
 }
 
-/**
- * Build the roster for a class and date.
- *
- * Odoo derives it from the placements effective on that date, skips students
- * already recorded, and refuses dates outside every term of the academic year.
- * All of that stays in `school.attendance.roster.action_generate`.
- */
 export async function generateRosterAction(
   _previous: AttendanceState,
   form: FormData,
@@ -31,13 +25,15 @@ export async function generateRosterAction(
   try {
     await generateAttendanceRoster(classId, date)
   } catch (cause) {
-    // "…is outside every term of…", "…has no active enrollment…" — Odoo's own
-    // wording, which tells the user exactly what to fix.
     return { error: toOdooError(cause).message }
   }
 
   revalidatePath('/attendance')
-  return { ok: 'Roster generated.' }
+  // Land the user on exactly the roster they just built/opened — this is what
+  // makes "take attendance" behave like opening a session instead of firing a
+  // background job. Existing rows show pre-filled (edit); new ones show blank
+  // (entry). Must stay outside the try/catch — redirect() throws internally.
+  redirect(`/attendance?${new URLSearchParams({ class: String(classId), date }).toString()}`)
 }
 
 export async function setAttendanceAction(
@@ -58,4 +54,26 @@ export async function setAttendanceAction(
 
   revalidatePath('/attendance')
   return { ok: 'Saved.' }
+}
+
+
+export interface BatchState {
+  error?: string
+  ok?: string
+}
+
+export async function setAttendanceBatchAction(
+  changes: Array<{ id: number; status: string }>,
+): Promise<BatchState> {
+  await requireSession()
+  if (changes.length === 0) return { ok: 'Nothing to save.' }
+
+  try {
+    await setAttendanceStatusBatch(changes)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath('/attendance')
+  return { ok: `Saved ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}.` }
 }

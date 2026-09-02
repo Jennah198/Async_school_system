@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
+import { selectionOptions } from '@/lib/odoo/selections'
+import { AssignResponsibilityForm } from './assign-responsibility-form'
 import {
   Badge,
   Card,
@@ -36,27 +38,41 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
   const id = Number((await params).id)
   if (!Number.isFinite(id)) notFound()
 
-  let staff, responsibilities, employment, dailyStatus, personal, links, blockers, canWrite
-  try {
-    ;[staff, responsibilities, employment, dailyStatus, personal, links, blockers, canWrite] =
-      await Promise.all([
-        getStaff(id),
-        listResponsibilities(id),
-        listEmployment(id),
-        listDailyStatus(id),
-        getStaffPersonalData(id),
-        getStaffLinks(id),
-        getActivationBlockers(id),
-        hasAccess('school.staff', 'write'),
-      ])
-  } catch (cause) {
-    return (
-      <>
-        <PageHeader title="Staff record" />
-        <ErrorState {...toOdooError(cause).toClient()} />
-      </>
-    )
-  }
+  let staff, responsibilities, employment, dailyStatus, personal, links, blockers, canWrite, canCreateResp, responsibilityOptions, departmentOptions
+try {
+  ;[
+    staff,
+    responsibilities,
+    employment,
+    dailyStatus,
+    personal,
+    links,
+    blockers,
+    canWrite,
+    canCreateResp,
+    responsibilityOptions,
+    departmentOptions,
+  ] = await Promise.all([
+    getStaff(id),
+    listResponsibilities(id),
+    listEmployment(id),
+    listDailyStatus(id),
+    getStaffPersonalData(id),
+    getStaffLinks(id),
+    getActivationBlockers(id),
+    hasAccess('school.staff', 'write'),
+    hasAccess('school.staff.responsibility', 'create'),
+    selectionOptions('school.staff.responsibility', 'responsibility'),
+    selectionOptions('school.staff.responsibility', 'department'),
+  ])
+} catch (cause) {
+  return (
+    <>
+      <PageHeader title="Staff record" />
+      <ErrorState {...toOdooError(cause).toClient()} />
+    </>
+  )
+}
 
   if (!staff) notFound()
 
@@ -125,12 +141,13 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
           </Card>
 
           <Card padded={false}>
-            <div className="p-6 pb-0">
+  <div className="p-6 pb-0">
               <CardHeader
                 title="Responsibilities"
                 hint="At least one active responsibility is required to leave Draft."
               />
             </div>
+
             {responsibilities.rows.length === 0 ? (
               <EmptyState title="No responsibilities recorded" />
             ) : (
@@ -147,6 +164,18 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                 ))}
               </DataTable>
             )}
+
+            {/* Assign form – only shown when the user may create */}
+            {canCreateResp ? (
+              <div className="p-6 pt-2">
+                <AssignResponsibilityForm
+                  staffId={staff.id}
+                  responsibilities={responsibilityOptions}
+                  departments={departmentOptions}
+                  defaultDepartment={String(staff.department || '')}
+                />
+              </div>
+            ) : null}
           </Card>
 
           <Card padded={false}>
