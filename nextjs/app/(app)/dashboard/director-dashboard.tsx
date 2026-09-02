@@ -77,9 +77,9 @@ export async function DirectorDashboard({ user }: { user: CurrentUser }) {
           <ActionList
             items={[
               {
-                label: 'Report cards generated, not approved',
+                label: 'Report cards awaiting approval',
                 count: pendingReportCards,
-                href: '/report-cards?status=generated',
+                href: '/report-cards?status=draft',
                 icon: 'reportCards',
               },
               {
