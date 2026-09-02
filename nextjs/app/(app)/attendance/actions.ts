@@ -4,7 +4,11 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
-import { generateAttendanceRoster, setAttendanceStatus } from '@/lib/odoo/models/operations'
+import {
+  generateAttendanceRoster,
+  setAttendanceStatus,
+  setAttendanceStatusBatch,
+} from '@/lib/odoo/models/operations'
 
 export interface AttendanceState {
   error?: string

@@ -1,5 +1,5 @@
 'use server'
-import { addResponsibility, endResponsibility, type ResponsibilityIntake } from '@/lib/odoo/models/staff'
+
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
@@ -293,82 +293,4 @@ export interface ResponsibilityState {
   error?: string
   ok?: string
   fieldErrors?: Record<string, string>
-}
-
-export async function assignResponsibilityAction(
-  _previous: ResponsibilityState,
-  form: FormData,
-): Promise<ResponsibilityState> {
-  await requireSession()
-
-  const staffId = Number(form.get('staffId'))
-  if (!Number.isFinite(staffId) || staffId <= 0) {
-    return { error: 'Missing staff record.' }
-  }
-
-  const responsibility = String(form.get('responsibility') ?? '').trim()
-  const startDate = String(form.get('start_date') ?? '').trim()
-  const department = String(form.get('department') ?? '').trim()
-  const endDate = String(form.get('end_date') ?? '').trim()
-  const isPrimary = form.get('is_primary') === 'on' || form.get('is_primary') === 'true'
-  const campusId = Number(form.get('campus_id'))
-  const managerId = Number(form.get('manager_id'))
-
-  // Light client-side checks (Odoo is the real authority)
-  const fieldErrors: Record<string, string> = {}
-  if (!responsibility) fieldErrors.responsibility = 'Choose a responsibility.'
-  if (!startDate) fieldErrors.start_date = 'Start date is required.'
-  if (endDate && startDate && endDate < startDate) {
-    fieldErrors.end_date = 'End date cannot be before start date.'
-  }
-
-  if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors }
-  }
-
-  const values: ResponsibilityIntake = {
-    responsibility,
-    start_date: startDate,
-    is_primary: isPrimary,
-    department: department || undefined,
-    end_date: endDate || undefined,
-    campus_id: Number.isFinite(campusId) && campusId > 0 ? campusId : undefined,
-    manager_id: Number.isFinite(managerId) && managerId > 0 ? managerId : undefined,
-  }
-
-  try {
-    await addResponsibility(staffId, values)
-  } catch (cause) {
-    // Surface Odoo’s own messages (single primary, self-manager, etc.)
-    return { error: toOdooError(cause).message }
-  }
-
-  revalidatePath(`/staff/${staffId}`)
-  return { ok: 'Responsibility assigned.' }
-}
-
-export async function endResponsibilityAction(
-  _previous: ResponsibilityState,
-  form: FormData,
-): Promise<ResponsibilityState> {
-  await requireSession()
-
-  const id = Number(form.get('id'))
-  const staffId = Number(form.get('staffId'))
-  const endDate = String(form.get('end_date') ?? '').trim() || new Date().toISOString().slice(0, 10)
-
-  if (!Number.isFinite(id) || id <= 0) {
-    return { error: 'Missing responsibility record.' }
-  }
-
-  try {
-    await endResponsibility(id, endDate)
-  } catch (cause) {
-    return { error: toOdooError(cause).message }
-  }
-
-  if (Number.isFinite(staffId) && staffId > 0) {
-    revalidatePath(`/staff/${staffId}`)
-  }
-  return { ok: 'Responsibility ended.' }
 }

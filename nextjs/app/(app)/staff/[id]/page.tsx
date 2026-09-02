@@ -1,6 +1,4 @@
 import { notFound } from 'next/navigation'
-import { selectionOptions } from '@/lib/odoo/selections'
-import { AssignResponsibilityForm } from './assign-responsibility-form'
 import {
   Badge,
   Card,
