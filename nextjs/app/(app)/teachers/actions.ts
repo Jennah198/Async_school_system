@@ -7,6 +7,7 @@ import { toOdooError } from '@/lib/odoo/errors'
 import {
   createTeacher,
   createTeacherLogin,
+  setTeacherPassword,
   updateTeacher,
   TEACHER_EDITABLE,
 } from '@/lib/odoo/models/teacher'
@@ -31,6 +32,16 @@ const INTAKE_FIELDS = [
   'staff_id', 'teaching_status', 'qualification', 'specialization',
   'years_of_experience', 'max_weekly_workload', 'available_days',
 ] as const
+
+/**
+ * Mirrors school_management's PASSWORD_REGEX so the user hears sooner:
+ * eight or more characters with an upper, a lower, a digit and a symbol.
+ * Odoo's `_check_strong_password` is still the authority.
+ */
+const STRONG_PASSWORD = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/
+
+const PASSWORD_HELP =
+  'At least 8 characters with an uppercase letter, a lowercase letter, a number and a symbol.'
 
 const submitted = (form: FormData) =>
   Object.fromEntries(INTAKE_FIELDS.map((f) => [f, text(form, f)]))
@@ -57,10 +68,17 @@ export async function createTeacherAction(
     }
   }
 
+  const password = String(form.get('login_password') ?? '')
+  if (password && !STRONG_PASSWORD.test(password)) {
+    return { fieldErrors: { login_password: PASSWORD_HELP }, values: submitted(form) }
+  }
+
   let id: number
   try {
     id = await createTeacher({
       staff_id: staffId,
+      // Empty means Odoo emails a set-password link instead.
+      login_password: password || undefined,
       teaching_status: text(form, 'teaching_status') || undefined,
       qualification: text(form, 'qualification') || undefined,
       specialization: text(form, 'specialization') || undefined,
@@ -114,9 +132,11 @@ export async function updateTeacherAction(
 /**
  * Provision the teaching login.
  *
- * Odoo owns the whole flow, including sending the password reset. This never
- * handles a password: `_create_teacher_user` with no password given calls
- * `action_reset_password`, so no credential passes through this application.
+ * Odoo owns the flow. With no password given, `_create_teacher_user` calls
+ * `action_reset_password` and emails a link — which is the better path, but
+ * only where an outgoing mail server exists. Where one does not, the account
+ * is created with no password and nobody can sign in, so the caller may set
+ * one instead.
  */
 export async function createTeacherLoginAction(
   _previous: TeacherFormState,
@@ -126,8 +146,19 @@ export async function createTeacherLoginAction(
   const id = Number(text(form, 'id'))
   if (!Number.isInteger(id) || id <= 0) return { error: 'That profile could not be identified.' }
 
+  const password = String(form.get('login_password') ?? '')
+  if (password && !STRONG_PASSWORD.test(password)) {
+    return { fieldErrors: { login_password: PASSWORD_HELP } }
+  }
+
   try {
-    await createTeacherLogin(id)
+    if (password) {
+      // Odoo's inverse creates the user when there is none and sets the
+      // password when there is, so one call covers both.
+      await setTeacherPassword(id, password)
+    } else {
+      await createTeacherLogin(id)
+    }
   } catch (cause) {
     // The usual refusal is "The linked staff record needs an email address
     // before a login can be created for …", which tells the user exactly
@@ -136,5 +167,34 @@ export async function createTeacherLoginAction(
   }
 
   revalidatePath(`/teachers/${id}`)
-  return { ok: 'Login created. Odoo has emailed the teacher a password reset.' }
+  return {
+    ok: password
+      ? 'Login ready. Give the teacher their password — it was not stored here.'
+      : 'Login created. Odoo has emailed the teacher a set-password link.',
+  }
+}
+
+/** Set or reset the password on an existing teaching login. */
+export async function setTeacherPasswordAction(
+  _previous: TeacherFormState,
+  form: FormData,
+): Promise<TeacherFormState> {
+  await requireSession()
+  const id = Number(text(form, 'id'))
+  const password = String(form.get('login_password') ?? '')
+
+  if (!Number.isInteger(id) || id <= 0) return { error: 'That profile could not be identified.' }
+  if (!password) return { fieldErrors: { login_password: 'Enter a password.' } }
+  if (!STRONG_PASSWORD.test(password)) {
+    return { fieldErrors: { login_password: PASSWORD_HELP } }
+  }
+
+  try {
+    await setTeacherPassword(id, password)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/teachers/${id}`)
+  return { ok: 'Password set. Give it to the teacher — it was not stored here.' }
 }
