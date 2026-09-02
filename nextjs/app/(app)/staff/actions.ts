@@ -1,10 +1,18 @@
 'use server'
-
+import { addResponsibility, endResponsibility, type ResponsibilityIntake } from '@/lib/odoo/models/staff'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireSession } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
-import { createStaff, updateStaff, type StaffIntake } from '@/lib/odoo/models/staff'
+import {
+  addResponsibility,
+  createStaff,
+  endResponsibility,
+  setPrimaryResponsibility,
+  updateStaff,
+  type StaffIntake,
+} from '@/lib/odoo/models/staff'
+import { todayIso } from '@/lib/format'
 
 /**
  * Every mutation here runs as the signed-in user's Odoo session. Nothing from
@@ -106,23 +114,261 @@ export async function registerStaffAction(
   redirect(`/staff/${id}`)
 }
 
+/**
+ * Fields a staff record may be edited through.
+ *
+ * `name`, `staff_id` and `primary_responsibility` are computed or sequence-
+ * assigned and are absent on purpose — Odoo would ignore or refuse them.
+ * `state` is absent because it moves through the workflow actions, which mint
+ * the sequence, create the hr.employee and cascade to teacher profiles; a
+ * direct write would skip all of that.
+ *
+ * The list is an allowlist, not a filter over whatever the form posts: a
+ * hand-crafted request naming another field gets it dropped here, and Odoo's
+ * own field-level groups still apply on top.
+ */
+const EDITABLE_FIELDS = [
+  'first_name',
+  'last_name',
+  'gender',
+  'date_of_birth',
+  'fayda_id',
+  'phone',
+  'mobile',
+  'email',
+  'department',
+  'job_title_id',
+  'employment_type',
+  'employment_status',
+  'hire_date',
+  'end_date',
+  'campus_id',
+  'manager_id',
+] as const
+
+/** Many2one fields have to reach Odoo as integers, or be cleared with false. */
+const RELATIONAL = new Set(['job_title_id', 'campus_id', 'manager_id'])
+
 export async function updateStaffAction(_previous: FormState, form: FormData): Promise<FormState> {
   await requireSession()
   const id = Number(text(form, 'id'))
-  if (!id) return { error: 'Missing record.' }
+  if (!Number.isInteger(id) || id <= 0) return { error: 'That record could not be identified.' }
 
-  const editable = ['phone', 'mobile', 'email', 'hire_date', 'end_date', 'employment_status', 'employment_type']
+  const fieldErrors: Record<string, string> = {}
   const values: Record<string, unknown> = {}
-  for (const field of editable) {
-    if (form.has(field)) values[field] = text(form, field) || false
+
+  for (const field of EDITABLE_FIELDS) {
+    // Only fields the form actually rendered are touched. A role that cannot
+    // see date_of_birth never posts it, so the write never mentions it.
+    if (!form.has(field)) continue
+    const raw = text(form, field)
+    if (RELATIONAL.has(field)) {
+      values[field] = raw ? Number(raw) : false
+    } else {
+      values[field] = raw || false
+    }
+  }
+
+  if (form.has('first_name') && !text(form, 'first_name')) {
+    fieldErrors.first_name = 'First name is required.'
+  }
+  if (form.has('last_name') && !text(form, 'last_name')) {
+    fieldErrors.last_name = 'Last name is required.'
+  }
+  const fayda = text(form, 'fayda_id')
+  // Mirrors school.staff._check_fayda_id so the user hears sooner; Odoo decides.
+  if (form.has('fayda_id') && fayda && !/^[0-9]{16}$/.test(fayda)) {
+    fieldErrors.fayda_id = 'Fayda ID must be exactly 16 digits.'
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values: Object.fromEntries(EDITABLE_FIELDS.map((f) => [f, text(form, f)])) }
   }
 
   try {
     await updateStaff(id, values)
   } catch (cause) {
-    return { error: toOdooError(cause).message }
+    // "Cannot leave Draft while the following are missing: …", the Fayda
+    // duplicate, the phone clash, the job-title/department mismatch — all
+    // written for the person doing the work.
+    return {
+      error: toOdooError(cause).message,
+      values: Object.fromEntries(EDITABLE_FIELDS.map((f) => [f, text(form, f)])),
+    }
   }
 
   revalidatePath(`/staff/${id}`)
-  return { ok: true }
+  revalidatePath('/staff')
+  redirect(`/staff/${id}`)
+}
+
+/* -------------------------------------------------------- responsibility --- */
+
+export interface ResponsibilityState {
+  error?: string
+  ok?: string
+}
+
+/**
+ * Add a responsibility.
+ *
+ * This is what unblocks activation: `_missing_registration_fields` requires at
+ * least one active responsibility before a staff member may leave Draft, and
+ * until now the frontend could create staff it could never activate.
+ */
+export async function addResponsibilityAction(
+  _previous: ResponsibilityState,
+  form: FormData,
+): Promise<ResponsibilityState> {
+  await requireSession()
+  const staffId = Number(text(form, 'staffId'))
+  const responsibility = text(form, 'responsibility')
+  if (!Number.isInteger(staffId) || staffId <= 0) return { error: 'That record could not be identified.' }
+  if (!responsibility) return { error: 'Choose a responsibility.' }
+
+  const campusId = Number(text(form, 'campus_id'))
+  const managerId = Number(text(form, 'manager_id'))
+
+  try {
+    await addResponsibility(staffId, {
+      responsibility,
+      is_primary: form.get('is_primary') === 'on',
+      department: text(form, 'department') || undefined,
+      campus_id: Number.isInteger(campusId) && campusId > 0 ? campusId : undefined,
+      manager_id: Number.isInteger(managerId) && managerId > 0 ? managerId : undefined,
+      start_date: text(form, 'start_date') || todayIso(),
+      end_date: text(form, 'end_date') || undefined,
+    })
+  } catch (cause) {
+    // "already has a primary responsibility", "cannot report to themselves",
+    // and the unique constraint on (staff, responsibility, department, date).
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/staff/${staffId}`)
+  return { ok: 'Responsibility added.' }
+}
+
+/** End a responsibility. Kept as history rather than deleted — see the model. */
+export async function endResponsibilityAction(
+  _previous: ResponsibilityState,
+  form: FormData,
+): Promise<ResponsibilityState> {
+  await requireSession()
+  const id = Number(text(form, 'id'))
+  const staffId = Number(text(form, 'staffId'))
+  if (!Number.isInteger(id) || id <= 0) return { error: 'That responsibility could not be identified.' }
+
+  try {
+    await endResponsibility(id, text(form, 'end_date') || todayIso())
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/staff/${staffId}`)
+  return { ok: 'Responsibility ended.' }
+}
+
+export async function setPrimaryResponsibilityAction(
+  _previous: ResponsibilityState,
+  form: FormData,
+): Promise<ResponsibilityState> {
+  await requireSession()
+  const id = Number(text(form, 'id'))
+  const staffId = Number(text(form, 'staffId'))
+  if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(staffId) || staffId <= 0) {
+    return { error: 'That responsibility could not be identified.' }
+  }
+
+  try {
+    await setPrimaryResponsibility(staffId, id)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/staff/${staffId}`)
+  return { ok: 'Primary responsibility updated.' }
+}
+
+export interface ResponsibilityState {
+  error?: string
+  ok?: string
+  fieldErrors?: Record<string, string>
+}
+
+export async function assignResponsibilityAction(
+  _previous: ResponsibilityState,
+  form: FormData,
+): Promise<ResponsibilityState> {
+  await requireSession()
+
+  const staffId = Number(form.get('staffId'))
+  if (!Number.isFinite(staffId) || staffId <= 0) {
+    return { error: 'Missing staff record.' }
+  }
+
+  const responsibility = String(form.get('responsibility') ?? '').trim()
+  const startDate = String(form.get('start_date') ?? '').trim()
+  const department = String(form.get('department') ?? '').trim()
+  const endDate = String(form.get('end_date') ?? '').trim()
+  const isPrimary = form.get('is_primary') === 'on' || form.get('is_primary') === 'true'
+  const campusId = Number(form.get('campus_id'))
+  const managerId = Number(form.get('manager_id'))
+
+  // Light client-side checks (Odoo is the real authority)
+  const fieldErrors: Record<string, string> = {}
+  if (!responsibility) fieldErrors.responsibility = 'Choose a responsibility.'
+  if (!startDate) fieldErrors.start_date = 'Start date is required.'
+  if (endDate && startDate && endDate < startDate) {
+    fieldErrors.end_date = 'End date cannot be before start date.'
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors }
+  }
+
+  const values: ResponsibilityIntake = {
+    responsibility,
+    start_date: startDate,
+    is_primary: isPrimary,
+    department: department || undefined,
+    end_date: endDate || undefined,
+    campus_id: Number.isFinite(campusId) && campusId > 0 ? campusId : undefined,
+    manager_id: Number.isFinite(managerId) && managerId > 0 ? managerId : undefined,
+  }
+
+  try {
+    await addResponsibility(staffId, values)
+  } catch (cause) {
+    // Surface Odoo’s own messages (single primary, self-manager, etc.)
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/staff/${staffId}`)
+  return { ok: 'Responsibility assigned.' }
+}
+
+export async function endResponsibilityAction(
+  _previous: ResponsibilityState,
+  form: FormData,
+): Promise<ResponsibilityState> {
+  await requireSession()
+
+  const id = Number(form.get('id'))
+  const staffId = Number(form.get('staffId'))
+  const endDate = String(form.get('end_date') ?? '').trim() || new Date().toISOString().slice(0, 10)
+
+  if (!Number.isFinite(id) || id <= 0) {
+    return { error: 'Missing responsibility record.' }
+  }
+
+  try {
+    await endResponsibility(id, endDate)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  if (Number.isFinite(staffId) && staffId > 0) {
+    revalidatePath(`/staff/${staffId}`)
+  }
+  return { ok: 'Responsibility ended.' }
 }

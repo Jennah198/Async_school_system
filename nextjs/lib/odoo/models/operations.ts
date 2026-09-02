@@ -522,3 +522,24 @@ export function listCurriculum(options: { classId?: number } = {}): Promise<
     },
   )
 }
+
+/**
+ * Save every changed row in one round trip.
+ *
+ * Odoo's write() takes many ids but only one values dict, so this groups
+ * changes by target status first — a class of 30 that settles on "present"
+ * costs one write call, not thirty.
+ */
+export async function setAttendanceStatusBatch(
+  changes: Array<{ id: number; status: string }>,
+): Promise<void> {
+  const byStatus = new Map<string, number[]>()
+  for (const { id, status } of changes) {
+    const ids = byStatus.get(status) ?? []
+    ids.push(id)
+    byStatus.set(status, ids)
+  }
+  await Promise.all(
+    Array.from(byStatus.entries()).map(([status, ids]) => write('school.attendance', ids, { status })),
+  )
+}
