@@ -1,5 +1,6 @@
 'use client'
 
+import { useId, useState } from 'react'
 import type { ReactNode, SelectHTMLAttributes, InputHTMLAttributes } from 'react'
 import { Icon } from '@/components/icons'
 import { cx } from './primitives'
@@ -84,6 +85,87 @@ export function TextField({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${name}-error` : undefined}
         className={cx(INPUT_CLASS, error && INPUT_INVALID)}
+        {...rest}
+      />
+    </Field>
+  )
+}
+
+/**
+ * A password input with a reveal control.
+ *
+ * Every password typed in this application is typed *for somebody else* — a
+ * registrar setting a teacher's first password, or resetting one they have
+ * lost. There is no muscle memory to fall back on and no confirmation field to
+ * catch a typo, so a wrong character is discovered only when the teacher
+ * cannot sign in. Being able to look is the check.
+ *
+ * It stays masked until asked: revealing is deliberate, never the default, and
+ * the control states which way round it is for a screen reader too.
+ */
+export function PasswordInput({
+  name,
+  invalid,
+  className,
+  ...rest
+}: {
+  name: string
+  invalid?: boolean
+} & Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [revealed, setRevealed] = useState(false)
+  const statusId = useId()
+
+  return (
+    <span className="relative block">
+      <input
+        id={name}
+        name={name}
+        type={revealed ? 'text' : 'password'}
+        aria-invalid={invalid ? true : undefined}
+        className={cx(INPUT_CLASS, 'pr-10', invalid && INPUT_INVALID, className)}
+        {...rest}
+      />
+      <button
+        type="button"
+        onClick={() => setRevealed((was) => !was)}
+        aria-pressed={revealed}
+        aria-controls={name}
+        aria-describedby={statusId}
+        title={revealed ? 'Hide password' : 'Show password'}
+        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-[8px] text-stone transition-colors hover:text-graphite focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-action-blue"
+      >
+        <Icon name={revealed ? 'eyeOff' : 'eye'} size={16} />
+        <span className="sr-only">{revealed ? 'Hide password' : 'Show password'}</span>
+      </button>
+      {/* Announced on toggle, so it is clear the password is now on screen. */}
+      <span id={statusId} role="status" className="sr-only">
+        {revealed ? 'Password is visible' : 'Password is hidden'}
+      </span>
+    </span>
+  )
+}
+
+/** PasswordInput wearing the same label, hint and error styling as TextField. */
+export function PasswordField({
+  label,
+  name,
+  error,
+  hint,
+  required,
+  ...rest
+}: {
+  label: string
+  name: string
+  error?: string
+  hint?: string
+} & Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  return (
+    <Field label={label} htmlFor={name} error={error} hint={hint} required={required}>
+      <PasswordInput
+        name={name}
+        required={required}
+        invalid={Boolean(error)}
+        aria-describedby={error ? `${name}-error` : undefined}
         {...rest}
       />
     </Field>
