@@ -31,6 +31,7 @@ export interface StudentDetail {
   section_id: Many2one
   stream_id: Many2one
   education_level: Selection
+  class_grade_level: Selection
   admission_type: Selection
   registration_status: Selection
   lifecycle_status: Selection
@@ -77,6 +78,7 @@ const STUDENT_DETAIL_FIELDS = [
   'section_id',
   'stream_id',
   'education_level',
+  'class_grade_level',
   'admission_type',
   'registration_status',
   'lifecycle_status',
@@ -642,6 +644,73 @@ export function listPromotionTargets(): Promise<Page<PromotionTarget>> {
     domain: [['active', '=', true]],
     limit: 300,
     order: 'academic_year_id desc, name',
+  })
+}
+
+export interface TransferIntake {
+  enrollmentId: number
+  newClassId: number
+  effectiveDate: string
+  reason: string
+}
+
+/**
+ * Move a student to another class inside the same academic year.
+ *
+ * `school.enrollment.transfer.action_confirm` closes the current placement and
+ * opens a new one rather than editing the enrolment, which is what preserves
+ * the one-enrolment-per-year invariant. It also re-checks that the target is
+ * in the same year, that the date is not before the current placement began,
+ * and the target's capacity — refusing unless a capacity override exists.
+ * None of that is reimplemented here.
+ */
+export async function transferEnrollment(intake: TransferIntake): Promise<void> {
+  const wizardId = await create('school.enrollment.transfer', {
+    enrollment_id: intake.enrollmentId,
+    new_class_id: intake.newClassId,
+    effective_date: intake.effectiveDate,
+    reason: intake.reason,
+  })
+  await callKw('school.enrollment.transfer', 'action_confirm', [[wizardId]])
+}
+
+export interface OverrideRow {
+  id: number
+  operation: Selection
+  reason: string
+  approved_by_id: Many2one
+  approved_at: string
+  active: boolean
+}
+
+export function listOverrides(enrollmentId: number): Promise<Page<OverrideRow> | null> {
+  return orNullOnRefusal(
+    searchRead<OverrideRow>(
+      'school.enrollment.override',
+      ['operation', 'reason', 'approved_by_id', 'approved_at', 'active'],
+      { domain: [['enrollment_id', '=', enrollmentId]], order: 'create_date desc', limit: 50 },
+    ),
+  )
+}
+
+/**
+ * Authorise an exception on one enrolment.
+ *
+ * Unlike the other wizards this is a permanent record, not a transient: Odoo
+ * stamps the approver and time, refuses `unlink` outright, and its `create`
+ * re-checks the director group *and* that `school_capacity_override` is
+ * enabled in company settings. A capacity override is what lets a transfer or
+ * placement into a full class succeed later.
+ */
+export function authorizeOverride(intake: {
+  enrollmentId: number
+  operation: string
+  reason: string
+}): Promise<number> {
+  return create('school.enrollment.override', {
+    enrollment_id: intake.enrollmentId,
+    operation: intake.operation,
+    reason: intake.reason,
   })
 }
 

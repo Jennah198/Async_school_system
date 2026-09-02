@@ -260,6 +260,32 @@ export function visibleSections(roles: SchoolRoles): NavSection[] {
 }
 
 /** Human label for the signed-in user's strongest role. */
+/**
+ * Where a role's work actually starts.
+ *
+ * The precedence is `primaryRoleLabel`'s, so the page someone lands on always
+ * agrees with the role the shell says they hold. Each destination is the queue
+ * that role's own dashboard already leads with, rather than a guess:
+ * a teacher's open mark lists, an exam officer's approval queue, a registrar's
+ * submitted registrations.
+ *
+ * Administrators and directors keep the dashboard — the overview is their work,
+ * not a step on the way to it.
+ *
+ * This only chooses a first page. Every destination is reachable from the
+ * sidebar regardless, and Odoo still authorises whatever is asked for there,
+ * so landing somewhere is never a grant of access to it.
+ */
+export function landingPath(roles: SchoolRoles): string {
+  if (roles.isAdmin || roles.isDirector) return '/dashboard'
+  if (roles.isRegistrar) return '/students?status=submitted'
+  if (roles.isExamOfficer) return '/assessments?status=submitted'
+  if (roles.isHr) return '/staff'
+  if (roles.isFrontOffice) return '/students'
+  if (roles.isTeacher) return '/assessments?status=open'
+  return '/dashboard'
+}
+
 export function primaryRoleLabel(roles: SchoolRoles): string {
   if (roles.isAdmin) return 'Administrator'
   if (roles.isDirector) return 'Director'

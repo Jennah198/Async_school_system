@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { login, logout } from '@/lib/odoo/auth'
 import { toOdooError } from '@/lib/odoo/errors'
+import { landingPath } from '@/lib/navigation'
 
 export interface LoginState {
   error?: string
@@ -24,14 +25,18 @@ export async function loginAction(
     return { error: 'Enter both your email and password.' }
   }
 
+  let session
   try {
-    await login(loginName, password)
+    session = await login(loginName, password)
   } catch (cause) {
     // Only the normalised message — never Odoo's traceback.
     return { error: toOdooError(cause).message }
   }
 
-  redirect('/dashboard')
+  // The groups Odoo just resolved decide the first page — a teacher's open
+  // mark lists, an exam officer's approval queue — rather than everyone
+  // landing on an overview most roles have to click straight through.
+  redirect(landingPath(session.user.roles))
 }
 
 export async function logoutAction(): Promise<void> {

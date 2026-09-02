@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/odoo/auth'
+import { landingPath } from '@/lib/navigation'
 import { LoginForm } from './login-form'
 
 export const metadata = { title: 'Sign in · Async School' }
@@ -8,9 +9,11 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
   const params = await searchParams
   const expired = params.expired === '1'
 
-  // Only bounce to the dashboard when the visitor is genuinely signed in.
-  // Arriving here after an expired Odoo session must not loop back.
-  if (!expired && (await getSession())) redirect('/dashboard')
+  // Only bounce an already signed-in visitor onward, and send them to the same
+  // page a fresh sign-in would. Arriving here after an expired Odoo session
+  // must not loop back.
+  const session = expired ? null : await getSession()
+  if (session) redirect(landingPath(session.user.roles))
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">

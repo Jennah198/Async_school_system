@@ -12,9 +12,15 @@ import {
   listEnrollments,
   listGuardians,
 } from '@/lib/odoo/models/student'
+import {
+  listAnswers,
+  listApplicableQuestions,
+  listOptions,
+} from '@/lib/odoo/models/registration'
 import { DocumentUpload } from './document-upload'
+import { Questionnaire } from './questionnaire'
 import { GuardiansSection } from './guardian-form'
-import { m2oLabel } from '@/lib/odoo/types'
+import { m2oId, m2oLabel } from '@/lib/odoo/types'
 import { selectionOptions } from '@/lib/odoo/selections'
 import { availableTransitions } from '@/lib/odoo/workflows'
 
@@ -75,6 +81,53 @@ export default async function StudentDetailPage({
   if (!student) notFound()
 
   const status = String(student.registration_status || '')
+
+  // The questionnaire is only meaningful before approval, and the domain that
+  // decides which questions apply is the same one the submission check uses.
+  const [applicable, answers] = await Promise.all([
+    listApplicableQuestions({
+      gradeLevel: Number(student.class_grade_level || 0),
+      admissionType: String(student.admission_type || 'new'),
+      streamId: m2oId(student.stream_id),
+    }),
+    listAnswers(student.id),
+  ])
+
+  const answerFor = new Map(
+    (answers?.rows ?? []).map((row) => [m2oId(row.question_id) ?? 0, row]),
+  )
+
+  // Only selection questions need their choices fetched, and they are read in
+  // parallel rather than one per row.
+  const selectionRows = (applicable?.rows ?? []).filter(
+    (question) => String(question.answer_type) === 'selection',
+  )
+  const optionPages = await Promise.all(
+    selectionRows.map((question) => listOptions(question.id)),
+  )
+  const optionsFor = new Map(
+    selectionRows.map((question, index) => [
+      question.id,
+      (optionPages[index]?.rows ?? []).map((option) => ({
+        id: option.id,
+        name: option.name,
+      })),
+    ]),
+  )
+
+  const questions = (applicable?.rows ?? []).map((question) => {
+    const answer = answerFor.get(question.id)
+    return {
+      id: question.id,
+      name: question.name,
+      answerType: String(question.answer_type || 'text'),
+      required: question.required,
+      options: optionsFor.get(question.id) ?? [],
+      answerId: answer?.id ?? null,
+      valueText: String(answer?.value_text || ''),
+      optionId: String(m2oId(answer?.option_id ?? false) ?? ''),
+    }
+  })
 
   return (
     <>
@@ -271,6 +324,22 @@ export default async function StudentDetailPage({
               </div>
             )}
           </Card>
+
+          {questions.length > 0 ? (
+            <Card padded={false}>
+              <div className="p-6 pb-0">
+                <CardHeader
+                  title="Registration questionnaire"
+                  hint="Odoo names every unanswered required question when a submission is refused."
+                />
+              </div>
+              <Questionnaire
+                studentId={student.id}
+                questions={questions}
+                canWrite={canWrite}
+              />
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader
