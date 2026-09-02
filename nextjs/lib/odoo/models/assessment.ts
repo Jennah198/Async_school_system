@@ -257,6 +257,26 @@ export async function createAssessment(intake: AssessmentIntake): Promise<number
   })
 }
 
+/** The states Odoo's unlock wizard accepts. */
+export const UNLOCKABLE_STATES = new Set(['approved', 'locked', 'published'])
+
+/**
+ * Reopen an approved, locked or published assessment for correction.
+ *
+ * `school.assessment.unlock` is a transient wizard: create it with the reason,
+ * then call `action_confirm`, which re-checks the Exam Officer group, writes an
+ * `unlocked` audit event carrying the reason, and moves the assessment back to
+ * `open`. None of that is repeated here — BR-11/AC-13 put it in the model on
+ * purpose, and a direct `write({state})` would skip the event entirely.
+ */
+export async function unlockAssessment(assessmentId: number, reason: string): Promise<void> {
+  const wizardId = await create('school.assessment.unlock', {
+    assessment_id: assessmentId,
+    reason,
+  })
+  await callKw('school.assessment.unlock', 'action_confirm', [[wizardId]])
+}
+
 /* --------------------------------------------------------- report card --- */
 
 /*
