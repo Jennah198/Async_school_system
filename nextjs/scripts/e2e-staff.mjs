@@ -105,7 +105,9 @@ try {
   console.log('\n[2] Activation (Odoo action_activate)')
   let body = (await page.textContent('body')) ?? ''
   check('record starts in Draft', /draft/i.test(body))
-  check('no staff ID before activation', /No staff ID yet/i.test(body))
+  // The record page says the number is pending rather than showing a dash;
+  // the label matches the 'Staff number' field on the edit form.
+  check('no staff number before activation', /No staff number yet/i.test(body))
 
   const missingShown = await page.locator('text=Still required to activate').isVisible().catch(() => false)
   console.log(`    Odoo completeness hint shown: ${missingShown}`)
