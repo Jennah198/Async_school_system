@@ -1,10 +1,10 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { Badge, Button, Cell, DataTable, EmptyState, Row, cx } from '@/components/ui'
+import { Badge, Button, Cell, DataTable, DateText, EmptyState, Row, cx } from '@/components/ui'
 import { Icon } from '@/components/icons'
 import { INPUT_CLASS, type Option } from '@/components/ui/form'
-import { formatDate, formatSelection, todayIso } from '@/lib/format'
+import { formatSelection, todayIso } from '@/lib/format'
 import {
   addResponsibilityAction,
   endResponsibilityAction,
@@ -128,8 +128,8 @@ export function Responsibilities({
               <Cell hideBelow="sm">{formatSelection(row.department)}</Cell>
               <Cell hideBelow="lg">{row.campus || '—'}</Cell>
               <Cell hideBelow="lg">{row.manager || '—'}</Cell>
-              <Cell hideBelow="md">{formatDate(row.start_date)}</Cell>
-              <Cell hideBelow="md">{row.end_date ? formatDate(row.end_date) : 'Current'}</Cell>
+              <Cell hideBelow="md">{<DateText value={row.start_date} />}</Cell>
+              <Cell hideBelow="md">{row.end_date ? <DateText value={row.end_date} /> : 'Current'}</Cell>
               <Cell>
                 {canWrite && row.active ? (
                   <span className="flex justify-end gap-1.5">
