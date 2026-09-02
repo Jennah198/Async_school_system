@@ -1,5 +1,3 @@
-import Link from 'next/link'
-import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
 import {
   Badge,
@@ -7,224 +5,337 @@ import {
   CardHeader,
   Cell,
   DataTable,
-  DetailField,
+  DetailGrid,
   EmptyState,
   ErrorState,
+  LinkButton,
+  Note,
   PageHeader,
+  RestrictedState,
   Row,
+  RowLink,
   StatusBadge,
+  TableCard,
 } from '@/components/ui'
-import { toOdooError } from '@/lib/odoo/errors'
+import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
+import { toOdooError } from '@/lib/odoo/errors'
+import { formatDate, formatDateTime, formatSelection, formatText, trimNumber } from '@/lib/format'
 import {
+  getActivationBlockers,
   getStaff,
+  getStaffLinks,
   getStaffPersonalData,
+  getTeacherProfileFor,
+  listCampusOptions,
   listDailyStatus,
   listEmployment,
+  listManagerOptions,
   listResponsibilities,
-  getStaffLinks,
-  getActivationBlockers,
+  staffFieldMeta,
 } from '@/lib/odoo/models/staff'
 import { m2oLabel } from '@/lib/odoo/types'
-import { WorkflowPanel } from '@/components/workflow-panel'
 import { availableTransitions } from '@/lib/odoo/workflows'
+import { Responsibilities } from './responsibilities'
 
 export const metadata = { title: 'Staff record · Async School' }
 
+const Restricted = () => <span className="text-stone">Restricted to your role</span>
 
 export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]'>) {
   const id = Number((await params).id)
   if (!Number.isFinite(id)) notFound()
 
-  let staff, responsibilities, employment, dailyStatus, personal, links, blockers, canWrite
+  let staff, responsibilities, employment, dailyStatus, personal, links, blockers,
+    canWrite, teacherProfile, meta, campuses, managers
   try {
-    ;[staff, responsibilities, employment, dailyStatus, personal, links, blockers, canWrite] =
-      await Promise.all([
-        getStaff(id),
-        listResponsibilities(id),
-        listEmployment(id),
-        listDailyStatus(id),
-        getStaffPersonalData(id),
-        getStaffLinks(id),
-        getActivationBlockers(id),
-        hasAccess('school.staff', 'write'),
-      ])
+    ;[
+      staff, responsibilities, employment, dailyStatus, personal, links, blockers,
+      canWrite, teacherProfile, meta, campuses, managers,
+    ] = await Promise.all([
+      getStaff(id),
+      listResponsibilities(id),
+      listEmployment(id),
+      listDailyStatus(id),
+      getStaffPersonalData(id),
+      getStaffLinks(id),
+      getActivationBlockers(id),
+      hasAccess('school.staff', 'write'),
+      getTeacherProfileFor(id),
+      staffFieldMeta(),
+      listCampusOptions(),
+      listManagerOptions(id),
+    ])
   } catch (cause) {
     return (
       <>
         <PageHeader title="Staff record" />
-        <ErrorState {...toOdooError(cause).toClient()} />
+        <ErrorState {...toOdooError(cause).toClient()} retryHref="/staff" />
       </>
     )
   }
 
   if (!staff) notFound()
 
+  const teacher = teacherProfile?.rows[0]
+  const state = String(staff.state || '')
+
   return (
     <>
       <PageHeader
         title={staff.name || 'Unnamed staff member'}
-        subtitle={`${staff.staff_id || 'No staff ID yet'} · ${formatSelection(staff.department)}`}
+        subtitle={`${staff.staff_id || 'No staff number yet'} · ${formatSelection(staff.department)}`}
+        breadcrumbs={[{ label: 'Staff', href: '/staff' }, { label: staff.name }]}
+        meta={
+          <>
+            <StatusBadge state={state} />
+            {staff.active ? null : <Badge tone="muted">Archived</Badge>}
+            {teacher ? <Badge tone="neutral">Teacher</Badge> : null}
+          </>
+        }
         action={
-          <Link
-            href="/staff"
-            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
-          >
-            Back to staff
-          </Link>
+          <>
+            {canWrite ? (
+              <LinkButton href={`/staff/${id}/edit`} icon="staff" variant="primary">
+                Edit
+              </LinkButton>
+            ) : null}
+            <LinkButton href="/staff" icon="arrowLeft">
+              Back to staff
+            </LinkButton>
+          </>
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Details" />
-            <dl className="grid gap-4 sm:grid-cols-3">
-              <DetailField label="Job title" value={m2oLabel(staff.job_title_id)} />
-              <DetailField
-                label="Primary responsibility"
-                value={formatSelection(staff.primary_responsibility)}
-              />
-              <DetailField label="Employment status" value={formatSelection(staff.employment_status)} />
-              <DetailField label="Employment type" value={formatSelection(staff.employment_type)} />
-              <DetailField label="Hire date" value={formatDate(staff.hire_date)} />
-              <DetailField label="End date" value={formatDate(staff.end_date)} />
-              <DetailField label="Phone" value={staff.phone || '—'} />
-              <DetailField label="Mobile" value={staff.mobile || '—'} />
-              <DetailField label="Email" value={staff.email || '—'} />
-              <DetailField
-                label="Linked employee"
-                value={links ? m2oLabel(links.employee_id) : <span className="text-stone">Restricted</span>}
-              />
-              <DetailField
-                label="Odoo login"
-                value={links ? m2oLabel(links.user_id) : <span className="text-stone">Restricted</span>}
-              />
-              <DetailField
-                label="Date of birth"
-                value={
-                  personal ? (
-                    personal.date_of_birth || '—'
-                  ) : (
-                    <span className="text-stone">Restricted to your role</span>
-                  )
-                }
-              />
-              <DetailField
-                label="Fayda ID"
-                value={
-                  personal ? (
-                    /* Shown only because Odoo returned it — never reconstructed. */
-                    personal.fayda_id || '—'
-                  ) : (
-                    <span className="text-stone">Restricted to your role</span>
-                  )
-                }
-              />
-            </dl>
+            <CardHeader title="Personal" icon="user" />
+            <DetailGrid
+              fields={[
+                { label: 'First name', value: formatText(staff.first_name) },
+                { label: 'Last name', value: formatText(staff.last_name) },
+                { label: 'Gender', value: formatSelection(staff.gender) },
+                {
+                  label: 'Date of birth',
+                  value: personal ? formatDate(personal.date_of_birth) : <Restricted />,
+                },
+                {
+                  label: 'Age',
+                  value: personal ? trimNumber(personal.age) : <Restricted />,
+                },
+                {
+                  label: 'Fayda ID',
+                  // Shown only because Odoo returned it — never reconstructed.
+                  value: personal ? formatText(personal.fayda_id) : <Restricted />,
+                },
+              ]}
+            />
           </Card>
 
-          <Card padded={false}>
-            <div className="p-6 pb-0">
-              <CardHeader
-                title="Responsibilities"
-                hint="At least one active responsibility is required to leave Draft."
-              />
-            </div>
-            {responsibilities.rows.length === 0 ? (
-              <EmptyState title="No responsibilities recorded" />
-            ) : (
-              <DataTable columns={['Responsibility', 'Primary', 'Department', 'From', 'To', 'Active']}>
-                {responsibilities.rows.map((row) => (
-                  <Row key={row.id}>
-                    <Cell strong>{formatSelection(row.responsibility)}</Cell>
-                    <Cell>{row.is_primary ? <Badge tone="solid">Primary</Badge> : null}</Cell>
-                    <Cell>{formatSelection(row.department)}</Cell>
-                    <Cell>{formatDate(row.start_date)}</Cell>
-                    <Cell>{formatDate(row.end_date)}</Cell>
-                    <Cell>{row.active ? 'Yes' : 'No'}</Cell>
-                  </Row>
-                ))}
+          <Card>
+            <CardHeader title="Contact" icon="announcements" />
+            <DetailGrid
+              fields={[
+                { label: 'Primary phone', value: formatText(staff.phone) },
+                { label: 'Mobile', value: formatText(staff.mobile) },
+                { label: 'Email', value: formatText(staff.email) },
+              ]}
+            />
+          </Card>
+
+          <Card>
+            <CardHeader title="Employment" icon="staff" />
+            <DetailGrid
+              fields={[
+                { label: 'Department', value: formatSelection(staff.department) },
+                { label: 'Job title', value: m2oLabel(staff.job_title_id) },
+                {
+                  label: 'Primary responsibility',
+                  value: formatSelection(staff.primary_responsibility),
+                },
+                { label: 'Employment status', value: formatSelection(staff.employment_status) },
+                { label: 'Employment type', value: formatSelection(staff.employment_type) },
+                { label: 'Hire date', value: formatDate(staff.hire_date) },
+                { label: 'End date', value: formatDate(staff.end_date) },
+                { label: 'Campus', value: m2oLabel(staff.campus_id) },
+                { label: 'Reporting manager', value: m2oLabel(staff.manager_id) },
+                {
+                  label: 'Linked employee',
+                  value: links ? m2oLabel(links.employee_id) : <Restricted />,
+                },
+                {
+                  label: 'Odoo login',
+                  value: links ? m2oLabel(links.user_id) : <Restricted />,
+                },
+              ]}
+            />
+          </Card>
+
+          <TableCard
+            title="Responsibilities"
+            icon="assignments"
+            hint="At least one active responsibility is required before the record can leave Draft."
+          >
+            <Responsibilities
+              staffId={id}
+              rows={responsibilities.rows.map((row) => ({
+                id: row.id,
+                responsibility: String(row.responsibility || ''),
+                is_primary: row.is_primary,
+                department: String(row.department || ''),
+                campus: m2oLabel(row.campus_id, ''),
+                manager: m2oLabel(row.manager_id, ''),
+                start_date: String(row.start_date || ''),
+                end_date: String(row.end_date || ''),
+                active: row.active,
+              }))}
+              responsibilities={meta.primary_responsibility?.selection ?? []}
+              departments={meta.department?.selection ?? []}
+              campuses={campuses}
+              managers={managers}
+              canWrite={canWrite}
+            />
+          </TableCard>
+
+          <TableCard
+            title="Teaching profile"
+            icon="teachers"
+            hint="A teacher profile hangs off this staff record; the staff record is what Odoo scopes teaching permissions from."
+            action={
+              teacher ? (
+                <LinkButton
+                  href={`/teachers?q=${encodeURIComponent(teacher.name)}`}
+                  size="sm"
+                  icon="arrowRight"
+                >
+                  Open teacher
+                </LinkButton>
+              ) : undefined
+            }
+          >
+            {teacherProfile === null ? (
+              <RestrictedState what="Teaching profiles" />
+            ) : teacher ? (
+              <DataTable
+                caption="Teaching profile for this staff member"
+                columns={[
+                  { key: 'name', label: 'Teacher' },
+                  { key: 'teacherId', label: 'Teacher ID' },
+                  { key: 'status', label: 'Teaching status' },
+                ]}
+              >
+                <Row>
+                  <Cell strong>
+                    <RowLink href={`/teachers?q=${encodeURIComponent(teacher.name)}`}>
+                      {teacher.name}
+                    </RowLink>
+                  </Cell>
+                  <Cell>
+                    <span className="tabular">{formatText(teacher.teacher_id)}</span>
+                  </Cell>
+                  <Cell>
+                    <StatusBadge state={teacher.teaching_status} size="sm" />
+                  </Cell>
+                </Row>
               </DataTable>
-            )}
-          </Card>
-
-          <Card padded={false}>
-            <div className="p-6 pb-0">
-              <CardHeader
-                title="Employment history"
-                hint="Effective-dated and non-deletable — Odoo refuses to remove these."
-              />
-            </div>
-            {employment === null ? (
+            ) : (
               <EmptyState
-                title="Not available to your role"
-                hint="Employment history is owned by HR — only HR and administrators can read it."
+                icon="teachers"
+                title="No teaching profile"
+                hint="Odoo only accepts a teacher profile on an active staff member in the academic department, or one holding a teaching responsibility."
               />
+            )}
+          </TableCard>
+
+          <TableCard
+            title="Employment history"
+            icon="documents"
+            hint="Effective-dated and non-deletable — Odoo refuses to remove these."
+          >
+            {employment === null ? (
+              <RestrictedState what="Employment history" />
             ) : employment.rows.length === 0 ? (
               <EmptyState
+                icon="documents"
                 title="No employment records"
                 hint="Odoo creates these as employment periods are recorded."
               />
             ) : (
-              <DataTable columns={['Job title', 'Responsibility', 'Manager', 'From', 'To']}>
+              <DataTable
+                caption="Employment history"
+                columns={[
+                  { key: 'title', label: 'Job title' },
+                  { key: 'responsibility', label: 'Responsibility', hideBelow: 'sm' },
+                  { key: 'manager', label: 'Manager', hideBelow: 'lg' },
+                  { key: 'from', label: 'From' },
+                  { key: 'to', label: 'To' },
+                ]}
+              >
                 {employment.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>{m2oLabel(row.job_title_id)}</Cell>
-                    <Cell>{formatSelection(row.responsibility)}</Cell>
-                    <Cell>{m2oLabel(row.manager_id)}</Cell>
+                    <Cell hideBelow="sm">{formatSelection(row.responsibility)}</Cell>
+                    <Cell hideBelow="lg">{m2oLabel(row.manager_id)}</Cell>
                     <Cell>{formatDate(row.date_start)}</Cell>
-                    <Cell>{row.date_end || 'Current'}</Cell>
+                    <Cell>{row.date_end ? formatDate(row.date_end) : 'Current'}</Cell>
                   </Row>
                 ))}
               </DataTable>
             )}
-          </Card>
+          </TableCard>
 
-          <Card padded={false}>
-            <div className="p-6 pb-0">
-              <CardHeader
-                title="Recent daily status"
-                hint="Generated nightly by Odoo from hr.attendance."
-              />
-            </div>
+          <TableCard
+            title="Recent daily status"
+            icon="attendance"
+            hint="Generated nightly by Odoo from hr.attendance."
+          >
             {dailyStatus === null ? (
-              <EmptyState
-                title="Not available to your role"
-                hint="Daily status is owned by HR — only HR and administrators can read it."
-              />
+              <RestrictedState what="Daily status" />
             ) : dailyStatus.rows.length === 0 ? (
               <EmptyState
+                icon="attendance"
                 title="No daily status yet"
                 hint="The scheduled job records these once the staff member is active."
               />
             ) : (
-              <DataTable columns={['Date', 'Status', 'Check in', 'Check out', 'Hours']}>
+              <DataTable
+                caption="Recent daily status"
+                columns={[
+                  { key: 'date', label: 'Date' },
+                  { key: 'status', label: 'Status' },
+                  { key: 'in', label: 'Check in', hideBelow: 'md' },
+                  { key: 'out', label: 'Check out', hideBelow: 'md' },
+                  { key: 'hours', label: 'Hours', numeric: true },
+                ]}
+              >
                 {dailyStatus.rows.map((row) => (
                   <Row key={row.id}>
                     <Cell strong>{formatDate(row.date)}</Cell>
-                    <Cell>{formatSelection(row.status)}</Cell>
-                    <Cell>{formatDateTime(row.check_in)}</Cell>
-                    <Cell>{formatDateTime(row.check_out)}</Cell>
-                    <Cell numeric>{row.worked_hours?.toFixed(2)}</Cell>
+                    <Cell>
+                      <StatusBadge state={row.status} size="sm" />
+                    </Cell>
+                    <Cell hideBelow="md">{formatDateTime(row.check_in)}</Cell>
+                    <Cell hideBelow="md">{formatDateTime(row.check_out)}</Cell>
+                    <Cell numeric>{trimNumber(row.worked_hours)}</Cell>
                   </Row>
                 ))}
               </DataTable>
             )}
-          </Card>
+          </TableCard>
         </div>
 
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Status" />
-            <div className="mb-4 flex items-center gap-2">
-              <StatusBadge state={staff.state} />
-              {!staff.active ? <Badge tone="muted">Archived</Badge> : null}
+            <CardHeader title="Status" icon="check" />
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <StatusBadge state={state} />
+              {staff.active ? null : <Badge tone="muted">Archived</Badge>}
             </div>
             <WorkflowPanel
               workflow="staff"
               id={staff.id}
-              transitions={availableTransitions('staff', String(staff.state || '')).map(
+              transitions={availableTransitions('staff', state).map(
                 ({ key, label, confirm, destructive, requiresReason }) => ({
                   key,
                   label,
@@ -233,10 +344,16 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                   requiresReason,
                 }),
               )}
-              revalidate={[`/staff/${staff.id}`, '/staff']}
+              revalidate={[`/staff/${staff.id}`, '/staff', '/teachers']}
               canWrite={canWrite}
-              blockedNote={staff.state === 'draft' ? (blockers ?? undefined) : undefined}
+              blockedNote={state === 'draft' ? (blockers ?? undefined) : undefined}
             />
+            <Note>
+              Activation mints the staff number, creates the linked employee record and reactivates
+              any teacher profile. Deactivation archives the Odoo login so access cannot outlive
+              employment. Staff records are never deleted from here — Odoo reserves that for an
+              administrator.
+            </Note>
           </Card>
         </div>
       </div>
