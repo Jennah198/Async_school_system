@@ -4,6 +4,16 @@ import { useActionState, useState } from 'react'
 import { MarkRow } from './mark-row'
 import { saveMarksAction, type MarkListState } from '../actions'
 
+/** Percent and grade are derived and read-only, so they yield first on narrow screens. */
+const COLUMNS = [
+  { label: 'Student', hideBelow: '' },
+  { label: 'Score', hideBelow: '' },
+  { label: 'Status', hideBelow: '' },
+  { label: 'Percent', hideBelow: ' hidden md:table-cell' },
+  { label: 'Grade', hideBelow: ' hidden sm:table-cell' },
+  { label: 'Remark', hideBelow: ' hidden lg:table-cell' },
+] as const
+
 export interface MarkListRow {
   id: number
   student: string
@@ -68,10 +78,10 @@ export function MarkList({
         <table className="w-full border-collapse text-[13px]">
           <thead>
             <tr>
-              {['Student', 'Score', 'Status', 'Percent', 'Grade', 'Remark'].map((label) => (
+              {COLUMNS.map(({ label, hideBelow }) => (
                 <th
                   key={label}
-                  className="border-b border-silver px-4 py-2.5 text-left text-[11px] font-medium tracking-wide text-slate uppercase"
+                  className={`border-b border-silver px-4 py-2.5 text-left text-[11px] font-medium tracking-wide text-slate uppercase${hideBelow}`}
                 >
                   {label}
                 </th>

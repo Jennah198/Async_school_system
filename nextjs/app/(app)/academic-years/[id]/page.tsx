@@ -49,7 +49,7 @@ export default async function AcademicYearDetailPage({
       meta={year.is_current ? <Badge tone="live">Current</Badge> : undefined}
       note="Closing a year makes it read-only. Creating the next year copies nothing — it opens an empty year to build classes in."
       fields={[
-        { label: 'Ethiopian year', value: year.name },
+        { label: 'Name', value: year.name },
         { label: 'Starts', value: <DateText value={year.date_start} /> },
         { label: 'Ends', value: <DateText value={year.date_end} /> },
         { label: 'Classes', value: formatCount(year.class_count) },

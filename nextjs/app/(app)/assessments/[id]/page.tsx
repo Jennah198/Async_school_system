@@ -61,7 +61,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Setup" hint="Frozen by Odoo once the mark list exists." />
             <dl className="grid gap-4 sm:grid-cols-3">

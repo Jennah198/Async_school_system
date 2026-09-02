@@ -99,15 +99,15 @@ export function MarkRow({
         </select>
       </td>
 
-      <td className={`${cell} tabular text-right text-[12px] text-slate`}>
+      <td className={`${cell} tabular hidden text-right text-[12px] text-slate md:table-cell`}>
         {formatPercent(percentage)}
       </td>
 
-      <td className={`${cell} text-[12px] font-medium text-graphite`}>
+      <td className={`${cell} hidden text-[12px] font-medium text-graphite sm:table-cell`}>
         {formatText(grade)}
       </td>
 
-      <td className={cell}>
+      <td className={`${cell} hidden lg:table-cell`}>
         <label className="sr-only" htmlFor={`note-${markId}`}>
           Remark for {student}
         </label>
