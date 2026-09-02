@@ -6,10 +6,14 @@ import { requireSession } from '@/lib/odoo/auth'
 import { readOne } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
 import {
+  createGuardian,
   createStudent,
   isUploadable,
+  updateGuardian,
   uploadStudentDocument,
   type ClassScope,
+  type GuardianIntake,
+  type GuardianUpdate,
   type StudentIntake,
 } from '@/lib/odoo/models/student'
 
@@ -188,4 +192,98 @@ export async function uploadStudentDocumentAction(
 
   revalidatePath(`/students/${studentId}`)
   return { ok: `${file.name} attached.` }
+}
+
+export interface GuardianFormState {
+  error?: string
+  fieldErrors?: Record<string, string>
+  values?: Record<string, string>
+}
+
+/**
+ * Add a guardian to a student.
+ *
+ * `_check_single_primary` is Odoo's — a second primary contact is rejected by
+ * the model, not pre-checked here. The error surfaces unchanged.
+ */
+export async function addGuardianAction(
+  _previous: GuardianFormState,
+  form: FormData,
+): Promise<GuardianFormState> {
+  await requireSession()
+
+  const studentId = Number(form.get('studentId'))
+  const name = String(form.get('name') ?? '').trim()
+  const phone = String(form.get('phone') ?? '').trim()
+  const relationship = String(form.get('relationship') ?? '').trim()
+  const occupation = String(form.get('occupation') ?? '').trim()
+  const isPrimary = form.get('is_primary') === 'on'
+
+  const values = { name, phone, relationship, occupation }
+  const fieldErrors: Record<string, string> = {}
+  if (!Number.isFinite(studentId)) {
+    return { error: 'That student could not be found.', values }
+  }
+  if (!name) fieldErrors.name = 'Name is required.'
+  if (!relationship) fieldErrors.relationship = 'Relationship is required.'
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values }
+  }
+
+  const intake: GuardianIntake = {
+    name,
+    relationship,
+    phone: phone || undefined,
+    occupation: occupation || undefined,
+    is_primary: isPrimary,
+  }
+
+  try {
+    await createGuardian(studentId, intake)
+  } catch (cause) {
+    return { error: toOdooError(cause).message, values }
+  }
+
+  revalidatePath(`/students/${studentId}`)
+  return { values: {} }
+}
+
+/**
+ * Edit an existing guardian link (relationship, phone, occupation, primary).
+ * The contact identity itself (partner_id) is not changed here — that mirrors
+ * the backend, which never re-points a guardian link at a different partner.
+ */
+export async function editGuardianAction(
+  _previous: GuardianFormState,
+  form: FormData,
+): Promise<GuardianFormState> {
+  await requireSession()
+
+  const guardianId = Number(form.get('guardianId'))
+  const studentId = Number(form.get('studentId'))
+  if (!Number.isFinite(guardianId) || !Number.isFinite(studentId)) {
+    return { error: 'That guardian could not be found.' }
+  }
+
+  const relationship = String(form.get('relationship') ?? '').trim()
+  const phone = String(form.get('phone') ?? '').trim()
+  const occupation = String(form.get('occupation') ?? '').trim()
+  const isPrimary = form.get('is_primary') === 'on'
+
+  const values: GuardianUpdate = {
+    relationship: relationship || undefined,
+    phone: phone || undefined,
+    occupation: occupation || undefined,
+    is_primary: isPrimary,
+  }
+
+  try {
+    await updateGuardian(guardianId, values)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/students/${studentId}`)
+  return {}
 }
