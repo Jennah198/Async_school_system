@@ -88,6 +88,32 @@ check('first tab stop is in the shell', Boolean(firstFocus), `→ ${firstFocus}`
 const focusRing = await page.evaluate(() => getComputedStyle(document.activeElement).outlineWidth)
 check('focus is visible', focusRing !== '0px', `outline ${focusRing}`)
 
+console.log('\nsigning out is reachable without hunting for it')
+const railSignOut = page.locator('#primary-navigation button:has-text("Sign out")')
+check('sidebar offers sign out', (await railSignOut.count()) === 1)
+check('and it is visible, not behind a menu', await railSignOut.isVisible())
+
+// Collapsed it becomes icon-only, so the name has to survive for a screen
+// reader and for the tooltip: an unlabelled icon is not a way out of an app.
+await page.click('#primary-navigation button[aria-controls="primary-navigation"]')
+await page.waitForTimeout(400)
+check('still there when collapsed', await railSignOut.isVisible())
+// The label is not removed when the rail collapses, only taken out of the
+// visual flow, so the button is still findable by its accessible name.
+const collapsedLabel = await railSignOut.locator('span').boundingBox()
+check(
+  'label is visually hidden when collapsed',
+  (collapsedLabel?.width ?? 99) <= 2 && (collapsedLabel?.height ?? 99) <= 2,
+  `${collapsedLabel?.width}x${collapsedLabel?.height}`,
+)
+check(
+  'but keeps its accessible name',
+  (await page.getByRole('button', { name: 'Sign out' }).count()) >= 1 &&
+    (await railSignOut.getAttribute('title')) === 'Sign out',
+)
+await page.click('#primary-navigation button[aria-controls="primary-navigation"]')
+await page.waitForTimeout(400)
+
 console.log('\naccount menu')
 await page.click('header button[aria-haspopup="menu"]')
 check('menu opens', await page.locator('[role="menu"]').isVisible())
@@ -114,6 +140,10 @@ await capture(mp, '03-mobile-closed')
 await mp.click('header button[aria-label="Open navigation"]')
 await mp.waitForTimeout(350)
 check('drawer opens', await mp.locator('#mobile-navigation').evaluate((el) => !el.hasAttribute('inert')))
+check(
+  'drawer offers sign out too',
+  await mp.locator('#mobile-navigation button:has-text("Sign out")').isVisible(),
+)
 check('drawer on screen', Math.round((await mp.locator('#mobile-navigation').boundingBox()).x) === 0)
 await capture(mp, '04-mobile-drawer')
 
@@ -128,6 +158,18 @@ await mp.waitForURL('**/students', { timeout: 30_000 })
 await mp.waitForTimeout(350)
 check('navigating closes the drawer', await mp.locator('#mobile-navigation').evaluate((el) => el.hasAttribute('inert')))
 await capture(mp, '05-mobile-students')
+
+console.log('\nthe sidebar button really signs out')
+await page.goto(`${BASE}/dashboard`, { waitUntil: 'domcontentloaded' })
+await page.click('#primary-navigation button:has-text("Sign out")')
+await page.waitForURL('**/login', { timeout: 60_000 }).catch(() => {})
+check('returns to the login form', page.url().includes('/login'), page.url())
+check(
+  'session cookie cleared',
+  !(await context.cookies()).some((c) => c.name === 'school_session' && c.value),
+)
+await page.goto(`${BASE}/dashboard`, { waitUntil: 'domcontentloaded' })
+check('dashboard no longer reachable', page.url().includes('/login'))
 
 await browser.close()
 console.log(`\n${failures === 0 ? 'shell: all checks passed' : `${failures} check(s) failed`}`)
