@@ -1,8 +1,8 @@
 import { CommandHeader, KpiBand, NeedsAttention, Panel, Section } from '@/components/dashboard/command-center'
-import { Note } from '@/components/ui'
+import { LinkButton, Note } from '@/components/ui'
 import {
   assessmentsAwaitingApproval,
-  promotionsAwaitingApproval,
+  documentsAwaitingVerification,
   reportCardsAwaitingApproval,
 } from '@/lib/odoo/models/dashboard'
 import {
@@ -13,41 +13,31 @@ import {
   type AcademicPeriods,
   type Scope,
 } from '@/lib/odoo/models/overview'
+import { primaryRoleLabel } from '@/lib/navigation'
 import { pluralise, trimNumber } from '@/lib/format'
-import type { CurrentUser } from '@/lib/odoo/types'
-import {
-  AssessmentPipeline,
-  PerformanceByGrade,
-  RecentActivity,
-  RegistrationFunnel,
-  ReportCardPipeline,
-  StudentIntake,
-} from './sections'
+import type { CurrentUser, SchoolRoles } from '@/lib/odoo/types'
+import { AssessmentPipeline, RecentActivity, ReportCardPipeline, StaffStates } from './sections'
 
 /**
- * The Director's view: outcomes, not operations.
+ * For Exam Officer, HR, and anyone else holding a school group without a
+ * dashboard of their own.
  *
- * The backend draws this line, not the design. `group_school_director` has
- * read on students, staff, enrolments, marks, assessments and report cards —
- * and **no ACL row at all** on classes, subjects, teachers, the academic year
- * or the term. That is not a gap to work around; it is the school system
- * saying a Director reads results and does not touch the timetable.
- *
- * So the screen is built from what a Director can actually see and would
- * actually act on: how many students there are, how they are performing, and
- * which approvals are sitting still. The panels a Director cannot read are not
- * requested, and the note at the foot says why the screen is narrower than an
- * administrator's rather than leaving somebody to wonder whether the school
- * really has no classes.
+ * These roles are narrow and specific, so the screen does not attempt a
+ * school-wide picture: it shows the counts they can read, the workflow they
+ * own, and the approvals that are the part of the job those roles share.
+ * Whatever Odoo refuses simply does not appear, and the note at the foot says
+ * so when almost everything is refused.
  */
-export async function DirectorDashboard({
+export async function GeneralDashboard({
   user,
+  roles,
   scope,
 }: {
   user: CurrentUser
+  roles: SchoolRoles
   scope: Scope & { periods: AcademicPeriods }
 }) {
-  const [students, staff, performance, activity, pendingAssessments, pendingCards, pendingPromotions] =
+  const [students, staff, performance, activity, pendingMarks, pendingCards, pendingDocuments] =
     await Promise.all([
       studentOverview(scope),
       staffOverview(),
@@ -55,23 +45,45 @@ export async function DirectorDashboard({
       recentActivity(8),
       assessmentsAwaitingApproval(),
       reportCardsAwaitingApproval(),
-      promotionsAwaitingApproval(),
+      documentsAwaitingVerification(),
     ])
 
-  // Odoo refused several of the underlying models rather than returning
-  // nothing — worth saying out loud, because a blank panel looks like a bug.
-  const restricted = [students.byGrade, staff.byDepartment, performance.bySubject].filter(
-    (value) => value === null,
-  ).length
+  const reportCardTotal = performance.reportCards
+    ? performance.reportCards.reduce((total, bucket) => total + bucket.count, 0)
+    : null
 
   return (
     <>
       <CommandHeader
         name={user.name}
-        role="Director"
+        role={primaryRoleLabel(roles)}
         department={user.school_department || undefined}
         scope={scope}
         periods={scope.periods}
+        action={
+          <span className="flex flex-wrap gap-2">
+            {roles.isExamOfficer ? (
+              <>
+                <LinkButton href="/assessments" icon="assessments" size="sm">
+                  Assessments
+                </LinkButton>
+                <LinkButton href="/report-cards" icon="reportCards" size="sm">
+                  Report cards
+                </LinkButton>
+              </>
+            ) : null}
+            {roles.isHr ? (
+              <>
+                <LinkButton href="/staff" icon="staff" size="sm">
+                  Staff
+                </LinkButton>
+                <LinkButton href="/documents" icon="documents" size="sm">
+                  Documents
+                </LinkButton>
+              </>
+            ) : null}
+          </span>
+        }
       />
 
       <KpiBand
@@ -85,7 +97,6 @@ export async function DirectorDashboard({
                 : undefined,
             icon: 'students',
             href: '/students',
-            spark: students.intake?.points.map((point) => point.value),
           },
           {
             label: 'Staff',
@@ -105,9 +116,7 @@ export async function DirectorDashboard({
           },
           {
             label: 'Report cards',
-            value: performance.reportCards
-              ? performance.reportCards.reduce((total, bucket) => total + bucket.count, 0)
-              : null,
+            value: reportCardTotal,
             context: performance.reportCards
               ? `${performance.reportCards.find((bucket) => bucket.value === 'published')?.count ?? 0} published`
               : undefined,
@@ -117,21 +126,14 @@ export async function DirectorDashboard({
         ]}
       />
 
-      <Section title="Outcomes" hint="How the school is performing in the scope above.">
-        <div className="grid items-start gap-3 lg:grid-cols-2">
-          <PerformanceByGrade performance={performance} />
-          <StudentIntake students={students} />
-        </div>
-      </Section>
-
-      <Section title="Approvals" hint="Work that has stopped and is waiting on a person.">
+      <Section title="Waiting on you">
         <div className="grid items-start gap-3 lg:grid-cols-3">
-          <Panel title="Waiting on a decision" icon="check">
+          <Panel title="Your queue" icon="check">
             <NeedsAttention
               items={[
                 {
                   label: 'Mark lists to approve',
-                  count: pendingAssessments,
+                  count: pendingMarks,
                   href: '/assessments?status=submitted',
                   icon: 'assessments',
                   action: 'Submitted by a teacher',
@@ -144,11 +146,11 @@ export async function DirectorDashboard({
                   action: 'Drafted, not yet published',
                 },
                 {
-                  label: 'Promotion batches',
-                  count: pendingPromotions,
-                  href: '/promotion',
-                  icon: 'promotion',
-                  action: 'Calculated, awaiting sign-off',
+                  label: 'Documents to verify',
+                  count: pendingDocuments,
+                  href: '/documents?status=uploaded',
+                  icon: 'documents',
+                  action: 'Uploaded and unchecked',
                 },
               ]}
             />
@@ -158,21 +160,19 @@ export async function DirectorDashboard({
         </div>
       </Section>
 
-      <Section title="Enrolment">
+      <Section title="Activity">
         <div className="grid items-start gap-3 lg:grid-cols-3">
-          <RegistrationFunnel students={students} />
           <div className="lg:col-span-2">
             <RecentActivity entries={activity} />
           </div>
+          <StaffStates staff={staff} />
         </div>
       </Section>
 
-      {restricted > 0 ? (
+      {students.total === null && staff.total === null ? (
         <Note>
-          Some panels are missing because the Director role has no read access to the models behind
-          them — classes, subjects and the academic calendar among them. That is the school
-          system&apos;s own answer rather than a fault in this screen, and an administrator can
-          widen it.
+          Your role has read access to very little of the school system. That is the
+          backend&apos;s answer, not a fault in this screen.
         </Note>
       ) : null}
     </>

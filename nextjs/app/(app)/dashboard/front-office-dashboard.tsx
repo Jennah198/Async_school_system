@@ -1,15 +1,15 @@
 import { Cell, DataTable, LinkButton, Note, Row, RowLink, StatusBadge } from '@/components/ui'
 import {
-  CountTile,
-  DashboardGreeting,
+  CommandHeader,
+  KpiBand,
   Panel,
-  QuickLinks,
-  TileGrid,
-} from '@/components/dashboard/panels'
+  Section,
+} from '@/components/dashboard/command-center'
 import { StudentLookup } from './student-lookup'
 import { formatEthiopianDate, formatEthiopianDateTime, formatSelection, formatText } from '@/lib/format'
 import { recentRegistrations, safeCount, upcomingPrograms } from '@/lib/odoo/models/dashboard'
 import { listLiveAnnouncements } from '@/lib/odoo/models/operations'
+import type { AcademicPeriods, Scope } from '@/lib/odoo/models/overview'
 import { m2oLabel, type CurrentUser } from '@/lib/odoo/types'
 
 /**
@@ -21,7 +21,13 @@ import { m2oLabel, type CurrentUser } from '@/lib/odoo/types'
  * not rendered rather than shown as refusals, because a screen full of "not
  * available" is not a dashboard.
  */
-export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
+export async function FrontOfficeDashboard({
+  user,
+  scope,
+}: {
+  user: CurrentUser
+  scope: Scope & { periods: AcademicPeriods }
+}) {
   const [students, announcements, programs, recent] = await Promise.all([
     safeCount('school.student'),
     listLiveAnnouncements(5),
@@ -31,55 +37,58 @@ export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
 
   return (
     <>
-      <DashboardGreeting
+      <CommandHeader
         name={user.name}
         role="Front Office"
         department={user.school_department || undefined}
+        scope={scope}
+        periods={scope.periods}
         action={
-          <LinkButton href="/announcements" icon="announcements">
-            Announcements
-          </LinkButton>
+          <span className="flex flex-wrap gap-2">
+            <LinkButton href="/students" icon="students" size="sm">
+              Student directory
+            </LinkButton>
+            <LinkButton href="/announcements" variant="primary" icon="announcements" size="sm">
+              Announcements
+            </LinkButton>
+          </span>
         }
       />
 
-      <QuickLinks
-        links={[
-          { href: '/students', label: 'Student directory', icon: 'students' },
-          { href: '/announcements', label: 'Post an announcement', icon: 'plus' },
+      <KpiBand
+        items={[
+          {
+            label: 'Students on file',
+            value: students,
+            context: 'Searchable for contact lookup',
+            icon: 'students',
+            href: '/students',
+          },
+          {
+            label: 'Announcements live',
+            value: announcements ? announcements.rows.length : null,
+            context: 'Published and inside their window',
+            icon: 'announcements',
+            href: '/announcements',
+          },
+          {
+            label: 'Programs upcoming',
+            value: programs ? programs.rows.length : null,
+            context: 'Published and not yet finished',
+            icon: 'programs',
+            href: '/programs',
+          },
         ]}
       />
 
-      <TileGrid>
-        <CountTile
-          label="Students on file"
-          value={students}
-          icon="students"
-          href="/students"
-          hint="Contact lookup"
-        />
-        <CountTile
-          label="Announcements live"
-          value={announcements ? announcements.rows.length : null}
-          icon="announcements"
-          href="/announcements"
-        />
-        <CountTile
-          label="Programs upcoming"
-          value={programs ? programs.rows.length : null}
-          icon="programs"
-          href="/programs"
-        />
-      </TileGrid>
-
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Section title="The front desk">
+      <div className="grid items-start gap-3 lg:grid-cols-2">
         <Panel
           title="Find a student"
           icon="search"
           hint="Search the directory by name, student ID or admission number."
         >
-          <div className="p-5 pt-1">
-            <StudentLookup />
-          </div>
+          <StudentLookup />
         </Panel>
 
         <Panel
@@ -97,7 +106,7 @@ export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
           }
         >
           {announcements && announcements.rows.length > 0 ? (
-            <ul className="space-y-2.5 p-5 pt-1">
+            <ul className="space-y-2.5">
               {announcements.rows.map((item) => (
                 <li key={item.id}>
                   <div className="flex items-baseline justify-between gap-3">
@@ -158,7 +167,7 @@ export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
 
         {programs && programs.rows.length > 0 ? (
           <Panel title="On the calendar" icon="programs" href="/programs">
-            <ul className="space-y-2.5 p-5 pt-1">
+            <ul className="space-y-2.5">
               {programs.rows.map((program) => (
                 <li key={program.id}>
                   <div className="flex items-baseline justify-between gap-3">
@@ -177,6 +186,7 @@ export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
           </Panel>
         ) : null}
       </div>
+      </Section>
 
       {students === null ? (
         <Note>
