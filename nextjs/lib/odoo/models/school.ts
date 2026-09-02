@@ -1,5 +1,5 @@
 import 'server-only'
-import { create, readOne, searchCount, searchRead } from '@/lib/odoo/client'
+import { create, readOne, searchCount, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { ethiopianYearOf } from '@/lib/ethiopian-date'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
@@ -317,6 +317,67 @@ export function listSubjects(options: ListOptions = {}): Promise<Page<SubjectRow
     offset: options.offset ?? 0,
     order: options.order ?? 'name asc',
   })
+}
+
+/* ------------------------------------------------- classes: read/write --- */
+
+export interface ClassDetail extends ClassRow {
+  room_id: Many2one
+  shift_id: Many2one
+  stream_id: Many2one
+  campus_id: Many2one
+  homeroom_teacher_id: Many2one
+  is_entry_level: boolean
+  min_age: number
+  max_age: number
+  active: boolean
+}
+
+const CLASS_DETAIL_FIELDS = [
+  'name', 'grade_id', 'section_id', 'academic_year_id', 'education_level',
+  'capacity', 'student_ids', 'room_id', 'shift_id', 'stream_id', 'campus_id',
+  'homeroom_teacher_id', 'is_entry_level', 'min_age', 'max_age', 'active',
+] as const
+
+export function getClass(id: number): Promise<ClassDetail | null> {
+  return orNullOnRefusal(readOne<ClassDetail>('school.class', id, CLASS_DETAIL_FIELDS))
+}
+
+export function createClass(values: Record<string, unknown>): Promise<number> {
+  return create('school.class', values)
+}
+
+/**
+ * `section_id` and `academic_year_id` are half of the uniqueness constraint
+ * and the scope every enrolled student was checked against, so Odoo, not this
+ * layer, decides whether a change to them is allowed.
+ */
+export function updateClass(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.class', [id], values)
+}
+
+/* ------------------------------------------------ subjects: read/write --- */
+
+export interface SubjectDetail extends SubjectRow {
+  sequence_code: string | false
+  short_name: string | false
+  credit_hours: number
+}
+
+export function getSubject(id: number): Promise<SubjectDetail | null> {
+  return orNullOnRefusal(
+    readOne<SubjectDetail>('school.subject', id, [
+      'name', 'code', 'short_name', 'sequence_code', 'subject_type', 'credit_hours', 'active',
+    ]),
+  )
+}
+
+export function createSubject(values: Record<string, unknown>): Promise<number> {
+  return create('school.subject', values)
+}
+
+export function updateSubject(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.subject', [id], values)
 }
 
 export interface AcademicYearRow {

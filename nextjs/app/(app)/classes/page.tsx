@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { formatSelection } from '@/lib/format'
@@ -29,6 +30,14 @@ export default async function ClassesPage({ searchParams }: PageProps<'/classes'
         { key: 'grade', label: 'Grade', options: grades },
         { key: 'level', label: 'Level', options: levels },
       ]}
+      action={
+        <Link
+          href="/classes/new"
+          className="rounded-[9999px] bg-ink px-4 py-2 text-[13px] text-white hover:bg-graphite"
+        >
+          New class
+        </Link>
+      }
       defaultSort={{ field: 'name', direction: 'asc' }}
       load={(query) =>
         listClasses({
@@ -39,6 +48,7 @@ export default async function ClassesPage({ searchParams }: PageProps<'/classes'
           offset: query.offset,
         })
       }
+      rowHref={(row) => `/classes/${row.id}`}
       emptyTitle="No classes visible"
       emptyHint="Classes are created per academic year from a grade and a section."
       columns={[

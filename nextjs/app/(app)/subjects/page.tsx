@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { formatSelection, formatText } from '@/lib/format'
@@ -19,6 +20,14 @@ export default async function SubjectsPage({ searchParams }: PageProps<'/subject
       subtitle="What a class studies is set per class in the curriculum, not here."
       search={{ placeholder: 'Subject name or code' }}
       filters={[{ key: 'type', label: 'Type', options: types }]}
+      action={
+        <Link
+          href="/subjects/new"
+          className="rounded-[9999px] bg-ink px-4 py-2 text-[13px] text-white hover:bg-graphite"
+        >
+          New subject
+        </Link>
+      }
       defaultSort={{ field: 'name', direction: 'asc' }}
       load={(query) =>
         listSubjects({
@@ -29,6 +38,7 @@ export default async function SubjectsPage({ searchParams }: PageProps<'/subject
           offset: query.offset,
         })
       }
+      rowHref={(row) => `/subjects/${row.id}/edit`}
       emptyTitle="No subjects visible"
       columns={[
         { key: 'name', label: 'Subject', sortField: 'name', render: (row) => row.name },
