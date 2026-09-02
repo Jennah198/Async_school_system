@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useActionState, useState } from 'react'
 import { formatSelection } from '@/lib/format'
 import { registerStudentAction, type StudentFormState } from '../actions'
@@ -166,12 +168,12 @@ export function StudentRegistrationForm({
           enrolment for them instead of registering a new student.
         </div>
 
-        
-          < a href="/enrollments/new"
+        <Link
+          href="/enrollments/new"
           className="inline-block rounded-[9999px] bg-ink px-5 py-2.5 text-[13px] font-medium text-white hover:bg-graphite"
         >
           Go to new enrolment →
-        </a>
+        </Link>
       </div>
     )
   }

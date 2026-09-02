@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { Badge, Button } from '@/components/ui'
-import { INPUT_CLASS } from '@/components/ui/form'
+import { PasswordInput } from '@/components/ui/form'
 import {
   createTeacherLoginAction,
   setTeacherPasswordAction,
@@ -70,11 +70,9 @@ export function TeacherLogin({
           <span className="mb-1.5 block text-[12px] font-medium text-graphite">
             Initial password
           </span>
-          <input
-            type="password"
+          <PasswordInput
             name="login_password"
             autoComplete="new-password"
-            className={INPUT_CLASS}
             placeholder="Leave blank to email a link"
           />
         </label>
@@ -112,13 +110,7 @@ function SetPassword({ teacherId, label }: { teacherId: number; label: string })
       <input type="hidden" name="id" value={teacherId} />
       <label className="block">
         <span className="mb-1.5 block text-[12px] font-medium text-graphite">New password</span>
-        <input
-          type="password"
-          name="login_password"
-          autoComplete="new-password"
-          required
-          className={INPUT_CLASS}
-        />
+        <PasswordInput name="login_password" autoComplete="new-password" required />
       </label>
       {state.fieldErrors?.login_password ? (
         <p role="alert" className="text-[11px] text-danger">

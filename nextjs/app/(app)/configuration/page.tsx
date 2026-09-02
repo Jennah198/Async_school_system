@@ -114,12 +114,21 @@ export default async function ConfigurationPage() {
         title="Configuration"
         subtitle="The academic structure every other screen draws on. Odoo owns the constraints between these."
         action={
-          <Link
-            href="/configuration/grading"
-            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
-          >
-            Grading schemes
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { href: '/configuration/grading', label: 'Grading schemes' },
+              { href: '/configuration/questionnaire', label: 'Questionnaire' },
+              { href: '/configuration/document-rules', label: 'Document rules' },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
         }
       />
 

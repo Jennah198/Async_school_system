@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge, DateText, LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
@@ -45,11 +46,19 @@ export default async function AnnouncementsPage({ searchParams }: PageProps<'/an
       }
       rowHref={(row) => `/announcements/${row.id}`}
       action={
-        canCreate ? (
-          <LinkButton href="/announcements/new" variant="primary" icon="plus">
-            New announcement
-          </LinkButton>
-        ) : undefined
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/announcements/board"
+            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+          >
+            Board view
+          </Link>
+          {canCreate ? (
+            <LinkButton href="/announcements/new" variant="primary" icon="plus">
+              New announcement
+            </LinkButton>
+          ) : null}
+        </div>
       }
       emptyTitle="No announcements visible"
       emptyHint="You see the ones you authored and the ones addressed to you."

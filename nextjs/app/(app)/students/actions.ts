@@ -7,6 +7,7 @@ import { requireSession } from '@/lib/odoo/auth'
 import { readOne } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
 
+import { saveAnswer } from '@/lib/odoo/models/registration'
 import {
   createGuardian,
   createStudent,
@@ -931,4 +932,70 @@ export async function updateStudentAction(
   revalidatePath(`/students/${id}`)
   revalidatePath('/students')
   redirect(`/students/${id}`)
+}
+
+// =======================================================
+// Registration questionnaire
+// =======================================================
+
+export interface AnswerState {
+  error?: string
+  ok?: string
+}
+
+/**
+ * Record the student's questionnaire answers.
+ *
+ * `_validate_submission_requirements` refuses a submission naming every
+ * applicable required question left unanswered, and an answer counts only when
+ * `value_text` or `option_id` is set — a blank one does not clear the refusal.
+ *
+ * `unique(student_id, question_id)` means each answer is created once and
+ * written thereafter, so the form posts the existing id when there is one.
+ * Only questions the page rendered are touched.
+ */
+export async function saveAnswersAction(
+  _previous: AnswerState,
+  form: FormData,
+): Promise<AnswerState> {
+  await requireSession()
+
+  const studentId = Number(String(form.get('studentId') ?? ''))
+  if (!Number.isInteger(studentId) || studentId <= 0) {
+    return { error: 'That student could not be found.' }
+  }
+
+  const questionIds = form
+    .getAll('questionId')
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0)
+
+  let saved = 0
+  for (const questionId of questionIds) {
+    const existing = Number(String(form.get(`answerId-${questionId}`) ?? ''))
+    const optionRaw = String(form.get(`option-${questionId}`) ?? '').trim()
+    const textRaw = String(form.get(`text-${questionId}`) ?? '').trim()
+    const wasOption = String(form.get(`was-option-${questionId}`) ?? '').trim()
+    const wasText = String(form.get(`was-text-${questionId}`) ?? '').trim()
+
+    // Only what actually moved is written, so re-saving an untouched form is
+    // not a hundred pointless writes.
+    if (optionRaw === wasOption && textRaw === wasText) continue
+
+    try {
+      await saveAnswer(studentId, questionId, {
+        id: Number.isInteger(existing) && existing > 0 ? existing : undefined,
+        value_text: textRaw || false,
+        option_id: optionRaw ? Number(optionRaw) : false,
+      })
+      saved += 1
+    } catch (cause) {
+      return { error: toOdooError(cause).message }
+    }
+  }
+
+  if (saved === 0) return { ok: 'Nothing had changed.' }
+
+  revalidatePath(`/students/${studentId}`)
+  return { ok: `Saved ${saved} ${saved === 1 ? 'answer' : 'answers'}.` }
 }

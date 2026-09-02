@@ -139,6 +139,37 @@ if (offered.length === 0) {
   })
   check('staff who already hold a profile are excluded', withProfile.length === 0, `${withProfile.length} clashes`)
 
+  /* ----------------------------------------------------- password reveal --- */
+
+  /*
+    The registrar is typing a password for somebody else, with no confirmation
+    field to catch a typo. Masked by default, revealable on demand, and back to
+    masked afterwards — asserted on the DOM rather than on the button's label,
+    because the label is not what protects the password.
+  */
+  console.log(String.fromCharCode(10) + 'password field: masked by default, revealable on demand')
+  const pw = page.locator('main input[name="login_password"]')
+  const toggle = page.locator('main button[aria-controls="login_password"]')
+  check('the initial password field is offered', (await pw.count()) === 1)
+  check('it is masked before anything is typed',
+    (await pw.getAttribute('type')) === 'password')
+  check('a reveal control sits with it', (await toggle.count()) === 1)
+  if ((await toggle.count()) === 1) {
+    check('the control states it is not pressed',
+      (await toggle.getAttribute('aria-pressed')) === 'false')
+    await pw.fill('Probe-Reveal-1')
+    await toggle.click()
+    check('clicking it reveals the password',
+      (await pw.getAttribute('type')) === 'text')
+    check('and the control now reads as pressed',
+      (await toggle.getAttribute('aria-pressed')) === 'true')
+    check('the typed value survives the toggle',
+      (await pw.inputValue()) === 'Probe-Reveal-1')
+    await toggle.click()
+    check('clicking again masks it', (await pw.getAttribute('type')) === 'password')
+    await pw.fill('')
+  }
+
   /* ------------------------------------------------------------ create --- */
 
   console.log('\ncreate: Next.js -> Odoo')
@@ -213,7 +244,6 @@ if (offered.length === 0) {
         await page.waitForTimeout(3000)
 
         // The real proof: authenticate against Odoo as that teacher.
-        const login = beforePw.user_id[1]
         const users = await odoo(sid, 'res.users', 'search_read', [], {
           domain: [['id', '=', beforePw.user_id[0]]], fields: ['login'], limit: 1,
         })

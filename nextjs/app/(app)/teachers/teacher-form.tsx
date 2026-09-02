@@ -7,6 +7,7 @@ import {
   FormActions,
   FormError,
   FormSection,
+  PasswordField,
   ReadOnlyField,
   SelectField,
   TextField,
@@ -167,10 +168,9 @@ export function TeacherForm({
             title="Teaching login"
             hint="Creating the profile also creates the Odoo login, against the email on the staff record."
           >
-            <TextField
+            <PasswordField
               label="Initial password"
               name="login_password"
-              type="password"
               autoComplete="new-password"
               defaultValue=""
               error={errors.login_password}

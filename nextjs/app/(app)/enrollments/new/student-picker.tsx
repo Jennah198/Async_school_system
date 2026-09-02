@@ -13,6 +13,8 @@ function studentLabel(student: StudentSearchRow): string {
   return id ? `${student.name} — ${id}` : student.name
 }
 
+const NO_RESULTS: StudentSearchRow[] = []
+
 export function StudentPicker({
   name,
   defaultValue,
@@ -37,16 +39,21 @@ export function StudentPicker({
     // A selection already matches the query exactly — nothing to search for.
     if (selected && query === selected.label) return
 
-    if (query.trim().length < 2) {
-      setResults([])
-      setOpen(false)
-      return
-    }
-
     const currentRequest = ++requestId.current
-    setPending(true)
 
+    // Everything happens inside the debounce. Setting state straight from the
+    // effect body makes React re-run the effect off its own render, so the
+    // short-query reset waits for the same timer the search does — a delay
+    // nobody can perceive at 300ms.
     const timeout = setTimeout(() => {
+      if (query.trim().length < 2) {
+        setResults(NO_RESULTS)
+        setOpen(false)
+        setPending(false)
+        return
+      }
+
+      setPending(true)
       searchStudentsAction(query)
         .then((rows) => {
           if (requestId.current !== currentRequest) return

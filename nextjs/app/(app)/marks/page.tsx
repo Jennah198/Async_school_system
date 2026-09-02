@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { formatPercent, formatScore, formatSelection, formatText } from '@/lib/format'
@@ -31,6 +32,14 @@ export default async function MarksPage({ searchParams }: PageProps<'/marks'>) {
       searchParams={searchParams}
       subtitle="Percentages and grades are computed by Odoo's grading scheme."
       search={{ placeholder: 'Student name' }}
+      action={
+        <Link
+          href="/marks/analysis"
+          className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+        >
+          Analysis
+        </Link>
+      }
       filters={[
         { key: 'class', label: 'Class', options: classes },
         { key: 'subject', label: 'Subject', options: subjects },

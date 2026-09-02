@@ -4,7 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation' 
 import { requireSession } from '@/lib/odoo/auth' 
 import { toOdooError } from '@/lib/odoo/errors' 
-import { createEnrollment, promoteEnrollment, searchApprovedStudents, type StudentSearchRow, }from '@/lib/odoo/models/student'
+import {
+  authorizeOverride,
+  createEnrollment,
+  promoteEnrollment,
+  searchApprovedStudents,
+  transferEnrollment,
+  type StudentSearchRow,
+} from '@/lib/odoo/models/student'
 
 
 export async function searchStudentsAction(query: string): Promise<StudentSearchRow[]> {
@@ -104,4 +111,96 @@ export async function promoteEnrollmentAction(
   revalidatePath('/enrollments')
   revalidatePath(`/enrollments/${enrollmentId}`)
   redirect(newEnrollmentId ? `/enrollments/${newEnrollmentId}` : '/enrollments')
+}
+
+export interface TransferState {
+  error?: string
+  ok?: string
+  fieldErrors?: Record<string, string>
+}
+
+/**
+ * Move a student to another class inside the same academic year.
+ *
+ * Every rule stays Odoo's: the target must be in the same year, the effective
+ * date may not precede the current placement, and a full class is refused
+ * unless a capacity override has been authorised on this enrolment. Those
+ * messages name the class and the date, so they are surfaced unchanged.
+ */
+export async function transferEnrollmentAction(
+  _previous: TransferState,
+  form: FormData,
+): Promise<TransferState> {
+  await requireSession()
+
+  const enrollmentId = Number(String(form.get('enrollmentId') ?? ''))
+  const newClassId = Number(String(form.get('new_class_id') ?? ''))
+  const effectiveDate = String(form.get('effective_date') ?? '').trim()
+  const reason = String(form.get('reason') ?? '').trim()
+
+  if (!Number.isInteger(enrollmentId) || enrollmentId <= 0) {
+    return { error: 'That enrolment could not be identified.' }
+  }
+
+  const fieldErrors: Record<string, string> = {}
+  if (!Number.isInteger(newClassId) || newClassId <= 0) {
+    fieldErrors.new_class_id = 'Choose the class to move the student to.'
+  }
+  if (!effectiveDate) fieldErrors.effective_date = 'An effective date is required.'
+  if (!reason) fieldErrors.reason = 'A reason is required — it is kept with the placement.'
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors }
+
+  try {
+    await transferEnrollment({ enrollmentId, newClassId, effectiveDate, reason })
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/enrollments/${enrollmentId}`)
+  revalidatePath('/enrollments')
+  return { ok: 'Transferred. The previous placement is closed and kept as history.' }
+}
+
+export interface OverrideState {
+  error?: string
+  ok?: string
+  fieldErrors?: Record<string, string>
+}
+
+/**
+ * Authorise an exception on one enrolment.
+ *
+ * Odoo's `create` re-checks the director group and that overrides are enabled
+ * in School Settings, and refuses `unlink` — an override is an audit record,
+ * so this never offers to remove one.
+ */
+export async function authorizeOverrideAction(
+  _previous: OverrideState,
+  form: FormData,
+): Promise<OverrideState> {
+  await requireSession()
+
+  const enrollmentId = Number(String(form.get('enrollmentId') ?? ''))
+  const operation = String(form.get('operation') ?? '').trim()
+  const reason = String(form.get('reason') ?? '').trim()
+
+  if (!Number.isInteger(enrollmentId) || enrollmentId <= 0) {
+    return { error: 'That enrolment could not be identified.' }
+  }
+
+  const fieldErrors: Record<string, string> = {}
+  if (!operation) fieldErrors.operation = 'Choose what is being overridden.'
+  if (!reason) fieldErrors.reason = 'A reason is required — it is permanent.'
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors }
+
+  try {
+    await authorizeOverride({ enrollmentId, operation, reason })
+  } catch (cause) {
+    // "Only a Principal or School Administrator can approve overrides." and
+    // "Enrollment overrides are disabled in School Settings."
+    return { error: toOdooError(cause).message }
+  }
+
+  revalidatePath(`/enrollments/${enrollmentId}`)
+  return { ok: 'Override authorised and recorded against your name.' }
 }

@@ -1,0 +1,56 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nextjs
+
+    # Placeholders only. lib/odoo/config.ts reads these through getters at
+    # request time, not at build time, so nothing here reaches Odoo — but the
+    # values must exist and SESSION_SECRET must clear its 32-character check.
+    env:
+      ODOO_BASE_URL: http://localhost:8069
+      ODOO_DB: ci
+      SESSION_SECRET: ci-placeholder-secret-not-used-for-anything-real
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nextjs/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Build first: next generates the PageProps/LayoutProps route types into
+      # .next/types, and every page signature references them. On a clean
+      # checkout tsc cannot resolve a single page until this has run.
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Lint
+        run: npm run lint
+
+      # The pure-logic tests: date conversion, the save diffs, the grid layout,
+      # the name-part split and the landing map. The e2e-* scripts are excluded
+      # deliberately — they need a live Odoo and mutate its data.
+      - name: Unit tests
+        run: |
+          for script in scripts/test-*.mjs; do
+            echo "--- $script"
+            node "$script"
+          done

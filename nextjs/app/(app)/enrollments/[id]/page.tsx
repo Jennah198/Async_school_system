@@ -1,4 +1,6 @@
 import { PromoteForm } from './promote-form'
+import { TransferForm } from './transfer-form'
+import { OverrideSection } from './override-form'
 import Link from 'next/link'
 import { formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
@@ -7,7 +9,14 @@ import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { listAcademicYears } from '@/lib/odoo/models/school'
 import { toOdooError } from '@/lib/odoo/errors'
-import { listPromotionTargets, getEnrollment, listPlacements, listStudentSubjects } from '@/lib/odoo/models/student'
+import {
+  getEnrollment,
+  listOverrides,
+  listPlacements,
+  listPromotionTargets,
+  listStudentSubjects,
+} from '@/lib/odoo/models/student'
+import { selectionOptions } from '@/lib/odoo/selections'
 import { m2oId, m2oLabel } from '@/lib/odoo/types'
 import { availableTransitions } from '@/lib/odoo/workflows'
 
@@ -18,15 +27,22 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
   const id = Number((await params).id)
   if (!Number.isFinite(id)) notFound()
 
-  let enrollment, subjects, placements, canWrite, years, targets
+  let enrollment, subjects, placements, canWrite, years, targets, overrides,
+    overrideOperations, canOverride
   try {
-    ;[enrollment, subjects, placements, canWrite, years, targets] = await Promise.all([
+    ;[
+      enrollment, subjects, placements, canWrite, years, targets, overrides,
+      overrideOperations, canOverride,
+    ] = await Promise.all([
       getEnrollment(id),
       listStudentSubjects(id),
       listPlacements(id),
       hasAccess('school.enrollment', 'write'),
       listAcademicYears({ limit: 50, order: 'date_start' }),
       listPromotionTargets(),
+      listOverrides(id),
+      selectionOptions('school.enrollment.override', 'operation'),
+      hasAccess('school.enrollment.override', 'create'),
     ])
   } catch (cause) {
     return (
@@ -39,6 +55,13 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
 
   if (!enrollment) notFound()
   const state = String(enrollment.state || '')
+
+  // A transfer stays inside the enrolment's own academic year — moving across
+  // years is a promotion, which has its own form below.
+  const yearId = m2oId(enrollment.academic_year_id)
+  const transferTargets = targets.rows.filter(
+    (row) => m2oId(row.academic_year_id) === yearId && row.id !== m2oId(enrollment.class_id),
+  )
 
   return (
     <>
@@ -177,11 +200,48 @@ export default async function EnrollmentDetailPage({ params }: PageProps<'/enrol
                 />
               </div>
             ) : null}
+            {canWrite && state === 'active' ? (
+              <div className="mt-3 border-t border-silver pt-3">
+                <TransferForm
+                  enrollmentId={enrollment.id}
+                  currentClass={m2oLabel(enrollment.class_id)}
+                  classes={transferTargets.map((row) => ({
+                    id: row.id,
+                    name: row.name,
+                    full: false,
+                  }))}
+                />
+              </div>
+            ) : null}
             <p className="mt-4 border-t border-silver pt-3 text-[11px] text-stone">
               Activation checks class capacity, allocates the roll number, records the placement and
               derives the subjects — all inside Odoo.
             </p>
           </Card>
+
+          {overrides === null ? null : (
+            <Card padded={false}>
+              <div className="p-6 pb-0">
+                <CardHeader
+                  title="Authorised overrides"
+                  hint="Permanent approvals that let this enrolment pass a rule it would otherwise fail."
+                />
+              </div>
+              <OverrideSection
+                enrollmentId={enrollment.id}
+                canAuthorize={canOverride}
+                operations={overrideOperations}
+                overrides={overrides.rows.map((row) => ({
+                  id: row.id,
+                  operation: formatSelection(row.operation),
+                  reason: row.reason,
+                  approvedBy: m2oLabel(row.approved_by_id),
+                  approvedAt: row.approved_at,
+                  active: row.active,
+                }))}
+              />
+            </Card>
+          )}
         </div>
       </div>
     </>

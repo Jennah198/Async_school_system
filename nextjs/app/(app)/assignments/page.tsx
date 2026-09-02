@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
@@ -54,11 +55,19 @@ export default async function AssignmentsPage({ searchParams }: PageProps<'/assi
       }
       rowHref={(row) => `/assignments/${row.id}`}
       action={
-        canCreate ? (
-          <LinkButton href="/assignments/new" variant="primary" icon="plus">
-            New assignment
-          </LinkButton>
-        ) : undefined
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/assignments/workload"
+            className="rounded-[9999px] border border-silver px-4 py-2 text-[13px] hover:bg-paper"
+          >
+            Workload
+          </Link>
+          {canCreate ? (
+            <LinkButton href="/assignments/new" variant="primary" icon="plus">
+              New assignment
+            </LinkButton>
+          ) : null}
+        </div>
       }
       emptyTitle="No assignments visible"
       emptyHint="Teachers see only their own assignments."
