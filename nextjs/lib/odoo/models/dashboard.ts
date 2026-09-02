@@ -195,7 +195,7 @@ export function recentRegistrations(limit = 6): Promise<Page<RecentStudentRow> |
     searchRead<RecentStudentRow>(
       'school.student',
       ['name', 'regno', 'class_id', 'registration_status', 'registration_date'],
-      { limit, order: 'registration_date desc, id desc' },
+      { limit, order: 'registration_date desc, id desc', withTotal: false },
     ),
   )
 }
