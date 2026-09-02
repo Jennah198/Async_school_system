@@ -13,7 +13,7 @@ import {
 } from '@/lib/odoo/models/assessment'
 import { m2oLabel } from '@/lib/odoo/types'
 import { availableTransitions } from '@/lib/odoo/workflows'
-import { MarkRow } from './mark-row'
+import { MarkList } from './mark-list'
 
 export const metadata = { title: 'Assessment · Async School' }
 
@@ -97,42 +97,21 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
                 hint="Opening the assessment generates the roster from subject enrolments valid on the assessment date."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-[13px]">
-                  <thead>
-                    <tr>
-                      {['Student', 'Score / status / percent / grade / remark'].map((label) => (
-                        <th
-                          key={label}
-                          className="border-b border-silver px-4 py-2.5 text-left text-[11px] font-medium tracking-wide text-slate uppercase"
-                          colSpan={label === 'Student' ? 1 : 5}
-                        >
-                          {label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {marks.rows.map((row) => (
-                      <MarkRow
-                        key={row.id}
-                        markId={row.id}
-                        assessmentId={assessment.id}
-                        student={m2oLabel(row.student_id)}
-                        score={row.score}
-                        maxScore={row.max_score}
-                        percentage={row.percentage}
-                        grade={row.grade}
-                        status={String(row.mark_status || '')}
-                        note={row.note || ''}
-                        statusOptions={statuses}
-                        editable={entryOpen && canWrite}
-                        requiresReason={!entryOpen}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <MarkList
+                assessmentId={assessment.id}
+                rows={marks.rows.map((row) => ({
+                  id: row.id,
+                  student: m2oLabel(row.student_id),
+                  score: row.score,
+                  maxScore: row.max_score,
+                  percentage: row.percentage,
+                  grade: row.grade,
+                  status: String(row.mark_status || ''),
+                  note: row.note || '',
+                }))}
+                statusOptions={statuses}
+                editable={entryOpen && canWrite}
+              />
             )}
           </Card>
 
