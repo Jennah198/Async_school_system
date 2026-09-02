@@ -1,7 +1,7 @@
-import { StatusBadge } from '@/components/ui'
+import { DateText, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
-import { formatDateTime, formatSelection, formatText } from '@/lib/format'
+import { formatSelection, formatText } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
 import { listPrograms } from '@/lib/odoo/models/operations'
 import { selectionOptions } from '@/lib/odoo/selections'
@@ -59,13 +59,13 @@ export default async function ProgramsPage({ searchParams }: PageProps<'/program
           key: 'start',
           label: 'Starts',
           sortField: 'start_datetime',
-          render: (row) => formatDateTime(row.start_datetime),
+          render: (row) => <DateText value={row.start_datetime} withTime />,
         },
         {
           key: 'end',
           label: 'Ends',
           hideBelow: 'md',
-          render: (row) => formatDateTime(row.end_datetime),
+          render: (row) => <DateText value={row.end_datetime} withTime />,
         },
         {
           key: 'location',

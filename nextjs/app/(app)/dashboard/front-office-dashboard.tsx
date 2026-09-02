@@ -7,7 +7,7 @@ import {
   TileGrid,
 } from '@/components/dashboard/panels'
 import { StudentLookup } from './student-lookup'
-import { formatDate, formatDateTime, formatSelection, formatText } from '@/lib/format'
+import { formatEthiopianDate, formatEthiopianDateTime, formatSelection, formatText } from '@/lib/format'
 import { recentRegistrations, safeCount, upcomingPrograms } from '@/lib/odoo/models/dashboard'
 import { listLiveAnnouncements } from '@/lib/odoo/models/operations'
 import { m2oLabel, type CurrentUser } from '@/lib/odoo/types'
@@ -103,7 +103,7 @@ export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
                   <div className="flex items-baseline justify-between gap-3">
                     <RowLink href={`/announcements/${item.id}`}>{item.name}</RowLink>
                     <span className="shrink-0 text-[11px] text-stone">
-                      {formatDateTime(item.publish_datetime)}
+                      {formatEthiopianDateTime(item.publish_datetime)}
                     </span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-stone">
@@ -164,7 +164,7 @@ export async function FrontOfficeDashboard({ user }: { user: CurrentUser }) {
                   <div className="flex items-baseline justify-between gap-3">
                     <RowLink href={`/programs/${program.id}`}>{program.name}</RowLink>
                     <span className="shrink-0 text-[11px] text-stone">
-                      {formatDate(program.start_datetime)}
+                      {formatEthiopianDate(program.start_datetime)}
                     </span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-stone">

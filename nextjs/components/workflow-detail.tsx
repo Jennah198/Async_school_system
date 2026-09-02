@@ -35,6 +35,7 @@ export function WorkflowDetail({
   note,
   breadcrumbs,
   meta,
+  actions,
   children,
 }: {
   title: string
@@ -51,6 +52,8 @@ export function WorkflowDetail({
   breadcrumbs?: Crumb[]
   /** Chips beside the page title. */
   meta?: ReactNode
+  /** Buttons shown before the back link, such as a print action. */
+  actions?: ReactNode
   /** Extra cards rendered beneath the detail grid. */
   children?: ReactNode
 }) {
@@ -62,13 +65,16 @@ export function WorkflowDetail({
         breadcrumbs={breadcrumbs}
         meta={meta}
         action={
-          <LinkButton href={backHref} icon="arrowLeft">
-            {backLabel}
-          </LinkButton>
+          <div className="flex items-center gap-2">
+            {actions}
+            <LinkButton href={backHref} icon="arrowLeft">
+              {backLabel}
+            </LinkButton>
+          </div>
         }
       />
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Details" />
             <DetailGrid fields={fields} />

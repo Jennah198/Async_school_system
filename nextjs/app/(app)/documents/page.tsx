@@ -1,7 +1,6 @@
-import { StatusBadge } from '@/components/ui'
+import { DateText, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
-import { formatDate } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
 import { documentTypeOptions } from '@/lib/odoo/filter-options'
 import { listDocuments } from '@/lib/odoo/models/operations'
@@ -58,7 +57,7 @@ export default async function DocumentsPage({ searchParams }: PageProps<'/docume
           key: 'expires',
           label: 'Expires',
           hideBelow: 'md',
-          render: (row) => formatDate(row.expiry_date),
+          render: (row) => <DateText value={row.expiry_date} />,
         },
         {
           key: 'verifiedBy',

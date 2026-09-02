@@ -1,8 +1,8 @@
-import { Badge, StatusBadge } from '@/components/ui'
+import { Badge, DateText, LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
-import { formatDate } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
+import { hasAccess } from '@/lib/odoo/client'
 import { listAcademicYears } from '@/lib/odoo/models/school'
 import { selectionOptions } from '@/lib/odoo/selections'
 
@@ -10,7 +10,10 @@ export const metadata = { title: 'Academic years · Async School' }
 
 /** Years are named by the Ethiopian year of their Gregorian start date. */
 export default async function AcademicYearsPage({ searchParams }: PageProps<'/academic-years'>) {
-  const states = await selectionOptions('school.academic.year', 'state')
+  const [states, canCreate] = await Promise.all([
+    selectionOptions('school.academic.year', 'state'),
+    hasAccess('school.academic.year', 'create'),
+  ])
 
   return (
     <ResourceList
@@ -32,6 +35,13 @@ export default async function AcademicYearsPage({ searchParams }: PageProps<'/ac
         })
       }
       rowHref={(row) => `/academic-years/${row.id}`}
+      action={
+        canCreate ? (
+          <LinkButton href="/academic-years/new" variant="primary" icon="plus">
+            New year
+          </LinkButton>
+        ) : undefined
+      }
       emptyTitle="No academic years visible"
       columns={[
         {
@@ -44,9 +54,9 @@ export default async function AcademicYearsPage({ searchParams }: PageProps<'/ac
           key: 'start',
           label: 'Starts',
           sortField: 'date_start',
-          render: (row) => formatDate(row.date_start),
+          render: (row) => <DateText value={row.date_start} />,
         },
-        { key: 'end', label: 'Ends', hideBelow: 'sm', render: (row) => formatDate(row.date_end) },
+        { key: 'end', label: 'Ends', hideBelow: 'sm', render: (row) => <DateText value={row.date_end} /> },
         {
           key: 'classes',
           label: 'Classes',

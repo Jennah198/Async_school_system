@@ -92,7 +92,7 @@ Coverage below reflects what is **implemented today**, not the full domain.
 | `school.staff.daily.status` | Daily status | HR, Admin only | `/staff/[id]` | ✅ read, degrades for others |
 | `school.job.title` | Job titles + granted responsibility | Registrar, Admin, Director, HR, Front Office, Teacher | (used by `/staff/new`) | ✅ read |
 | `school.teacher` | Teacher profiles + workload | Registrar, Admin, Teacher, Exam Officer | `/teachers` | ✅ list |
-| `school.academic.year` | Academic years | Registrar, Admin, Teacher | `/academic-years` | ✅ list |
+| `school.academic.year` | Academic years | Registrar, Admin, Teacher | `/academic-years`, `/academic-years/[id]`, `/academic-years/new` | ✅ list · detail · **create** · **open/close/archive/create next year** |
 | `school.class` | Classes | Registrar, Admin, Teacher, Exam Officer | `/classes` | ✅ list |
 | `school.subject` | Subjects | Registrar, Admin, Teacher | `/subjects` | ✅ list |
 | `school.teacher.assignment` | Teaching assignments | Registrar, Admin, Teacher | `/assignments` | ✅ list |
@@ -106,7 +106,7 @@ Coverage below reflects what is **implemented today**, not the full domain.
 | `school.assessment.event` | Immutable audit trail | as assessment | `/assessments/[id]` | ✅ read |
 | `school.attendance` | Attendance capture | Teacher, Registrar, Admin | `/attendance` | ✅ list · **roster generation** · **status entry** |
 | `school.class.schedule` | Timetable | Teacher, Admin | `/schedule`, `/schedule/[id]` | ✅ list · detail · **publish/complete/cancel** |
-| `school.announcement` | Announcements | Registrar, Front Office, Admin, Teacher | `/announcements`, `/announcements/[id]` | ✅ list · detail · **publish/archive/reset** |
+| `school.announcement` | Announcements | Registrar, Front Office, Admin, Teacher | `/announcements`, `/announcements/[id]`, `/announcements/new` | ✅ list · detail · **author** · **publish/archive/reset** |
 | `school.program` | Programs | Registrar, Admin, Teacher | `/programs`, `/programs/[id]` | ✅ list · detail · **publish/complete/cancel** |
 | `school.document` | Document register | Registrar, Admin, HR | `/documents`, `/documents/[id]` | ✅ list · detail · **verify/reject with reason** |
 | `school.report.card` | Report cards | Exam Officer, Admin, Director, Registrar | `/report-cards`, `/report-cards/[id]` | ✅ list · detail · **generate/approve/publish** |
@@ -133,6 +133,15 @@ their own queries per row. `searchRead()` therefore requires a field list.
 
 **Fayda ID is never worked around.** It carries a field-level group. A teacher
 requesting it gets 403 from Odoo, and that 403 is surfaced, not bypassed.
+
+**Dates read Ethiopian, store Gregorian.** Odoo stores and validates
+Gregorian, and `school.academic.year` already checks the year name against the
+Ethiopian year of `date_start` with the `ethiopian_date` package.
+`lib/ethiopian-date.ts` is the same conversion for the browser, as integer
+arithmetic rather than `Intl` — `lib/format.ts` renders on both sides of
+hydration and a locale-dependent formatter can resolve differently on each.
+`DateText` renders the pair, Ethiopian first; `EthiopianDateInput` picks in the
+Ethiopian calendar and posts a Gregorian `YYYY-MM-DD`.
 
 **Business logic stays in Odoo.** State transitions go through `callAction()`
 to the model's own `action_*` method — never `write({state})`, which would skip

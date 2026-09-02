@@ -1,10 +1,4 @@
-import {
-  Cell,
-  DataTable,
-  Row,
-  RowLink,
-  StatusBadge,
-} from '@/components/ui'
+import { Cell, DataTable, DateText, Row, RowLink, StatusBadge } from '@/components/ui'
 import {
   ActionList,
   CountTile,
@@ -245,7 +239,7 @@ export async function TeacherDashboard({ user }: { user: CurrentUser }) {
                     <RowLink href={`/assessments/${assessment.id}`}>{assessment.name}</RowLink>
                   </Cell>
                   <Cell>{m2oLabel(assessment.class_id)}</Cell>
-                  <Cell hideBelow="sm">{formatDate(assessment.date)}</Cell>
+                  <Cell hideBelow="sm">{<DateText value={assessment.date} />}</Cell>
                   <Cell numeric>{assessment.mark_count}</Cell>
                   <Cell>
                     <StatusBadge state={assessment.state} size="sm" />
@@ -391,7 +385,7 @@ export async function TeacherDashboard({ user }: { user: CurrentUser }) {
                 <li key={item.id} className="flex items-baseline justify-between gap-4">
                   <RowLink href={`/announcements/${item.id}`}>{item.name}</RowLink>
                   <span className="shrink-0 text-[11px] text-stone">
-                    {formatDate(item.publish_datetime || undefined)}
+                    {formatEthiopianDate(item.publish_datetime || undefined)}
                   </span>
                 </li>
               ))}
