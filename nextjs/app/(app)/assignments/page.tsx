@@ -1,8 +1,10 @@
-import { StatusBadge } from '@/components/ui'
+import { LinkButton, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
+import { RowLink } from '@/components/ui/table'
+import { canCreateAssignment, listAssignableTeachers } from '@/lib/odoo/models/assignment'
 import { formatSelection } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
-import { classOptions, subjectOptions } from '@/lib/odoo/filter-options'
+import { classOptions, subjectOptions, termOptions } from '@/lib/odoo/filter-options'
 import { listAssignments } from '@/lib/odoo/models/school'
 import { selectionOptions } from '@/lib/odoo/selections'
 import { m2oLabel } from '@/lib/odoo/types'
@@ -10,12 +12,16 @@ import { m2oLabel } from '@/lib/odoo/types'
 export const metadata = { title: 'Teaching assignments · Async School' }
 
 export default async function AssignmentsPage({ searchParams }: PageProps<'/assignments'>) {
-  const [states, responsibilities, classes, subjects] = await Promise.all([
-    selectionOptions('school.teacher.assignment', 'state'),
-    selectionOptions('school.teacher.assignment', 'responsibility'),
-    classOptions(),
-    subjectOptions(),
-  ])
+  const [states, responsibilities, classes, subjects, teachers, terms, canCreate] =
+    await Promise.all([
+      selectionOptions('school.teacher.assignment', 'state'),
+      selectionOptions('school.teacher.assignment', 'responsibility'),
+      classOptions(),
+      subjectOptions(),
+      listAssignableTeachers(),
+      termOptions(),
+      canCreateAssignment(),
+    ])
 
   return (
     <ResourceList
@@ -27,8 +33,14 @@ export default async function AssignmentsPage({ searchParams }: PageProps<'/assi
       search={{ placeholder: 'Assignment reference' }}
       filters={[
         { key: 'status', label: 'Status', options: states },
+        {
+          key: 'teacher',
+          label: 'Teacher',
+          options: teachers.map((t) => ({ value: String(t.id), label: t.name })),
+        },
         { key: 'class', label: 'Class', options: classes },
         { key: 'subject', label: 'Subject', options: subjects },
+        { key: 'term', label: 'Term', options: terms },
         { key: 'responsibility', label: 'Role', options: responsibilities },
       ]}
       load={(query) =>
@@ -40,10 +52,22 @@ export default async function AssignmentsPage({ searchParams }: PageProps<'/assi
           offset: query.offset,
         })
       }
+      rowHref={(row) => `/assignments/${row.id}`}
+      action={
+        canCreate ? (
+          <LinkButton href="/assignments/new" variant="primary" icon="plus">
+            New assignment
+          </LinkButton>
+        ) : undefined
+      }
       emptyTitle="No assignments visible"
       emptyHint="Teachers see only their own assignments."
       columns={[
-        { key: 'teacher', label: 'Teacher', render: (row) => m2oLabel(row.teacher_id) },
+        {
+          key: 'teacher',
+          label: 'Teacher',
+          render: (row) => <RowLink href={`/assignments/${row.id}`}>{m2oLabel(row.teacher_id)}</RowLink>,
+        },
         { key: 'subject', label: 'Subject', render: (row) => m2oLabel(row.subject_id) },
         { key: 'class', label: 'Class', render: (row) => m2oLabel(row.class_id) },
         { key: 'term', label: 'Term', hideBelow: 'md', render: (row) => m2oLabel(row.term_id) },
