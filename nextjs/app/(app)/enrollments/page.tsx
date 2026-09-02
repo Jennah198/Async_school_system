@@ -1,7 +1,7 @@
-import { StatusBadge } from '@/components/ui'
+import { DateText, StatusBadge } from '@/components/ui'
 import { ResourceList } from '@/components/resource-list'
 import { RowLink } from '@/components/ui/table'
-import { formatDate, formatSelection, formatText } from '@/lib/format'
+import { formatSelection, formatText } from '@/lib/format'
 import { toOdooOrder } from '@/lib/list-query'
 import { academicYearOptions, classOptions } from '@/lib/odoo/filter-options'
 import { listEnrollments } from '@/lib/odoo/models/student'
@@ -77,7 +77,7 @@ export default async function EnrollmentsPage({ searchParams }: PageProps<'/enro
           label: 'From',
           sortField: 'enrollment_date',
           hideBelow: 'md',
-          render: (row) => formatDate(row.enrollment_date),
+          render: (row) => <DateText value={row.enrollment_date} />,
         },
         { key: 'state', label: 'Status', render: (row) => <StatusBadge state={row.state} model="school.enrollment" /> },
       ]}

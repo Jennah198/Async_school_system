@@ -1,19 +1,7 @@
 import Link from 'next/link'
-import { formatDate, formatSelection } from '@/lib/format'
+import { formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
-import {
-  Badge,
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailField,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-} from '@/components/ui'
+import { Badge, Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -117,7 +105,7 @@ export default async function StudentDetailPage({
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Registration" />
 
@@ -139,7 +127,7 @@ export default async function StudentDetailPage({
 
               <DetailField
                 label="Registered on"
-                value={formatDate(student.registration_date)}
+                value={<DateText value={student.registration_date} />}
               />
 
               <DetailField
@@ -354,7 +342,7 @@ export default async function StudentDetailPage({
                     </Cell>
 
                     <Cell>
-                      {formatDate(row.enrollment_date)}
+                      <DateText value={row.enrollment_date} />
                     </Cell>
 
                     <Cell>

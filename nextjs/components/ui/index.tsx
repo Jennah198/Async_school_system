@@ -16,6 +16,7 @@ export {
   Button,
   Card,
   CardHeader,
+  DateText,
   IconButton,
   LinkButton,
   Skeleton,

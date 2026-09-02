@@ -1,18 +1,7 @@
 import Link from 'next/link'
-import { formatDate, formatDateTime, formatSelection } from '@/lib/format'
+import { formatDualDate, formatSelection } from '@/lib/format'
 import { notFound } from 'next/navigation'
-import {
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailField,
-  EmptyState,
-  ErrorState,
-  PageHeader,
-  Row,
-  StatusBadge,
-} from '@/components/ui'
+import { Card, CardHeader, Cell, DataTable, DateText, DetailField, EmptyState, ErrorState, PageHeader, Row, StatusBadge } from '@/components/ui'
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
@@ -24,7 +13,7 @@ import {
 } from '@/lib/odoo/models/assessment'
 import { m2oLabel } from '@/lib/odoo/types'
 import { availableTransitions } from '@/lib/odoo/workflows'
-import { MarkRow } from './mark-row'
+import { MarkList } from './mark-list'
 
 export const metadata = { title: 'Assessment · Async School' }
 
@@ -60,7 +49,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
     <>
       <PageHeader
         title={assessment.name}
-        subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${formatDate(assessment.date)}`}
+        subtitle={`${m2oLabel(assessment.class_id)} · ${m2oLabel(assessment.subject_id)} · ${formatDualDate(assessment.date)}`}
         action={
           <Link
             href="/assessments"
@@ -72,7 +61,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Setup" hint="Frozen by Odoo once the mark list exists." />
             <dl className="grid gap-4 sm:grid-cols-3">
@@ -81,7 +70,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
               <DetailField label="Subject" value={m2oLabel(assessment.subject_id)} />
               <DetailField label="Term" value={m2oLabel(assessment.term_id)} />
               <DetailField label="Academic year" value={m2oLabel(assessment.academic_year_id)} />
-              <DetailField label="Date" value={formatDate(assessment.date)} />
+              <DetailField label="Date" value={<DateText value={assessment.date} />} />
               <DetailField label="Maximum mark" value={assessment.max_mark} />
               <DetailField label="Weight" value={assessment.weight} />
               <DetailField
@@ -108,42 +97,21 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
                 hint="Opening the assessment generates the roster from subject enrolments valid on the assessment date."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-[13px]">
-                  <thead>
-                    <tr>
-                      {['Student', 'Score / status / percent / grade / remark'].map((label) => (
-                        <th
-                          key={label}
-                          className="border-b border-silver px-4 py-2.5 text-left text-[11px] font-medium tracking-wide text-slate uppercase"
-                          colSpan={label === 'Student' ? 1 : 5}
-                        >
-                          {label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {marks.rows.map((row) => (
-                      <MarkRow
-                        key={row.id}
-                        markId={row.id}
-                        assessmentId={assessment.id}
-                        student={m2oLabel(row.student_id)}
-                        score={row.score}
-                        maxScore={row.max_score}
-                        percentage={row.percentage}
-                        grade={row.grade}
-                        status={String(row.mark_status || '')}
-                        note={row.note || ''}
-                        statusOptions={statuses}
-                        editable={entryOpen && canWrite}
-                        requiresReason={!entryOpen}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <MarkList
+                assessmentId={assessment.id}
+                rows={marks.rows.map((row) => ({
+                  id: row.id,
+                  student: m2oLabel(row.student_id),
+                  score: row.score,
+                  maxScore: row.max_score,
+                  percentage: row.percentage,
+                  grade: row.grade,
+                  status: String(row.mark_status || ''),
+                  note: row.note || '',
+                }))}
+                statusOptions={statuses}
+                editable={entryOpen && canWrite}
+              />
             )}
           </Card>
 
@@ -164,7 +132,7 @@ export default async function AssessmentDetailPage({ params }: PageProps<'/asses
                   <Row key={row.id}>
                     <Cell strong>{formatSelection(row.event_type)}</Cell>
                     <Cell>{m2oLabel(row.actor_id)}</Cell>
-                    <Cell>{formatDateTime(row.occurred_at)}</Cell>
+                    <Cell>{<DateText value={row.occurred_at} withTime />}</Cell>
                     <Cell>{row.reason || '—'}</Cell>
                   </Row>
                 ))}

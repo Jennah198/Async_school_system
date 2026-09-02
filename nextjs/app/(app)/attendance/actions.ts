@@ -3,10 +3,10 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireSession } from '@/lib/odoo/auth'
+import { changedStatuses } from '@/lib/attendance-diff'
 import { toOdooError } from '@/lib/odoo/errors'
 import {
   generateAttendanceRoster,
-  setAttendanceStatus,
   setAttendanceStatusBatch,
 } from '@/lib/odoo/models/operations'
 
@@ -40,37 +40,34 @@ export async function generateRosterAction(
   redirect(`/attendance?${new URLSearchParams({ class: String(classId), date }).toString()}`)
 }
 
-export async function setAttendanceAction(
-  _previous: AttendanceState,
-  form: FormData,
-): Promise<AttendanceState> {
-  await requireSession()
-
-  const id = Number(form.get('id'))
-  const status = String(form.get('status') ?? '').trim()
-  if (!Number.isFinite(id) || !status) return { error: 'That change is not available.' }
-
-  try {
-    await setAttendanceStatus(id, status)
-  } catch (cause) {
-    return { error: toOdooError(cause).message }
-  }
-
-  revalidatePath('/attendance')
-  return { ok: 'Saved.' }
-}
-
 
 export interface BatchState {
   error?: string
   ok?: string
 }
 
+/**
+ * Save every changed row of an attendance register in one pass.
+ *
+ * `setAttendanceStatusBatch` groups the changes by target status, so a class
+ * that settles on "present" costs one write rather than thirty. Odoo still
+ * authorises each one and owns the placement rules behind the register.
+ */
 export async function setAttendanceBatchAction(
-  changes: Array<{ id: number; status: string }>,
+  _previous: BatchState,
+  form: FormData,
 ): Promise<BatchState> {
   await requireSession()
-  if (changes.length === 0) return { ok: 'Nothing to save.' }
+
+  const ids = form
+    .getAll('attendanceId')
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0)
+
+  if (ids.length === 0) return { error: 'This register has no rows to save.' }
+
+  const changes = changedStatuses(form, ids)
+  if (changes.length === 0) return { ok: 'No changes to save.' }
 
   try {
     await setAttendanceStatusBatch(changes)

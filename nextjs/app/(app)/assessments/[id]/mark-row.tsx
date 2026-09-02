@@ -1,19 +1,18 @@
 'use client'
 
-import { useActionState, useState } from 'react'
-import { saveMarkAction, type MarkState } from '../actions'
+import { formatPercent, formatText } from '@/lib/format'
 
 /**
  * One row of the mark list.
  *
- * Percentage and grade are Odoo's computed values, shown read-only — the
- * grading scheme is never reimplemented here. Entry is disabled unless the
- * assessment is open, mirroring the guard in `school.mark.write`; Odoo
- * enforces it regardless.
+ * Presentational: the inputs belong to the single form in `MarkList`, and are
+ * named by mark id so one submit carries the whole roster. Percentage and
+ * grade are Odoo's computed values, shown read-only — the grading scheme is
+ * never reimplemented here. Entry is disabled unless the assessment is open,
+ * mirroring the guard in `school.mark.write`; Odoo enforces it regardless.
  */
 export function MarkRow({
   markId,
-  assessmentId,
   student,
   score,
   maxScore,
@@ -23,10 +22,9 @@ export function MarkRow({
   note,
   statusOptions,
   editable,
-  requiresReason,
+  error,
 }: {
   markId: number
-  assessmentId: number
   student: string
   score: number
   maxScore: number
@@ -36,123 +34,91 @@ export function MarkRow({
   note: string
   statusOptions: Array<{ value: string; label: string }>
   editable: boolean
-  /** Once past `open`, Odoo wants a reason on any correction. */
-  requiresReason: boolean
+  error?: string
 }) {
-  const [state, formAction, pending] = useActionState<MarkState, FormData>(saveMarkAction, {})
-  const [localScore, setLocalScore] = useState(String(score ?? ''))
-  const [clientError, setClientError] = useState<string | null>(null)
-
-  const handleFormSubmit = (formData: FormData) => {
-    const val = formData.get('score')
-    if (val !== null && val !== '') {
-      const num = Number(val)
-      if (num < 0 || num > maxScore) {
-        setClientError(`Score must be between 0 and ${maxScore}`)
-        return
-      }
-    }
-    setClientError(null)
-    formAction(formData)
-  }
-
   const cell = 'px-4 py-2 align-middle'
-  const input =
-    'w-20 rounded-[8px] border border-silver px-2 py-1 text-[13px] tabular focus:border-action-blue focus:outline-none disabled:bg-paper disabled:text-stone'
+  const control =
+    'rounded-[8px] border border-silver px-2 py-1 text-[13px] focus:border-action-blue ' +
+    'focus:outline-none disabled:bg-paper disabled:text-stone'
 
   return (
     <tr className="border-b border-silver/70 last:border-0">
-      <td className={`${cell} font-medium text-graphite`}>{student}</td>
-      <td className={cell} colSpan={5}>
-        <form action={handleFormSubmit} className="flex flex-wrap items-center gap-2">
-          <input type="hidden" name="markId" value={markId} />
-          <input type="hidden" name="assessmentId" value={assessmentId} />
+      <td className={`${cell} font-medium text-graphite`}>
+        {student}
+        {error ? (
+          <span role="alert" className="mt-0.5 block text-[11px] text-danger">
+            {error}
+          </span>
+        ) : null}
+      </td>
 
-          <label className="sr-only" htmlFor={`score-${markId}`}>
-            Score for {student}
-          </label>
+      <td className={cell}>
+        {/* The original values ride along so the action writes only what moved. */}
+        <input type="hidden" name="markId" value={markId} />
+        <input type="hidden" name={`max-${markId}`} value={maxScore} />
+        <input type="hidden" name={`was-score-${markId}`} value={score ?? ''} />
+        <input type="hidden" name={`was-status-${markId}`} value={status} />
+        <input type="hidden" name={`was-note-${markId}`} value={note} />
+
+        <label className="sr-only" htmlFor={`score-${markId}`}>
+          Score for {student}
+        </label>
+        <div className="flex items-center gap-1.5">
           <input
             id={`score-${markId}`}
-            name="score"
+            name={`score-${markId}`}
             type="number"
             step="0.01"
             min={0}
             max={maxScore}
-            value={localScore}
-            onChange={(e) => setLocalScore(e.target.value)}
+            defaultValue={score ?? ''}
             disabled={!editable}
-            className={input}
+            aria-invalid={error ? true : undefined}
+            className={`${control} tabular w-20`}
           />
-          <span className="text-[12px] text-stone">/ {maxScore}</span>
+          <span className="text-[12px] whitespace-nowrap text-stone">/ {maxScore}</span>
+        </div>
+      </td>
 
-          <label className="sr-only" htmlFor={`status-${markId}`}>
-            Status for {student}
-          </label>
-          <select
-            id={`status-${markId}`}
-            name="mark_status"
-            defaultValue={status}
-            disabled={!editable}
-            className="rounded-[8px] border border-silver px-2 py-1 text-[12px] focus:border-action-blue focus:outline-none disabled:bg-paper disabled:text-stone"
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+      <td className={cell}>
+        <label className="sr-only" htmlFor={`status-${markId}`}>
+          Status for {student}
+        </label>
+        <select
+          id={`status-${markId}`}
+          name={`status-${markId}`}
+          defaultValue={status}
+          disabled={!editable}
+          className={`${control} text-[12px]`}
+        >
+          {statusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </td>
 
-          <span className="tabular w-14 text-right text-[12px] text-slate">
-            {percentage ? `${percentage.toFixed(1)}%` : '—'}
-          </span>
-          <span className="w-8 text-[12px] font-medium text-graphite">{grade || '—'}</span>
+      <td className={`${cell} tabular hidden text-right text-[12px] text-slate md:table-cell`}>
+        {formatPercent(percentage)}
+      </td>
 
-          <label className="sr-only" htmlFor={`note-${markId}`}>
-            Remark for {student}
-          </label>
-          <input
-            id={`note-${markId}`}
-            name="note"
-            defaultValue={note}
-            disabled={!editable}
-            placeholder="Remark"
-            className="min-w-[120px] flex-1 rounded-[8px] border border-silver px-2 py-1 text-[12px] focus:border-action-blue focus:outline-none disabled:bg-paper"
-          />
+      <td className={`${cell} hidden text-[12px] font-medium text-graphite sm:table-cell`}>
+        {formatText(grade)}
+      </td>
 
-          {requiresReason ? (
-            <input
-              name="reason"
-              placeholder="Correction reason"
-              className="min-w-[140px] rounded-[8px] border border-silver px-2 py-1 text-[12px] focus:border-action-blue focus:outline-none"
-            />
-          ) : null}
-
-          {editable ? (
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-[9999px] border border-silver px-3 py-1 text-[12px] hover:bg-paper disabled:opacity-50"
-            >
-              {pending ? 'Saving…' : 'Save'}
-            </button>
-          ) : null}
-
-          {clientError ? (
-            <span role="alert" className="text-[11px] text-danger">
-              {clientError}
-            </span>
-          ) : null}
-          {state.error && !clientError ? (
-            <span role="alert" className="text-[11px] text-danger">
-              {state.error}
-            </span>
-          ) : null}
-          {state.ok && !clientError ? (
-            <span role="status" className="text-[11px] text-action-blue">
-              {state.ok}
-            </span>
-          ) : null}
-        </form>
+      <td className={`${cell} hidden lg:table-cell`}>
+        <label className="sr-only" htmlFor={`note-${markId}`}>
+          Remark for {student}
+        </label>
+        <input
+          id={`note-${markId}`}
+          name={`note-${markId}`}
+          defaultValue={note}
+          disabled={!editable}
+          placeholder="Remark"
+          className={`${control} min-w-[120px] w-full text-[12px]`}
+        />
       </td>
     </tr>
   )

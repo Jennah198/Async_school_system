@@ -1,23 +1,7 @@
 import { notFound } from 'next/navigation'
-import {
-  Badge,
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailGrid,
-  EmptyState,
-  ErrorState,
-  LinkButton,
-  Note,
-  PageHeader,
-  Row,
-  RowLink,
-  StatusBadge,
-  TableCard,
-} from '@/components/ui'
+import { Badge, Card, CardHeader, Cell, DataTable, DateText, DetailGrid, EmptyState, ErrorState, LinkButton, Note, PageHeader, Row, RowLink, StatusBadge, TableCard } from '@/components/ui'
 import { toOdooError } from '@/lib/odoo/errors'
-import { formatDate, formatDateRange, formatSelection, trimNumber } from '@/lib/format'
+import { formatEthiopianDateRange, formatSelection, trimNumber } from '@/lib/format'
 import {
   assignmentTransitionsFrom,
   canWriteAssignment,
@@ -120,10 +104,10 @@ export default async function AssignmentDetailPage({ params }: PageProps<'/assig
                 { label: 'Periods per week', value: trimNumber(assignment.weekly_periods) },
                 {
                   label: 'Effective',
-                  value: formatDateRange(assignment.start_date, assignment.end_date),
+                  value: formatEthiopianDateRange(assignment.start_date, assignment.end_date),
                 },
-                { label: 'Starts', value: formatDate(assignment.start_date) },
-                { label: 'Ends', value: assignment.end_date ? formatDate(assignment.end_date) : 'Open' },
+                { label: 'Starts', value: <DateText value={assignment.start_date} /> },
+                { label: 'Ends', value: assignment.end_date ? <DateText value={assignment.end_date} /> : 'Open' },
               ]}
             />
             <Note>

@@ -1,6 +1,7 @@
 import 'server-only'
-import { readOne, searchCount, searchRead } from '@/lib/odoo/client'
+import { create, readOne, searchCount, searchRead } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
+import { ethiopianYearOf } from '@/lib/ethiopian-date'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
 import type { Domain, Ids, Many2one, Page, Selection } from '@/lib/odoo/types'
 
@@ -352,6 +353,32 @@ export function listAcademicYears(options: ListOptions = {}): Promise<Page<Acade
 
 export function getAcademicYear(id: number): Promise<AcademicYearRow | null> {
   return readOne<AcademicYearRow>('school.academic.year', id, ACADEMIC_YEAR_FIELDS)
+}
+
+export interface AcademicYearIntake {
+  date_start: string
+  date_end: string
+  is_current: boolean
+}
+
+/**
+ * Create an academic year.
+ *
+ * The name is derived, never typed. Odoo's `_check_year_name` requires it to
+ * be the four-digit Ethiopian year of the Gregorian `date_start`, so asking a
+ * registrar to retype it can only produce a validation error. `is_current` is
+ * still Odoo's to police — `_check_single_current_year` rejects a second one.
+ */
+export function createAcademicYear(intake: AcademicYearIntake): Promise<number> {
+  const year = ethiopianYearOf(intake.date_start)
+  if (year === null) throw new Error('The start date is not a valid date.')
+
+  return create('school.academic.year', {
+    name: String(year),
+    date_start: intake.date_start,
+    date_end: intake.date_end,
+    is_current: intake.is_current,
+  })
 }
 
 /* ------------------------------------------------------------ Aggregate --- */

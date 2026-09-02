@@ -5,6 +5,7 @@ import {
   CardHeader,
   Cell,
   DataTable,
+  DateText,
   DetailGrid,
   EmptyState,
   ErrorState,
@@ -20,7 +21,7 @@ import {
 import { WorkflowPanel } from '@/components/workflow-panel'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
-import { formatDate, formatDateTime, formatSelection, formatText, trimNumber } from '@/lib/format'
+import { formatSelection, formatText, trimNumber } from '@/lib/format'
 import {
   getActivationBlockers,
   getStaff,
@@ -118,7 +119,7 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                 { label: 'Gender', value: formatSelection(staff.gender) },
                 {
                   label: 'Date of birth',
-                  value: personal ? formatDate(personal.date_of_birth) : <Restricted />,
+                  value: personal ? <DateText value={personal.date_of_birth} /> : <Restricted />,
                 },
                 {
                   label: 'Age',
@@ -156,8 +157,8 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                 },
                 { label: 'Employment status', value: formatSelection(staff.employment_status) },
                 { label: 'Employment type', value: formatSelection(staff.employment_type) },
-                { label: 'Hire date', value: formatDate(staff.hire_date) },
-                { label: 'End date', value: formatDate(staff.end_date) },
+                { label: 'Hire date', value: <DateText value={staff.hire_date} /> },
+                { label: 'End date', value: <DateText value={staff.end_date} /> },
                 { label: 'Campus', value: m2oLabel(staff.campus_id) },
                 { label: 'Reporting manager', value: m2oLabel(staff.manager_id) },
                 {
@@ -271,8 +272,8 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
                     <Cell strong>{m2oLabel(row.job_title_id)}</Cell>
                     <Cell hideBelow="sm">{formatSelection(row.responsibility)}</Cell>
                     <Cell hideBelow="lg">{m2oLabel(row.manager_id)}</Cell>
-                    <Cell>{formatDate(row.date_start)}</Cell>
-                    <Cell>{row.date_end ? formatDate(row.date_end) : 'Current'}</Cell>
+                    <Cell>{<DateText value={row.date_start} />}</Cell>
+                    <Cell>{row.date_end ? <DateText value={row.date_end} /> : 'Current'}</Cell>
                   </Row>
                 ))}
               </DataTable>
@@ -305,12 +306,12 @@ export default async function StaffDetailPage({ params }: PageProps<'/staff/[id]
               >
                 {dailyStatus.rows.map((row) => (
                   <Row key={row.id}>
-                    <Cell strong>{formatDate(row.date)}</Cell>
+                    <Cell strong>{<DateText value={row.date} />}</Cell>
                     <Cell>
                       <StatusBadge state={row.status} size="sm" />
                     </Cell>
-                    <Cell hideBelow="md">{formatDateTime(row.check_in)}</Cell>
-                    <Cell hideBelow="md">{formatDateTime(row.check_out)}</Cell>
+                    <Cell hideBelow="md">{<DateText value={row.check_in} withTime />}</Cell>
+                    <Cell hideBelow="md">{<DateText value={row.check_out} withTime />}</Cell>
                     <Cell numeric>{trimNumber(row.worked_hours)}</Cell>
                   </Row>
                 ))}

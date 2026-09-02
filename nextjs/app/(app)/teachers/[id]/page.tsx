@@ -1,32 +1,7 @@
 import { notFound } from 'next/navigation'
-import {
-  Badge,
-  Card,
-  CardHeader,
-  Cell,
-  DataTable,
-  DetailGrid,
-  EmptyState,
-  ErrorState,
-  LinkButton,
-  Note,
-  PageHeader,
-  RestrictedState,
-  Row,
-  RowLink,
-  Stat,
-  StatusBadge,
-  TableCard,
-} from '@/components/ui'
+import { Badge, Card, CardHeader, Cell, DataTable, DateText, DetailGrid, EmptyState, ErrorState, LinkButton, Note, PageHeader, RestrictedState, Row, RowLink, Stat, StatusBadge, TableCard } from '@/components/ui'
 import { toOdooError } from '@/lib/odoo/errors'
-import {
-  formatDate,
-  formatSelection,
-  formatText,
-  formatTimeRange,
-  trimNumber,
-  weekdayName,
-} from '@/lib/format'
+import { formatSelection, formatText, formatTimeRange, trimNumber, weekdayName } from '@/lib/format'
 import {
   canWriteTeacher,
   getTeacher,
@@ -146,7 +121,7 @@ export default async function TeacherDetailPage({ params }: PageProps<'/teachers
                   value: teacher.years_of_experience ? trimNumber(teacher.years_of_experience) : '—',
                 },
                 { label: 'Available days', value: formatText(teacher.available_days) },
-                { label: 'Hire date', value: formatDate(teacher.hire_date) },
+                { label: 'Hire date', value: <DateText value={teacher.hire_date} /> },
                 { label: 'Odoo login', value: m2oLabel(teacher.user_id) },
               ]}
             />
