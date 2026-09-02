@@ -32,45 +32,9 @@ export async function AppShell({ user, children }: { user: CurrentUser; children
     <ShellFrame
       sections={sections}
       brand={{ name: 'Async School', initial: 'A' }}
-      user={{ name: user.name, role }}
       initialCollapsed={collapsed}
-      sidebarFooter={
-        /*
-          Signing out belongs here, in plain sight. It lived in the sidebar,
-          moved into the header account menu, and became a control nobody could
-          find — an avatar with no affordance is not a way out of an
-          application. It is offered in both places now; this is the visible one.
-
-          The footer is rendered on the server so `logoutAction` stays a server
-          action, which means it cannot read the sidebar's collapsed state. It
-          styles against the `data-collapsed` attribute the rail sets instead.
-        */
-        <>
-          <div className="flex items-center gap-2.5 rounded-[8px] px-2 py-1.5 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-paper text-[11px] font-medium text-graphite">
-              {initials}
-            </span>
-            <span className="min-w-0 flex-1 group-data-[collapsed=true]:hidden">
-              <span className="block truncate text-[12px] font-medium text-graphite">
-                {user.name}
-              </span>
-              <span className="block truncate text-[11px] text-stone">{role}</span>
-            </span>
-          </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              title="Sign out"
-              className="mt-1 flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[12px] text-slate transition-colors hover:bg-danger-bg hover:text-danger group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0"
-            >
-              <Icon name="signOut" size={16} className="shrink-0" />
-              {/* Collapsed, the icon is the only label, so the name has to
-                  survive for a screen reader and for the tooltip. */}
-              <span className="group-data-[collapsed=true]:sr-only">Sign out</span>
-            </button>
-          </form>
-        </>
-      }
+      account={{ name: user.name, role, initials }}
+      signOutAction={logoutAction}
       userMenu={
         <>
           <div className="border-b border-silver px-2.5 pt-1 pb-2.5">

@@ -29,19 +29,20 @@ import {
 export function ShellFrame({
   sections,
   brand,
-  user,
   initialCollapsed,
   userMenu,
-  sidebarFooter,
+  account,
+  signOutAction,
   children,
 }: {
   sections: NavSection[]
   brand: { name: string; initial: string }
-  user: { name: string; role: string }
   initialCollapsed: boolean
   /** Rendered on the server so the sign-out form action stays server-owned. */
   userMenu: ReactNode
-  sidebarFooter: ReactNode
+  /** Who is signed in — used by both the header and the sidebar footer. */
+  account: { name: string; role: string; initials: string }
+  signOutAction: () => Promise<void>
   children: ReactNode
 }) {
   const pathname = usePathname()
@@ -96,7 +97,8 @@ export function ShellFrame({
         mobileOpen={mobileOpen}
         onMobileOpenChange={setDrawerOpen}
         brand={brand}
-        footer={sidebarFooter}
+        account={account}
+        signOutAction={signOutAction}
       />
 
       <div
@@ -133,8 +135,10 @@ export function ShellFrame({
           </p>
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-[12px] text-stone md:inline">{user.role}</span>
-            <AccountMenu name={user.name}>{userMenu}</AccountMenu>
+            <span className="hidden text-[12px] text-stone md:inline">{account.role}</span>
+            <AccountMenu name={account.name} initials={account.initials}>
+              {userMenu}
+            </AccountMenu>
           </div>
         </header>
 
@@ -147,7 +151,15 @@ export function ShellFrame({
 }
 
 /** The avatar button in the header and the panel it opens. */
-function AccountMenu({ name, children }: { name: string; children: ReactNode }) {
+function AccountMenu({
+  name,
+  initials,
+  children,
+}: {
+  name: string
+  initials: string
+  children: ReactNode
+}) {
   const root = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   // Same trick as the drawer: navigation closes the menu by derivation.
@@ -170,14 +182,6 @@ function AccountMenu({ name, children }: { name: string; children: ReactNode }) 
       document.removeEventListener('keydown', onKey)
     }
   }, [open, close])
-
-  const initials =
-    name
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('') || '—'
 
   return (
     <div ref={root} className="relative">

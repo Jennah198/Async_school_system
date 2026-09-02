@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '@/components/icons'
 import { cx } from '@/components/ui'
 import type { NavSection } from '@/lib/navigation'
@@ -35,7 +35,10 @@ export interface SidebarProps {
   mobileOpen: boolean
   onMobileOpenChange: (open: boolean) => void
   brand: { name: string; initial: string }
-  footer: ReactNode
+  /** Who is signed in, for the footer. */
+  account: { name: string; role: string; initials: string }
+  /** The sign-out server action, passed down so the form stays server-owned. */
+  signOutAction: () => Promise<void>
 }
 
 export function Sidebar(props: SidebarProps) {
@@ -61,12 +64,9 @@ export function Sidebar(props: SidebarProps) {
       <aside
         id="primary-navigation"
         aria-label="Main"
-        // Read by the server-rendered footer, which cannot see this state
-        // directly but can style against it.
-        data-collapsed={collapsed ? 'true' : 'false'}
         style={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
         className={cx(
-          'group fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-silver bg-white',
+          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-silver bg-white',
           'transition-[width] duration-200 ease-out lg:flex',
         )}
       >
@@ -87,11 +87,9 @@ export function Sidebar(props: SidebarProps) {
         id="mobile-navigation"
         aria-label="Main"
         inert={mobileOpen ? undefined : true}
-        // The drawer is always the full-width variant; see below.
-        data-collapsed="false"
         style={{ width: EXPANDED_WIDTH }}
         className={cx(
-          'group fixed inset-y-0 left-0 z-50 flex flex-col border-r border-silver bg-white',
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-silver bg-white',
           'transition-transform duration-200 ease-out lg:hidden',
           mobileOpen ? 'translate-x-0 shadow-[var(--shadow-raised)]' : '-translate-x-full',
         )}
@@ -109,7 +107,8 @@ function SidebarBody({
   onCollapsedChange,
   onMobileOpenChange,
   brand,
-  footer,
+  account,
+  signOutAction,
   pathname,
   showClose,
 }: SidebarProps & { pathname: string; showClose: boolean }) {
@@ -156,7 +155,57 @@ function SidebarBody({
       </nav>
 
       <div className="shrink-0 border-t border-silver p-2.5">
-        {footer}
+        <div
+          className={cx(
+            'flex items-center gap-2.5 rounded-[8px] py-1.5',
+            collapsed ? 'justify-center px-0' : 'px-2',
+          )}
+        >
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-paper text-[11px] font-medium text-graphite"
+            title={collapsed ? `${account.name} · ${account.role}` : undefined}
+          >
+            {account.initials}
+          </span>
+          {collapsed ? (
+            <span className="sr-only">
+              {account.name}, {account.role}
+            </span>
+          ) : (
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[12px] font-medium text-graphite">
+                {account.name}
+              </span>
+              <span className="block truncate text-[11px] text-stone">{account.role}</span>
+            </span>
+          )}
+        </div>
+
+        {/*
+          Signing out belongs in plain sight. It lived here, moved into the
+          header account menu, and became a control nobody could find — an
+          avatar with no affordance is not a way out of an application. It is
+          offered in both places now; this is the visible one.
+
+          The label is conditionally rendered rather than hidden with CSS, the
+          same way the nav links do it, so the collapsed rail contains no text
+          box at all.
+        */}
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            title={collapsed ? 'Sign out' : undefined}
+            className={cx(
+              'mt-1 flex w-full items-center gap-2.5 rounded-[8px] py-2 text-[12px]',
+              'text-slate transition-colors hover:bg-danger-bg hover:text-danger',
+              collapsed ? 'justify-center px-0' : 'px-2.5',
+            )}
+          >
+            <Icon name="signOut" size={16} className="shrink-0" />
+            {collapsed ? <span className="sr-only">Sign out</span> : <span>Sign out</span>}
+          </button>
+        </form>
+
         {showClose ? null : (
           <button
             type="button"
