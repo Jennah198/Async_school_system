@@ -157,8 +157,8 @@ export default async function TeacherDetailPage({ params }: PageProps<'/teachers
             icon="assignments"
             hint="What this teacher teaches, to which class, in which term."
             action={
-              <LinkButton href="/assignments" size="sm" icon="arrowRight">
-                All assignments
+              <LinkButton href={`/assignments?teacher=${id}`} size="sm" icon="arrowRight">
+                In assignments
               </LinkButton>
             }
           >
@@ -185,7 +185,9 @@ export default async function TeacherDetailPage({ params }: PageProps<'/teachers
               >
                 {assignments.rows.map((row) => (
                   <Row key={row.id}>
-                    <Cell strong>{m2oLabel(row.subject_id)}</Cell>
+                    <Cell strong>
+                      <RowLink href={`/assignments/${row.id}`}>{m2oLabel(row.subject_id)}</RowLink>
+                    </Cell>
                     <Cell>{m2oLabel(row.class_id)}</Cell>
                     <Cell hideBelow="sm">{m2oLabel(row.term_id)}</Cell>
                     <Cell hideBelow="lg">{m2oLabel(row.academic_year_id)}</Cell>

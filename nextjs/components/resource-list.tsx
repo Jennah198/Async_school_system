@@ -142,11 +142,20 @@ export async function ResourceList<T extends { id: number }>({
         {hasToolbar ? (
           <Toolbar
             hint={
-              hrefs.isNarrowed ? (
-                <Link href={hrefs.cleared} className="text-action-blue hover:underline">
-                  Clear filters
-                </Link>
-              ) : undefined
+              /*
+                The count lives here rather than only in the subtitle, because a
+                screen that overrides the subtitle to explain a rule — as the
+                assignments list does — would otherwise leave a filtered result
+                with no indication of how many matched.
+              */
+              <span className="flex items-center gap-3">
+                <span className="tabular">{pluralise(result.total, 'record')}</span>
+                {hrefs.isNarrowed ? (
+                  <Link href={hrefs.cleared} className="text-action-blue hover:underline">
+                    Clear filters
+                  </Link>
+                ) : null}
+              </span>
             }
           >
             {search ? <SearchField placeholder={search.placeholder} /> : null}
