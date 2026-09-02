@@ -202,6 +202,8 @@ export interface TeacherIntake {
   years_of_experience?: number
   max_weekly_workload?: number
   available_days?: string
+  /** Optional initial password. See the note on createTeacher. */
+  login_password?: string
 }
 
 /**
@@ -212,9 +214,12 @@ export interface TeacherIntake {
  * ValidationError naming the teacher when it is missing. Nothing is
  * pre-empted here — the caller surfaces that message.
  *
- * `login_password` is deliberately not sent. Odoo's create pops it and, when
- * absent, sends the new user a reset mail instead, which keeps the password
- * out of this application entirely.
+ * `login_password` is Odoo's own field for this: `store=False`, handed
+ * straight to `res.users.password` by `_inverse_login_password`, and never
+ * written to the teacher record. Leaving it empty makes Odoo email a
+ * set-password link instead, which is the better path — but only where an
+ * outgoing mail server exists. Without one the account is created with no
+ * password and the teacher cannot sign in at all, so the field is offered.
  */
 export function createTeacher(intake: TeacherIntake): Promise<number> {
   return create(
@@ -256,6 +261,20 @@ export function updateTeacher(id: number, values: Record<string, unknown>): Prom
  */
 export function createTeacherLogin(id: number): Promise<unknown> {
   return callKw('school.teacher', 'action_create_login_user', [[id]])
+}
+
+/**
+ * Set or reset the password on a teacher's login.
+ *
+ * Writing `login_password` runs Odoo's `_inverse_login_password`, which sets
+ * `res.users.password` when a login exists and creates the user when it does
+ * not. The field is not stored, so the value lives only for the duration of
+ * the write — the same guarantee the Odoo client gives.
+ *
+ * Odoo's own `_check_strong_password` is the authority on what is acceptable.
+ */
+export function setTeacherPassword(id: number, password: string): Promise<boolean> {
+  return write('school.teacher', [id], { login_password: password })
 }
 
 export function canCreateTeacher(): Promise<boolean> {
