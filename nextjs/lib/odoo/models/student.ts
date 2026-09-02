@@ -48,6 +48,10 @@ export interface StudentDetail {
 
   guardian_name: string | false
   guardian_phone: string | false
+  guardian_relationship: Selection
+  guardian_occupation: string | false
+  emergency_contact_name: string | false
+  emergency_contact_phone: string | false
   previous_school: string | false
   enrollment_count: number
   active: boolean
@@ -83,6 +87,8 @@ const STUDENT_DETAIL_FIELDS = [
   'guardian_phone',
   'guardian_relationship',
   'guardian_occupation',
+  'emergency_contact_name',
+  'emergency_contact_phone',
 
   // Admission information
   'previous_school',
@@ -317,6 +323,53 @@ export function createStudent(intake: StudentIntake): Promise<number> {
     Object.entries(intake).filter(([, value]) => value !== undefined && value !== ''),
   )
   return create('school.student', values)
+}
+
+export interface StudentFieldMeta {
+  readonly: boolean
+  selection?: Array<{ value: string; label: string }>
+}
+
+/**
+ * What the signed-in user may actually touch on school.student.
+ *
+ * `fields_get` runs as that user and omits anything behind a group they lack,
+ * so a field's presence here is the permission check. `national_id`,
+ * `regional_id` and `fan_number` are registrar-only; a role without those
+ * groups gets no such input rather than a form whose write Odoo would refuse.
+ */
+export async function studentFieldMeta(): Promise<Record<string, StudentFieldMeta>> {
+  const raw = await callKw<Record<string, Record<string, unknown>>>(
+    'school.student',
+    'fields_get',
+    [],
+    { attributes: ['readonly', 'selection'] },
+  )
+  return Object.fromEntries(
+    Object.entries(raw).map(([name, meta]) => [
+      name,
+      {
+        readonly: Boolean(meta.readonly),
+        selection: Array.isArray(meta.selection)
+          ? (meta.selection as Array<[string, string]>).map(([value, label]) => ({ value, label }))
+          : undefined,
+      },
+    ]),
+  )
+}
+
+/**
+ * Correct a registration in place.
+ *
+ * Deliberately not a placement change: `class_id`, `academic_year_id`,
+ * `section_id`, `stream_id` and `education_level` have to move together or
+ * `_check_registration_scope` rejects the write, and moving a student between
+ * classes is what `school.enrollment.transfer` exists for. The registration
+ * and lifecycle states are the workflow panel's, since approval is what mints
+ * the student number and creates the enrolment.
+ */
+export function updateStudent(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.student', [id], values)
 }
 
 /**

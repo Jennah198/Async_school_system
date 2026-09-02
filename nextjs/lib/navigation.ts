@@ -236,6 +236,14 @@ const NAV_RULES: NavRuleSection[] = [
         description: 'Grades, sections, streams, shifts, rooms',
         visible: (r) => any(r.isRegistrar, r.isAdmin),
       },
+      {
+        href: '/configuration/grading',
+        label: 'Grading schemes',
+        icon: 'marks',
+        description: 'The bands report cards are graded by',
+        // Only these two roles have ACL rows on school.grading.scheme.
+        visible: (r) => any(r.isAdmin, r.isExamOfficer),
+      },
     ],
   },
 ]
