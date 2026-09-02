@@ -31,6 +31,7 @@ export interface StudentDetail {
   section_id: Many2one
   stream_id: Many2one
   education_level: Selection
+  class_grade_level: Selection
   admission_type: Selection
   registration_status: Selection
   lifecycle_status: Selection
@@ -77,6 +78,7 @@ const STUDENT_DETAIL_FIELDS = [
   'section_id',
   'stream_id',
   'education_level',
+  'class_grade_level',
   'admission_type',
   'registration_status',
   'lifecycle_status',
