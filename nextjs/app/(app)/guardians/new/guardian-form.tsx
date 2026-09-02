@@ -107,7 +107,7 @@ export function GuardianForm({
       <section className="border-t border-silver pt-5">
         <h2 className="text-[15px] leading-tight">Guardian</h2>
         <p className="mb-3 mt-0.5 text-[12px] text-slate">
-          Enter the guardian's contact and relationship details.
+          Enter the guardian&apos;s contact and relationship details.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -184,7 +184,7 @@ export function GuardianForm({
           />
 
           <span className="text-[13px] text-graphite">
-            Make this the student's primary guardian
+            Make this the student&apos;s primary guardian
           </span>
         </label>
 

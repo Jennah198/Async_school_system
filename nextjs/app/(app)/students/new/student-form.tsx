@@ -8,6 +8,7 @@ interface Option {
   value: string
   label: string
 }
+
 interface ClassOption {
   id: number
   name: string
@@ -41,8 +42,13 @@ function Field({
         {label}
         {required ? <span className="ml-0.5 text-danger">*</span> : null}
       </label>
+
       {children}
-      {hint && !error ? <p className="mt-1 text-[11px] text-stone">{hint}</p> : null}
+
+      {hint && !error ? (
+        <p className="mt-1 text-[11px] text-stone">{hint}</p>
+      ) : null}
+
       {error ? (
         <p id={`${htmlFor}-error`} role="alert" className="mt-1 text-[11px] text-danger">
           {error}
@@ -52,13 +58,59 @@ function Field({
   )
 }
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint?: string
+  children: React.ReactNode
+}) {
   return (
     <section className="border-t border-silver pt-5 first:border-0 first:pt-0">
       <h2 className="text-[15px] leading-tight">{title}</h2>
-      {hint ? <p className="mt-0.5 mb-3 text-[12px] text-slate">{hint}</p> : <div className="mb-3" />}
+
+      {hint ? (
+        <p className="mt-0.5 mb-3 text-[12px] text-slate">{hint}</p>
+      ) : (
+        <div className="mb-3" />
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </section>
+  )
+}
+
+function FileField({
+  label,
+  htmlFor,
+  required,
+  hint,
+  error,
+}: {
+  label: string
+  htmlFor: string
+  required?: boolean
+  hint?: string
+  error?: string
+}) {
+  return (
+    <Field
+      label={label}
+      htmlFor={htmlFor}
+      required={required}
+      hint={hint}
+      error={error}
+    >
+      <input
+        id={htmlFor}
+        name={htmlFor}
+        type="file"
+        accept=".pdf,.png"
+        className="w-full rounded-[8px] border border-silver bg-white px-3 py-2 text-[12px] text-slate file:mr-3 file:rounded-[9999px] file:border file:border-silver file:bg-paper file:px-3 file:py-1.5 file:text-[12px] file:text-graphite hover:file:bg-paper"
+      />
+    </Field>
   )
 }
 
@@ -77,19 +129,34 @@ export function StudentRegistrationForm({
     registerStudentAction,
     {},
   )
+
   const prior = state.values ?? {}
+
   const [classId, setClassId] = useState(prior.class_id ?? '')
-  const [admissionType, setAdmissionType] = useState(prior.admission_type ?? 'new')
+  const [admissionType, setAdmissionType] = useState(
+    prior.admission_type ?? 'new',
+  )
 
   const chosen = classes.find((c) => String(c.id) === classId)
   const err = state.fieldErrors ?? {}
 
   return (
     <form action={formAction} className="space-y-6" noValidate>
-      <Section title="Student">
+      {/* ------------------------------------------------ Student --- */}
+
+      <Section
+        title="Student"
+        hint="Enter the student's personal and identification information."
+      >
         <Field label="Full name" htmlFor="name" required error={err.name}>
-          <input id="name" name="name" className={INPUT} defaultValue={prior.name ?? ''} />
+          <input
+            id="name"
+            name="name"
+            className={INPUT}
+            defaultValue={prior.name ?? ''}
+          />
         </Field>
+
         <Field
           label="Date of birth"
           htmlFor="date_of_birth"
@@ -105,9 +172,25 @@ export function StudentRegistrationForm({
             defaultValue={prior.date_of_birth ?? ''}
           />
         </Field>
+
+        <Field label="Place of birth" htmlFor="place_of_birth">
+          <input
+            id="place_of_birth"
+            name="place_of_birth"
+            className={INPUT}
+            defaultValue={prior.place_of_birth ?? ''}
+          />
+        </Field>
+
         <Field label="Gender" htmlFor="gender">
-          <select id="gender" name="gender" className={INPUT} defaultValue={prior.gender ?? ''}>
+          <select
+            id="gender"
+            name="gender"
+            className={INPUT}
+            defaultValue={prior.gender ?? ''}
+          >
             <option value="">Not specified</option>
+
             {genders.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -115,6 +198,30 @@ export function StudentRegistrationForm({
             ))}
           </select>
         </Field>
+
+        <Field label="Primary language" htmlFor="primary_language">
+          <input
+            id="primary_language"
+            name="primary_language"
+            className={INPUT}
+            defaultValue={prior.primary_language ?? ''}
+          />
+        </Field>
+
+        <Field
+          label="Email"
+          htmlFor="email"
+          error={err.email}
+        >
+          <input
+            id="email"
+            name="email"
+            type="email"
+            className={INPUT}
+            defaultValue={prior.email ?? ''}
+          />
+        </Field>
+
         {canSeeFan ? (
           <Field
             label="FAN (National ID)"
@@ -131,13 +238,60 @@ export function StudentRegistrationForm({
             />
           </Field>
         ) : null}
+
+        <Field
+          label="National ID"
+          htmlFor="national_id"
+          error={err.national_id}
+        >
+          <input
+            id="national_id"
+            name="national_id"
+            className={INPUT}
+            defaultValue={prior.national_id ?? ''}
+          />
+        </Field>
+
+        <Field
+          label="Regional ID"
+          htmlFor="regional_id"
+          error={err.regional_id}
+        >
+          <input
+            id="regional_id"
+            name="regional_id"
+            className={INPUT}
+            defaultValue={prior.regional_id ?? ''}
+          />
+        </Field>
+
+        <Field
+          label="Student photo"
+          htmlFor="photo"
+          hint="PNG only."
+        >
+          <input
+            id="photo"
+            name="photo"
+            type="file"
+            accept=".png,image/png"
+            className="w-full rounded-[8px] border border-silver bg-white px-3 py-2 text-[12px] text-slate file:mr-3 file:rounded-[9999px] file:border file:border-silver file:bg-paper file:px-3 file:py-1.5 file:text-[12px] file:text-graphite hover:file:bg-paper"
+          />
+        </Field>
       </Section>
+
+      {/* ------------------------------------------------ Placement --- */}
 
       <Section
         title="Placement"
         hint="The academic year, section, stream and education level are taken from the class, exactly as Odoo derives them."
       >
-        <Field label="Grade / class" htmlFor="class_id" required error={err.class_id}>
+        <Field
+          label="Grade / class"
+          htmlFor="class_id"
+          required
+          error={err.class_id}
+        >
           <select
             id="class_id"
             name="class_id"
@@ -146,6 +300,7 @@ export function StudentRegistrationForm({
             onChange={(event) => setClassId(event.target.value)}
           >
             <option value="">Choose…</option>
+
             {classes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.year}
@@ -153,6 +308,7 @@ export function StudentRegistrationForm({
             ))}
           </select>
         </Field>
+
         <Field label="Admission type" htmlFor="admission_type">
           <select
             id="admission_type"
@@ -168,6 +324,7 @@ export function StudentRegistrationForm({
             ))}
           </select>
         </Field>
+
         {chosen ? (
           <p className="text-[11px] text-stone sm:col-span-2">
             {chosen.name} sits in {chosen.year}
@@ -178,20 +335,41 @@ export function StudentRegistrationForm({
             .
           </p>
         ) : null}
+
         {admissionType === 'transfer' ? (
-          <Field
-            label="Previous school"
-            htmlFor="previous_school"
-            hint="Required by Odoo for a transfer admission."
-          >
-            <input
-              id="previous_school"
-              name="previous_school"
-              className={INPUT}
-              defaultValue={prior.previous_school ?? ''}
-            />
-          </Field>
+          <>
+            <Field
+              label="Previous school"
+              htmlFor="previous_school"
+              required
+              error={err.previous_school}
+              hint="Required for transfer admission."
+            >
+              <input
+                id="previous_school"
+                name="previous_school"
+                className={INPUT}
+                defaultValue={prior.previous_school ?? ''}
+              />
+            </Field>
+
+            <Field
+              label="Transfer reference"
+              htmlFor="transfer_reference"
+              required
+              error={err.transfer_reference}
+              hint="Reference or evidence identifying the transfer."
+            >
+              <input
+                id="transfer_reference"
+                name="transfer_reference"
+                className={INPUT}
+                defaultValue={prior.transfer_reference ?? ''}
+              />
+            </Field>
+          </>
         ) : null}
+
         <Field label="Registration date" htmlFor="registration_date">
           <input
             id="registration_date"
@@ -201,13 +379,36 @@ export function StudentRegistrationForm({
             defaultValue={prior.registration_date ?? ''}
           />
         </Field>
+
+        <Field
+          label="Additional support needed"
+          htmlFor="support_need"
+          hint="Select this if the student requires additional support."
+        >
+          <label className="flex min-h-[38px] items-center gap-2 rounded-[8px] border border-silver bg-white px-3 py-2 text-[13px] text-graphite">
+            <input
+              id="support_need"
+              name="support_need"
+              type="checkbox"
+              defaultChecked={prior.support_need === 'true'}
+            />
+            Student requires additional support
+          </label>
+        </Field>
       </Section>
+
+      {/* ----------------------------------------------- Parent / guardian --- */}
 
       <Section
         title="Parent / guardian"
-        hint="Approving the registration turns this contact into a partner-backed guardian record."
+        hint="The guardian information is saved with the registration. Odoo creates the guardian relationship when the registration is approved."
       >
-        <Field label="Guardian name" htmlFor="guardian_name" required error={err.guardian_name}>
+        <Field
+          label="Guardian name"
+          htmlFor="guardian_name"
+          required
+          error={err.guardian_name}
+        >
           <input
             id="guardian_name"
             name="guardian_name"
@@ -215,6 +416,7 @@ export function StudentRegistrationForm({
             defaultValue={prior.guardian_name ?? ''}
           />
         </Field>
+
         <Field
           label="Guardian phone"
           htmlFor="guardian_phone"
@@ -229,6 +431,39 @@ export function StudentRegistrationForm({
             defaultValue={prior.guardian_phone ?? ''}
           />
         </Field>
+
+        <Field
+          label="Relationship"
+          htmlFor="guardian_relationship"
+          required
+          error={err.guardian_relationship}
+        >
+          <select
+            id="guardian_relationship"
+            name="guardian_relationship"
+            className={INPUT}
+            defaultValue={prior.guardian_relationship ?? 'guardian'}
+          >
+            <option value="father">Father</option>
+            <option value="mother">Mother</option>
+            <option value="guardian">Guardian</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+
+        <Field
+          label="Occupation"
+          htmlFor="guardian_occupation"
+          error={err.guardian_occupation}
+        >
+          <input
+            id="guardian_occupation"
+            name="guardian_occupation"
+            className={INPUT}
+            defaultValue={prior.guardian_occupation ?? ''}
+          />
+        </Field>
+
         <Field
           label="Emergency contact name"
           htmlFor="emergency_contact_name"
@@ -242,6 +477,7 @@ export function StudentRegistrationForm({
             defaultValue={prior.emergency_contact_name ?? ''}
           />
         </Field>
+
         <Field
           label="Emergency contact phone"
           htmlFor="emergency_contact_phone"
@@ -257,11 +493,43 @@ export function StudentRegistrationForm({
         </Field>
       </Section>
 
+      {/* ------------------------------------------------ Documents --- */}
+
+      <Section
+        title="Documents"
+        hint="Only PDF and PNG files are accepted."
+      >
+        <FileField
+          label="Birth certificate"
+          htmlFor="birth_certificate"
+          required
+          error={err.birth_certificate}
+          hint="PDF or PNG."
+        />
+
+        {!chosen?.entryLevel ? (
+          <FileField
+            label="Previous-grade document"
+            htmlFor="previous_grade_document"
+            required
+            error={err.previous_grade_document}
+            hint="PDF or PNG. Required for grades that are not entry level."
+          />
+        ) : null}
+      </Section>
+
+      {/* ------------------------------------------------ Errors --- */}
+
       {state.error ? (
-        <p role="alert" className="rounded-[8px] bg-danger-bg px-3 py-2 text-[13px] text-danger">
+        <p
+          role="alert"
+          className="rounded-[8px] bg-danger-bg px-3 py-2 text-[13px] text-danger"
+        >
           {state.error}
         </p>
       ) : null}
+
+      {/* ------------------------------------------------ Submit --- */}
 
       <div className="flex items-center gap-3 border-t border-silver pt-5">
         <button
@@ -272,6 +540,7 @@ export function StudentRegistrationForm({
         >
           {pending ? 'Creating…' : 'Create registration'}
         </button>
+
         <span className="text-[12px] text-stone">
           Created in Draft — submit and approve from the student record.
         </span>

@@ -2,9 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+
 import { requireSession } from '@/lib/odoo/auth'
 import { readOne } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
+
 import {
   createGuardian,
   createStudent,
@@ -23,18 +25,43 @@ export interface StudentFormState {
   values?: Record<string, string>
 }
 
+// -------------------------------------------------------
+// Upload configuration
+// -------------------------------------------------------
+
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+]
+
+// -------------------------------------------------------
+// Student registration
+// -------------------------------------------------------
+
 const INTAKE_FIELDS = [
   'name',
   'date_of_birth',
   'gender',
+  'place_of_birth',
+  'primary_language',
+  'national_id',
+  'regional_id',
+  'email',
   'guardian_name',
   'guardian_phone',
+  'guardian_relationship',
+  'guardian_occupation',
   'emergency_contact_name',
   'emergency_contact_phone',
   'fan_number',
   'class_id',
   'admission_type',
   'previous_school',
+  'transfer_reference',
+  'support_need',
   'registration_date',
 ] as const
 
@@ -43,17 +70,18 @@ function text(form: FormData, key: string): string {
 }
 
 function submitted(form: FormData): Record<string, string> {
-  return Object.fromEntries(INTAKE_FIELDS.map((f) => [f, String(form.get(f) ?? '')]))
+  return Object.fromEntries(
+    INTAKE_FIELDS.map((f) => [f, String(form.get(f) ?? '')]),
+  )
 }
 
 /**
  * Register a student in Draft.
  *
- * The scope fields Odoo's `_onchange_class_id` would derive — academic year,
- * section, education level, stream — are read back from the chosen class on
- * the server rather than trusted from the browser. `_check_registration_scope`
- * then verifies they agree, so a tampered payload is rejected by Odoo, not by
- * this function.
+ * The scope fields Odoo's `_onchange_class_id` would derive —
+ * academic year, section, education level, stream — are read
+ * back from the chosen class on the server rather than trusted
+ * from the browser.
  */
 export async function registerStudentAction(
   _previous: StudentFormState,
@@ -62,103 +90,472 @@ export async function registerStudentAction(
   await requireSession()
 
   const fieldErrors: Record<string, string> = {}
+
+  // -------------------------------------------------------
+  // Basic student information
+  // -------------------------------------------------------
+
   const name = text(form, 'name')
   const dob = text(form, 'date_of_birth')
+  const placeOfBirth = text(form, 'place_of_birth')
+  const primaryLanguage = text(form, 'primary_language')
+  const nationalId = text(form, 'national_id')
+  const regionalId = text(form, 'regional_id')
+  const email = text(form, 'email')
+  const gender = text(form, 'gender')
+
+  // -------------------------------------------------------
+  // Guardian information
+  // -------------------------------------------------------
+
   const guardianName = text(form, 'guardian_name')
   const guardianPhone = text(form, 'guardian_phone')
-  const emergencyName = text(form, 'emergency_contact_name')
-  const emergencyPhone = text(form, 'emergency_contact_phone')
+  const guardianRelationship = text(
+    form,
+    'guardian_relationship',
+  )
+  const guardianOccupation = text(
+    form,
+    'guardian_occupation',
+  )
+
+  // -------------------------------------------------------
+  // Emergency contact
+  // -------------------------------------------------------
+
+  const emergencyName = text(
+    form,
+    'emergency_contact_name',
+  )
+
+  const emergencyPhone = text(
+    form,
+    'emergency_contact_phone',
+  )
+
+  // -------------------------------------------------------
+  // Admission information
+  // -------------------------------------------------------
+
   const classId = Number(text(form, 'class_id'))
+  const admissionType = text(form, 'admission_type')
+  const previousSchool = text(form, 'previous_school')
+  const transferReference = text(
+    form,
+    'transfer_reference',
+  )
+  const registrationDate = text(
+    form,
+    'registration_date',
+  )
 
-  if (!name) fieldErrors.name = 'Full name is required.'
-  if (!dob) fieldErrors.date_of_birth = 'Date of birth is required.'
-  if (!guardianName) fieldErrors.guardian_name = 'Parent or guardian name is required.'
-  if (!guardianPhone) fieldErrors.guardian_phone = 'Guardian phone is required.'
-  // Odoo marks both emergency-contact fields required=True on the model.
-  if (!emergencyName) fieldErrors.emergency_contact_name = 'Emergency contact name is required.'
-  if (!emergencyPhone) fieldErrors.emergency_contact_phone = 'Emergency contact phone is required.'
-  if (!classId) fieldErrors.class_id = 'Choose a grade or class.'
+  // -------------------------------------------------------
+  // Other fields
+  // -------------------------------------------------------
 
-  // Mirrors school.student._check_fan_format so the user hears sooner. Odoo
-  // still validates, and owns the uniqueness constraint.
   const fan = text(form, 'fan_number')
+  const supportNeed =
+    form.get('support_need') === 'on'
+
+  // -------------------------------------------------------
+  // Basic validation
+  // -------------------------------------------------------
+
+  if (!name) {
+    fieldErrors.name = 'Full name is required.'
+  }
+
+  if (!dob) {
+    fieldErrors.date_of_birth =
+      'Date of birth is required.'
+  }
+
+  if (!guardianName) {
+    fieldErrors.guardian_name =
+      'Parent or guardian name is required.'
+  }
+
+  if (!guardianPhone) {
+    fieldErrors.guardian_phone =
+      'Guardian phone is required.'
+  }
+
+  if (!guardianRelationship) {
+    fieldErrors.guardian_relationship =
+      'Guardian relationship is required.'
+  }
+
+  if (!emergencyName) {
+    fieldErrors.emergency_contact_name =
+      'Emergency contact name is required.'
+  }
+
+  if (!emergencyPhone) {
+    fieldErrors.emergency_contact_phone =
+      'Emergency contact phone is required.'
+  }
+
+  if (!classId) {
+    fieldErrors.class_id =
+      'Choose a grade or class.'
+  }
+
+  // FAN format
   if (fan && !/^[0-9]{16}$/.test(fan)) {
-    fieldErrors.fan_number = 'FAN must be exactly 16 digits.'
+    fieldErrors.fan_number =
+      'FAN must be exactly 16 digits.'
+  }
+
+  // Email format
+  if (
+    email &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    fieldErrors.email =
+      'Enter a valid email address.'
+  }
+
+  // -------------------------------------------------------
+  // Transfer-specific fields
+  // -------------------------------------------------------
+
+  if (admissionType === 'transfer') {
+    if (!previousSchool) {
+      fieldErrors.previous_school =
+        'Previous school is required for transfer admission.'
+    }
+
+    if (!transferReference) {
+      fieldErrors.transfer_reference =
+        'Transfer reference is required for transfer admission.'
+    }
   }
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors, values: submitted(form) }
-  }
-
-  let scope: ClassScope | null
-  try {
-    scope = await readOne<ClassScope>('school.class', classId, [
-      'name',
-      'academic_year_id',
-      'section_id',
-      'stream_id',
-      'education_level',
-      'is_entry_level',
-    ])
-  } catch (cause) {
-    return { error: toOdooError(cause).message, values: submitted(form) }
-  }
-
-  if (!scope?.academic_year_id) {
     return {
-      error: 'That class has no academic year, so a student cannot be registered against it.',
+      fieldErrors,
       values: submitted(form),
     }
   }
 
+  // -------------------------------------------------------
+  // Get class scope from Odoo
+  // -------------------------------------------------------
+
+  let scope: ClassScope | null
+
+  try {
+    scope = await readOne<ClassScope>(
+      'school.class',
+      classId,
+      [
+        'name',
+        'academic_year_id',
+        'section_id',
+        'stream_id',
+        'education_level',
+        'is_entry_level',
+      ],
+    )
+  } catch (cause) {
+    return {
+      error: toOdooError(cause).message,
+      values: submitted(form),
+    }
+  }
+
+  if (!scope?.academic_year_id) {
+    return {
+      error:
+        'That class has no academic year, so a student cannot be registered against it.',
+      values: submitted(form),
+    }
+  }
+
+  // -------------------------------------------------------
+  // Read uploaded files
+  // -------------------------------------------------------
+
+  const birthCertificate = form.get(
+    'birth_certificate',
+  )
+
+  const previousGradeDocument = form.get(
+    'previous_grade_document',
+  )
+
+  const photoFile = form.get('photo')
+
+  // Birth certificate is required.
+  if (
+    !(birthCertificate instanceof File) ||
+    birthCertificate.size === 0
+  ) {
+    fieldErrors.birth_certificate =
+      'Birth certificate is required.'
+  }
+
+  // Previous grade document is required unless
+  // this is an entry-level class.
+  if (
+    !scope.is_entry_level &&
+    (!(previousGradeDocument instanceof File) ||
+      previousGradeDocument.size === 0)
+  ) {
+    fieldErrors.previous_grade_document =
+      'Previous grade document is required for this class.'
+  }
+
+  // -------------------------------------------------------
+  // Photo validation
+  // -------------------------------------------------------
+
+  if (
+    photoFile instanceof File &&
+    photoFile.size > 0
+  ) {
+    if (photoFile.type !== 'image/png') {
+      fieldErrors.photo =
+        'Student photo must be a PNG image.'
+    }
+
+    if (photoFile.size > MAX_UPLOAD_BYTES) {
+      fieldErrors.photo =
+        'Student photo must be smaller than 8 MB.'
+    }
+  }
+
+  // -------------------------------------------------------
+  // Validate documents
+  // -------------------------------------------------------
+
+  const validateDocument = (
+    file: FormDataEntryValue,
+    field: string,
+  ) => {
+    if (
+      !(file instanceof File) ||
+      file.size === 0
+    ) {
+      return
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      fieldErrors[field] =
+        'Only PDF, JPG and PNG files are accepted.'
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      fieldErrors[field] =
+        'File must be smaller than 8 MB.'
+    }
+  }
+
+  if (!birthCertificate) {
+    return {
+      error: 'Please upload a birth certificate.',
+      fieldErrors,
+      values: submitted(form),
+    }
+  }
+
+  validateDocument(
+    birthCertificate,
+    'birth_certificate',
+  )
+
+  // Previous grade document is optional for
+  // entry-level classes.
+  if (
+    previousGradeDocument instanceof File &&
+    previousGradeDocument.size > 0
+  ) {
+    validateDocument(
+      previousGradeDocument,
+      'previous_grade_document',
+    )
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      fieldErrors,
+      values: submitted(form),
+    }
+  }
+
+  // -------------------------------------------------------
+  // Convert photo to base64
+  // -------------------------------------------------------
+
+  let photoBase64: string | undefined
+
+  if (
+    photoFile instanceof File &&
+    photoFile.size > 0
+  ) {
+    photoBase64 = Buffer.from(
+      await photoFile.arrayBuffer(),
+    ).toString('base64')
+  }
+
+  // -------------------------------------------------------
+  // Build Odoo student intake
+  // -------------------------------------------------------
+
   const intake: StudentIntake = {
     name,
     date_of_birth: dob,
+
+    // Student personal information
+    place_of_birth:
+      placeOfBirth || undefined,
+
+    primary_language:
+      primaryLanguage || undefined,
+
+    national_id:
+      nationalId || undefined,
+
+    regional_id:
+      regionalId || undefined,
+
+    email:
+      email || undefined,
+
+    photo: photoBase64,
+
+    gender:
+      gender || undefined,
+
+    // Guardian information
     guardian_name: guardianName,
+
     guardian_phone: guardianPhone,
-    emergency_contact_name: emergencyName,
-    emergency_contact_phone: emergencyPhone,
+
+    guardian_relationship:
+      guardianRelationship || undefined,
+
+    guardian_occupation:
+      guardianOccupation || undefined,
+
+    // Emergency contact
+    emergency_contact_name:
+      emergencyName,
+
+    emergency_contact_phone:
+      emergencyPhone,
+
+    // Admission information
     class_id: classId,
-    academic_year_id: scope.academic_year_id[0],
-    section_id: scope.section_id ? scope.section_id[0] : undefined,
-    stream_id: scope.stream_id ? scope.stream_id[0] : undefined,
-    education_level: scope.education_level || undefined,
-    gender: text(form, 'gender') || undefined,
-    admission_type: text(form, 'admission_type') || undefined,
-    previous_school: text(form, 'previous_school') || undefined,
-    registration_date: text(form, 'registration_date') || undefined,
-    fan_number: fan || undefined,
+
+    academic_year_id:
+      scope.academic_year_id[0],
+
+    section_id: scope.section_id
+      ? scope.section_id[0]
+      : undefined,
+
+    stream_id: scope.stream_id
+      ? scope.stream_id[0]
+      : undefined,
+
+    education_level:
+      scope.education_level || undefined,
+
+    admission_type:
+      admissionType || undefined,
+
+    previous_school:
+      previousSchool || undefined,
+
+    transfer_reference:
+      transferReference || undefined,
+
+    support_need: supportNeed,
+
+    registration_date:
+      registrationDate || undefined,
+
+    fan_number:
+      fan || undefined,
   }
 
+  // -------------------------------------------------------
+  // Create the student as Draft
+  // -------------------------------------------------------
+
   let id: number
+
   try {
     id = await createStudent(intake)
   } catch (cause) {
-    // Odoo's age-for-grade rule and scope checks produce messages written for
-    // the registrar — surface them unchanged.
-    return { error: toOdooError(cause).message, values: submitted(form) }
+    return {
+      error: toOdooError(cause).message,
+      values: submitted(form),
+    }
+  }
+
+  // -------------------------------------------------------
+  // Upload registration documents
+  // -------------------------------------------------------
+
+  try {
+    const birthBase64 = Buffer.from(
+      await (
+        birthCertificate as File
+      ).arrayBuffer(),
+    ).toString('base64')
+
+    await uploadStudentDocument(
+      id,
+      'birth_certificate',
+      (birthCertificate as File).name,
+      birthBase64,
+    )
+
+    if (
+      previousGradeDocument instanceof File &&
+      previousGradeDocument.size > 0
+    ) {
+      const previousGradeBase64 =
+        Buffer.from(
+          await previousGradeDocument.arrayBuffer(),
+        ).toString('base64')
+
+      await uploadStudentDocument(
+        id,
+        'previous_grade_document',
+        previousGradeDocument.name,
+        previousGradeBase64,
+      )
+    }
+  } catch (cause) {
+    return {
+      error:
+        `Student was created, but the document upload failed: ` +
+        toOdooError(cause).message,
+      values: submitted(form),
+    }
   }
 
   revalidatePath('/students')
+
   redirect(`/students/${id}`)
 }
+
+// =======================================================
+// Student document upload
+// =======================================================
 
 export interface UploadState {
   error?: string
   ok?: string
 }
 
-/** Files Odoo accepts on a student record, and nothing else. */
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024
-const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
-
 /**
  * Attach a document to a student.
  *
- * The bytes travel Browser → Next.js → Odoo and are never exposed through a
- * pre-signed URL: the binaries carry a registrar-only field group that only
- * Odoo can evaluate. Size and content type are checked here because Odoo only
- * validates the filename extension.
+ * The bytes travel Browser → Next.js → Odoo.
  */
 export async function uploadStudentDocumentAction(
   _previous: UploadState,
@@ -166,33 +563,76 @@ export async function uploadStudentDocumentAction(
 ): Promise<UploadState> {
   await requireSession()
 
-  const studentId = Number(form.get('studentId'))
-  const field = String(form.get('field') ?? '')
+  const studentId = Number(
+    form.get('studentId'),
+  )
+
+  const field = String(
+    form.get('field') ?? '',
+  )
+
   const file = form.get('file')
 
-  if (!Number.isFinite(studentId) || !isUploadable(field)) {
-    return { error: 'That upload is not available.' }
+  if (
+    !Number.isFinite(studentId) ||
+    !isUploadable(field)
+  ) {
+    return {
+      error: 'That upload is not available.',
+    }
   }
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: 'Choose a file to upload.' }
+
+  if (
+    !(file instanceof File) ||
+    file.size === 0
+  ) {
+    return {
+      error: 'Choose a file to upload.',
+    }
   }
+
   if (file.size > MAX_UPLOAD_BYTES) {
-    return { error: 'That file is larger than 8 MB.' }
+    return {
+      error: 'That file is larger than 8 MB.',
+    }
   }
+
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return { error: 'Only PDF, JPG and PNG files are accepted.' }
+    return {
+      error:
+        'Only PDF, JPG and PNG files are accepted.',
+    }
   }
 
-  const base64 = Buffer.from(await file.arrayBuffer()).toString('base64')
+  const base64 = Buffer.from(
+    await file.arrayBuffer(),
+  ).toString('base64')
+
   try {
-    await uploadStudentDocument(studentId, field, file.name, base64)
+    await uploadStudentDocument(
+      studentId,
+      field,
+      file.name,
+      base64,
+    )
   } catch (cause) {
-    return { error: toOdooError(cause).message }
+    return {
+      error: toOdooError(cause).message,
+    }
   }
 
-  revalidatePath(`/students/${studentId}`)
-  return { ok: `${file.name} attached.` }
+  revalidatePath(
+    `/students/${studentId}`,
+  )
+
+  return {
+    ok: `${file.name} attached.`,
+  }
 }
+
+// =======================================================
+// Guardian actions
+// =======================================================
 
 export interface GuardianFormState {
   error?: string
@@ -203,8 +643,8 @@ export interface GuardianFormState {
 /**
  * Add a guardian to a student.
  *
- * `_check_single_primary` is Odoo's — a second primary contact is rejected by
- * the model, not pre-checked here. The error surfaces unchanged.
+ * `_check_single_primary` is Odoo's — a second primary
+ * contact is rejected by the model.
  */
 export async function addGuardianAction(
   _previous: GuardianFormState,
@@ -212,47 +652,99 @@ export async function addGuardianAction(
 ): Promise<GuardianFormState> {
   await requireSession()
 
-  const studentId = Number(form.get('studentId'))
-  const name = String(form.get('name') ?? '').trim()
-  const phone = String(form.get('phone') ?? '').trim()
-  const relationship = String(form.get('relationship') ?? '').trim()
-  const occupation = String(form.get('occupation') ?? '').trim()
-  const isPrimary = form.get('is_primary') === 'on'
+  const studentId = Number(
+    form.get('studentId'),
+  )
 
-  const values = { name, phone, relationship, occupation }
-  const fieldErrors: Record<string, string> = {}
-  if (!Number.isFinite(studentId)) {
-    return { error: 'That student could not be found.', values }
+  const name = String(
+    form.get('name') ?? '',
+  ).trim()
+
+  const phone = String(
+    form.get('phone') ?? '',
+  ).trim()
+
+  const relationship = String(
+    form.get('relationship') ?? '',
+  ).trim()
+
+  const occupation = String(
+    form.get('occupation') ?? '',
+  ).trim()
+
+  const isPrimary =
+    form.get('is_primary') === 'on'
+
+  const values = {
+    name,
+    phone,
+    relationship,
+    occupation,
   }
-  if (!name) fieldErrors.name = 'Name is required.'
-  if (!relationship) fieldErrors.relationship = 'Relationship is required.'
+
+  const fieldErrors: Record<string, string> = {}
+
+  if (!Number.isFinite(studentId)) {
+    return {
+      error:
+        'That student could not be found.',
+      values,
+    }
+  }
+
+  if (!name) {
+    fieldErrors.name =
+      'Name is required.'
+  }
+
+  if (!relationship) {
+    fieldErrors.relationship =
+      'Relationship is required.'
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
-    return { fieldErrors, values }
+    return {
+      fieldErrors,
+      values,
+    }
   }
 
   const intake: GuardianIntake = {
     name,
     relationship,
     phone: phone || undefined,
-    occupation: occupation || undefined,
+    occupation:
+      occupation || undefined,
     is_primary: isPrimary,
   }
 
   try {
-    await createGuardian(studentId, intake)
+    await createGuardian(
+      studentId,
+      intake,
+    )
   } catch (cause) {
-    return { error: toOdooError(cause).message, values }
+    return {
+      error: toOdooError(cause).message,
+      values,
+    }
   }
 
-  revalidatePath(`/students/${studentId}`)
-  return { values: {} }
+  revalidatePath(
+    `/students/${studentId}`,
+  )
+
+  return {
+    values: {},
+  }
 }
 
 /**
- * Edit an existing guardian link (relationship, phone, occupation, primary).
- * The contact identity itself (partner_id) is not changed here — that mirrors
- * the backend, which never re-points a guardian link at a different partner.
+ * Edit an existing guardian link
+ * (relationship, phone, occupation, primary).
+ *
+ * The contact identity itself (`partner_id`)
+ * is not changed here.
  */
 export async function editGuardianAction(
   _previous: GuardianFormState,
@@ -260,30 +752,66 @@ export async function editGuardianAction(
 ): Promise<GuardianFormState> {
   await requireSession()
 
-  const guardianId = Number(form.get('guardianId'))
-  const studentId = Number(form.get('studentId'))
-  if (!Number.isFinite(guardianId) || !Number.isFinite(studentId)) {
-    return { error: 'That guardian could not be found.' }
+  const guardianId = Number(
+    form.get('guardianId'),
+  )
+
+  const studentId = Number(
+    form.get('studentId'),
+  )
+
+  if (
+    !Number.isFinite(guardianId) ||
+    !Number.isFinite(studentId)
+  ) {
+    return {
+      error:
+        'That guardian could not be found.',
+    }
   }
 
-  const relationship = String(form.get('relationship') ?? '').trim()
-  const phone = String(form.get('phone') ?? '').trim()
-  const occupation = String(form.get('occupation') ?? '').trim()
-  const isPrimary = form.get('is_primary') === 'on'
+  const relationship = String(
+    form.get('relationship') ?? '',
+  ).trim()
+
+  const phone = String(
+    form.get('phone') ?? '',
+  ).trim()
+
+  const occupation = String(
+    form.get('occupation') ?? '',
+  ).trim()
+
+  const isPrimary =
+    form.get('is_primary') === 'on'
 
   const values: GuardianUpdate = {
-    relationship: relationship || undefined,
-    phone: phone || undefined,
-    occupation: occupation || undefined,
+    relationship:
+      relationship || undefined,
+
+    phone:
+      phone || undefined,
+
+    occupation:
+      occupation || undefined,
+
     is_primary: isPrimary,
   }
 
   try {
-    await updateGuardian(guardianId, values)
+    await updateGuardian(
+      guardianId,
+      values,
+    )
   } catch (cause) {
-    return { error: toOdooError(cause).message }
+    return {
+      error: toOdooError(cause).message,
+    }
   }
 
-  revalidatePath(`/students/${studentId}`)
+  revalidatePath(
+    `/students/${studentId}`,
+  )
+
   return {}
 }
