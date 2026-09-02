@@ -35,3 +35,19 @@ export function splitFullName(name: string): NameParts {
 export function joinFullName({ first, middle, last }: NameParts): string {
   return [first, middle, last].map((part) => part.trim()).filter(Boolean).join(' ')
 }
+
+/**
+ * The parts an edit form should start from.
+ *
+ * Stored parts are only trustworthy when they still rebuild the stored name.
+ * They often do not: the demo seed writes `name` in full alongside a partial
+ * first/last, so student 'SRS Demo Abel Kebede' carries first 'SRS' and last
+ * 'Kebede' and nothing else. Editing from those parts and saving would run
+ * `_compute_name` and quietly shorten the student's name to 'SRS Kebede'.
+ *
+ * Falling back to a split of the stored name keeps the first save lossless
+ * whatever state the record is in.
+ */
+export function editableNameParts(name: string, stored: NameParts): NameParts {
+  return joinFullName(stored) === name.trim() ? stored : splitFullName(name)
+}

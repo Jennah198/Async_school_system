@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Card, ErrorState, PageHeader } from '@/components/ui'
 import { hasAccess } from '@/lib/odoo/client'
 import { toOdooError } from '@/lib/odoo/errors'
-import { splitFullName } from '@/lib/name-parts'
+import { editableNameParts } from '@/lib/name-parts'
 import {
   getStudent,
   getStudentPersonalData,
@@ -64,17 +64,13 @@ export default async function EditStudentPage({ params }: PageProps<'/students/[
       Object.prototype.hasOwnProperty.call(meta, field) && !meta[field].readonly,
   )
 
-  const stored = {
+  // Stored parts are used only when they still rebuild the stored name; both
+  // registration and the demo seed leave records where they do not.
+  const parts = editableNameParts(String(student.name || ''), {
     first: String(student.first_name || ''),
     middle: String(student.middle_name || ''),
     last: String(student.last_name || ''),
-  }
-  // Registration writes `name` directly, so a student created through this app
-  // has no parts stored. Seeding them from the name keeps the save lossless.
-  const parts =
-    stored.first || stored.middle || stored.last
-      ? stored
-      : splitFullName(String(student.name || ''))
+  })
 
   return (
     <>
