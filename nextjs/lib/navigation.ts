@@ -82,6 +82,14 @@ const NAV_RULES: NavRuleSection[] = [
           any(r.isRegistrar, r.isTeacher, r.isAdmin, r.isExamOfficer, r.isDirector, r.isFrontOffice),
       },
       {
+  href: '/guardians',
+  label: 'Guardians',
+  icon: 'students',
+  description: 'Student guardian relationships',
+  visible: (r) =>
+    any(r.isRegistrar, r.isAdmin, r.isDirector, r.isFrontOffice),
+},
+      {
         href: '/enrollments',
         label: 'Enrolments',
         icon: 'enrolment',

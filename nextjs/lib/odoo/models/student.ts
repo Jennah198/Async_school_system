@@ -1,5 +1,5 @@
 import 'server-only'
-import { create, readOne, searchRead } from '@/lib/odoo/client'
+import { create, readOne, searchRead, write } from '@/lib/odoo/client'
 import { orNullOnRefusal } from '@/lib/odoo/errors'
 import { listDomain, type ListOptions } from '@/lib/odoo/list'
 import type { Many2one, Page, Selection } from '@/lib/odoo/types'
@@ -284,7 +284,6 @@ export async function uploadStudentDocument(
   filename: string,
   base64: string,
 ): Promise<boolean> {
-  const { write } = await import('@/lib/odoo/client')
   return write('school.student', [studentId], {
     [field]: base64,
     [UPLOADABLE[field]]: filename,
@@ -321,4 +320,113 @@ export async function listClassScopes(): Promise<ClassScope[]> {
     { domain: [['active', '=', true]], limit: 200, order: 'name' },
   )
   return page.rows
+}
+
+/* ------------------------------------------------------------ guardian --- */
+
+export interface GuardianIntake {
+  name: string
+  phone?: string
+  relationship: string
+  occupation?: string
+  is_primary?: boolean
+}
+
+/**
+ * Add a guardian to a student.
+ *
+ * Mirrors `school.student._ensure_guardian`: reuse an existing res.partner
+ * with the same name and phone rather than creating a duplicate contact, so
+ * one parent can serve several students as a single record. Odoo still owns
+ * `_check_single_primary` — a second `is_primary=True` here is rejected by
+ * the model, not pre-checked in this layer.
+ */
+export async function createGuardian(studentId: number, intake: GuardianIntake): Promise<number> {
+  const phone = intake.phone || false
+
+  const existing = await searchRead<{ id: number }>('res.partner', ['id'], {
+    domain: [
+      ['name', '=', intake.name],
+      ['phone', '=', phone],
+    ],
+    limit: 1,
+  })
+
+  const partnerId =
+    existing.rows[0]?.id ?? (await create('res.partner', { name: intake.name, phone, type: 'contact' }))
+
+  if (existing.rows[0] && phone) {
+    // An existing contact keeps whatever phone it already has unless this
+    // guardian link is the one supplying it.
+    await write('res.partner', [partnerId], { phone })
+  }
+
+  return create('school.student.guardian', {
+    student_id: studentId,
+    partner_id: partnerId,
+    relationship: intake.relationship,
+    occupation: intake.occupation || false,
+    is_primary: intake.is_primary ?? false,
+  })
+}
+
+export interface GuardianUpdate {
+  relationship?: string
+  phone?: string
+  occupation?: string
+  is_primary?: boolean
+}
+
+/** Edit an existing guardian link. `phone` is a related field onto the partner. */
+export function updateGuardian(guardianId: number, values: GuardianUpdate): Promise<boolean> {
+  const payload = Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value !== undefined),
+  )
+  return write('school.student.guardian', [guardianId], payload)
+}
+export interface GlobalGuardianRow {
+  id: number
+  student_id: Many2one
+  partner_id: Many2one
+  name: string | false
+  relationship: Selection
+  phone: string | false
+  occupation: string | false
+  is_primary: boolean
+}
+
+export const GUARDIAN_FILTERS = {
+  relationship: { field: 'relationship' },
+} as const
+
+export function listAllGuardians(
+  options: ListOptions = {},
+): Promise<Page<GlobalGuardianRow>> {
+  return searchRead<GlobalGuardianRow>(
+    'school.student.guardian',
+    [
+      'student_id',
+      'partner_id',
+      'name',
+      'relationship',
+      'phone',
+      'occupation',
+      'is_primary',
+    ],
+    {
+      domain: listDomain(options, {
+        searchFields: [
+          'student_id.name',
+          'partner_id.name',
+          'name',
+          'phone',
+          'occupation',
+        ],
+        filters: GUARDIAN_FILTERS,
+      }),
+      limit: options.limit ?? 25,
+      offset: options.offset ?? 0,
+      order: options.order ?? 'student_id',
+    },
+  )
 }
