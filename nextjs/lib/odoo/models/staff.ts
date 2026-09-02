@@ -93,6 +93,8 @@ export interface StaffDetail {
   email: string | false
   gender: Selection
   primary_responsibility: Selection
+  campus_id: Many2one
+  manager_id: Many2one
   active: boolean
 }
 
@@ -149,6 +151,8 @@ const STAFF_DETAIL_FIELDS = [
   'email',
   'gender',
   'primary_responsibility',
+  'campus_id',
+  'manager_id',
   'active',
 ] as const
 
@@ -251,6 +255,62 @@ export async function listJobTitles(): Promise<JobTitleOption[]> {
   return page.rows
 }
 
+/**
+ * Staff members who can be somebody's reporting manager.
+ *
+ * `_check_manager_is_not_self` refuses a self-reference, so the caller's own
+ * record is dropped here too — offering a choice Odoo will reject is a worse
+ * experience than not offering it, and the constraint still has the final say.
+ */
+export async function listManagerOptions(excludeId?: number): Promise<Array<{ id: number; name: string; staff_id: string | false }>> {
+  const page = await orNullOnRefusal(
+    searchRead<{ id: number; name: string; staff_id: string | false }>(
+      'school.staff',
+      ['name', 'staff_id'],
+      {
+        domain: [
+          ['active', '=', true],
+          ['state', '=', 'active'],
+          ...(excludeId ? [['id', '!=', excludeId]] : []),
+        ],
+        limit: 300,
+        order: 'name',
+      },
+    ),
+  )
+  return page?.rows ?? []
+}
+
+/** Campuses, for the responsibility and staff forms. Read as the caller. */
+export async function listCampusOptions(): Promise<Array<{ id: number; name: string }>> {
+  const page = await orNullOnRefusal(
+    searchRead<{ id: number; name: string }>('school.campus', ['name'], {
+      domain: [['active', '=', true]],
+      limit: 100,
+      order: 'name',
+    }),
+  )
+  return page?.rows ?? []
+}
+
+/**
+ * The teacher profile on this staff record, if there is one.
+ *
+ * `school.teacher.staff_id` is required and one profile per staff member is
+ * the practical rule, so this reads at most one. It is what makes the staff
+ * page the entry point to the teaching side of the domain.
+ */
+export function getTeacherProfileFor(
+  staffId: number,
+): Promise<Page<{ id: number; name: string; teacher_id: string | false; teaching_status: Selection }> | null> {
+  return orNullOnRefusal(
+    searchRead('school.teacher', ['name', 'teacher_id', 'teaching_status'], {
+      domain: [['staff_id', '=', staffId]],
+      limit: 1,
+    }),
+  )
+}
+
 /* ---------------------------------------------------------------- write --- */
 
 export interface StaffIntake {
@@ -310,34 +370,66 @@ export function updateStaff(id: number, values: Record<string, unknown>): Promis
 
 /* ------------------------------------------------------- state machine --- */
 
-export interface ResponsibilityIntake {
-  responsibility: string
-  is_primary?: boolean
-  department?: string
-  campus_id?: number
-  manager_id?: number
-  start_date: string
-  end_date?: string
-  active?: boolean
-}
-
+/**
+ * Responsibilities decide whether a staff member can be activated at all.
+ *
+ * `_missing_registration_fields` requires "at least one active Responsibility"
+ * before the record may leave Draft, and `_compute_primary_responsibility`
+ * reads the primary one. Without a way to manage these from the frontend, a
+ * staff member created here could be stuck in Draft permanently — which is
+ * what was happening.
+ */
 export function addResponsibility(
   staffId: number,
-  values: ResponsibilityIntake,
+  values: {
+    responsibility: string
+    is_primary: boolean
+    department?: string
+    campus_id?: number
+    manager_id?: number
+    start_date: string
+    end_date?: string
+  },
 ): Promise<number> {
   return create('school.staff.responsibility', {
     staff_id: staffId,
-    is_primary: values.is_primary ?? false,
-    active: values.active ?? true,
-    ...values,
+    ...Object.fromEntries(Object.entries(values).filter(([, v]) => v !== undefined && v !== '')),
   })
 }
-export function endResponsibility(
-  id: number,
-  endDate: string,
-): Promise<boolean> {
-  return write('school.staff.responsibility', [id], {
-    end_date: endDate,
-    active: false,
+
+/**
+ * End a responsibility rather than delete it.
+ *
+ * The model is `mail.thread`-tracked precisely so the history survives, and
+ * the brief calls for responsibility history to be recorded. Closing it with
+ * an end date and clearing `active` keeps the row; deleting would not.
+ */
+export function endResponsibility(id: number, endDate: string): Promise<boolean> {
+  return write('school.staff.responsibility', [id], { end_date: endDate, active: false })
+}
+
+/**
+ * Make one responsibility the primary.
+ *
+ * `_check_single_primary` refuses a second primary on the same staff member,
+ * so the previous one is cleared first — in the caller's own session, so both
+ * writes are authorised the same way. Odoo still re-checks.
+ */
+export async function setPrimaryResponsibility(staffId: number, id: number): Promise<boolean> {
+  const current = await searchRead<{ id: number }>('school.staff.responsibility', ['id'], {
+    domain: [
+      ['staff_id', '=', staffId],
+      ['is_primary', '=', true],
+      ['id', '!=', id],
+    ],
+    limit: 10,
   })
+  if (current.rows.length) {
+    await write(
+      'school.staff.responsibility',
+      current.rows.map((row) => row.id),
+      { is_primary: false },
+    )
+  }
+  return write('school.staff.responsibility', [id], { is_primary: true })
 }

@@ -25,7 +25,9 @@ import {
   listGuardians,
 } from '@/lib/odoo/models/student'
 import { DocumentUpload } from './document-upload'
+import { GuardiansSection } from './guardian-form'
 import { m2oLabel } from '@/lib/odoo/types'
+import { selectionOptions } from '@/lib/odoo/selections'
 import { availableTransitions } from '@/lib/odoo/workflows'
 
 export const metadata = { title: 'Student · Async School' }
@@ -37,16 +39,19 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
   const id = Number((await params).id)
   if (!Number.isFinite(id)) notFound()
 
-  let student, guardians, enrollments, personal, documents, canWrite
+  let student, guardians, enrollments, personal, documents, canWrite, canWriteGuardians, relationships
   try {
-    ;[student, guardians, enrollments, personal, documents, canWrite] = await Promise.all([
-      getStudent(id),
-      listGuardians(id),
-      listEnrollments({ studentId: id }),
-      getStudentPersonalData(id),
-      getStudentDocuments(id),
-      hasAccess('school.student', 'write'),
-    ])
+    ;[student, guardians, enrollments, personal, documents, canWrite, canWriteGuardians, relationships] =
+      await Promise.all([
+        getStudent(id),
+        listGuardians(id),
+        listEnrollments({ studentId: id }),
+        getStudentPersonalData(id),
+        getStudentDocuments(id),
+        hasAccess('school.student', 'write'),
+        hasAccess('school.student.guardian', 'create'),
+        selectionOptions('school.student.guardian', 'relationship'),
+      ])
   } catch (cause) {
     return (
       <>
@@ -72,6 +77,9 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
           >
             Back to students
           </Link>
+          // TODO(students): add a "Print" button here once wired, calling
+          // school.student.action_print_student_report() — backend already
+          // supports this, frontend just needs the trigger.
         }
       />
 
@@ -79,6 +87,11 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
         <div className="space-y-4">
           <Card>
             <CardHeader title="Registration" />
+            {/* TODO(students): registration form/detail is missing these
+                fields that exist on the backend model: national_id,
+                regional_id, place_of_birth, primary_language, email, photo,
+                transfer_reference, support_need. Decide which belong here
+                (read-only detail) vs. only on the create form. */}
             <dl className="grid gap-4 sm:grid-cols-3">
               <DetailField label="Student ID" value={student.regno || '—'} />
               <DetailField label="Admission number" value={student.admission_number || '—'} />
@@ -119,23 +132,20 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
             </div>
             {guardians === null ? (
               <EmptyState title="Not available to your role" />
-            ) : guardians.rows.length === 0 ? (
+            ) : guardians.rows.length === 0 && !canWriteGuardians ? (
               <EmptyState
                 title="No guardian linked yet"
                 hint={`Intake contact: ${student.guardian_name || '—'} · ${student.guardian_phone || '—'}`}
               />
             ) : (
-              <DataTable columns={['Guardian', 'Relationship', 'Primary', 'Phone', 'Occupation']}>
-                {guardians.rows.map((row) => (
-                  <Row key={row.id}>
-                    <Cell strong>{row.name || m2oLabel(row.partner_id)}</Cell>
-                    <Cell>{formatSelection(row.relationship)}</Cell>
-                    <Cell>{row.is_primary ? <Badge tone="solid">Primary</Badge> : null}</Cell>
-                    <Cell>{row.phone || '—'}</Cell>
-                    <Cell>{row.occupation || '—'}</Cell>
-                  </Row>
-                ))}
-              </DataTable>
+              <div className="px-6 pb-6">
+                <GuardiansSection
+                  studentId={student.id}
+                  guardians={guardians.rows}
+                  relationships={relationships}
+                  canWrite={canWriteGuardians}
+                />
+              </div>
             )}
           </Card>
 
@@ -144,6 +154,12 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
               title="Registration documents"
               hint="Odoo requires the birth certificate before a registration can be submitted."
             />
+            {/* TODO(students): only birth_certificate and previous_grade_document
+                are handled here. Backend also has a dynamic document-rule system
+                (school.document / school.document.rule) for additional required
+                documents per grade/admission-type/stream — not shown anywhere yet.
+                Also: workflows.ts already defines a `document` verify/reject
+                workflow — check if/where that's meant to be used. */}
             {documents === null ? (
               <p className="text-[12px] text-slate">Not available to your role.</p>
             ) : (
@@ -200,6 +216,11 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
                 ))}
               </DataTable>
             )}
+            {/* TODO(students): transfer wizard (school.enrollment.transfer) and
+                promotion wizard (school.promotion.wizard) should launch from
+                the enrollment detail page (/enrollments/[id]), not here — but
+                a "Transfer" / "Promote" action linking there could live in
+                this card. */}
           </Card>
         </div>
 
@@ -225,6 +246,11 @@ export default async function StudentDetailPage({ params }: PageProps<'/students
               revalidate={[`/students/${student.id}`, '/students']}
               canWrite={canWrite}
             />
+            {/* TODO(students): registration questionnaire (school.registration.question
+                / school.registration.answer) is required per grade/admission-type/
+                stream and blocks submission if unanswered — not shown anywhere in
+                the frontend yet. Needs its own section, probably here or on the
+                create form. */}
             <p className="mt-4 border-t border-silver pt-3 text-[11px] text-stone">
               Odoo checks completeness on submit and approve — documents, questionnaire answers and
               the age-for-grade rule included — and names anything missing.
