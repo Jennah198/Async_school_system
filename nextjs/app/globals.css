@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+/*
+  School ERP design system.
+
+  Derived from design.md (Cal.com — "Monochrome Utility, Human Touch"). The
+  palette, radii, shadows, pill buttons and card-as-building-block are taken
+  verbatim. What is deliberately NOT taken is the marketing page geometry:
+  design.md describes a 1200px centred landing page with 96px section gaps and
+  48–64px display type. This is a dense administrative application, so the
+  shell runs full width, and the type scale stops at 24px. design.md itself
+  specifies "Density: compact", which is the instruction being followed here.
+
+  Two documented deviations from design.md's "no colour beyond the blue
+  accent":
+
+  1. A single muted red for destructive confirmation and form validation,
+     which must not signal by text alone.
+
+  2. A five-hue status palette — used *only* for status chips and the dot
+     inside them, and never as a page or control colour. A school system's
+     whole job is telling somebody what state a hundred rows are in, and
+     monochrome fill weight alone did not survive a dense table. Every chip
+     still carries its word, so the hue is reinforcement rather than the
+     signal; see lib/status.ts for the semantic tones these map to.
+*/
+
+@theme {
+  /* ---- Palette (design.md) ------------------------------------------- */
+  --color-ink: #101010;
+  --color-graphite: #242424;
+  --color-slate: #6b7280;
+  --color-stone: #898989;
+  --color-silver: #e5e7eb;
+  --color-paper: #f4f4f4;
+  --color-white: #ffffff;
+  --color-action-blue: #0099ff;
+  --color-info-bg: #eff6fe;
+  /* Documented deviation — destructive + validation only. */
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+
+  /* Documented deviation — status chips only. Desaturated to sit calmly
+     beside the monochrome table they annotate. */
+  --color-status-idle: #6b7280;
+  --color-status-idle-bg: #f1f2f4;
+  --color-status-progress: #b25e09;
+  --color-status-progress-bg: #fdf4e7;
+  --color-status-active: #0a66c2;
+  --color-status-active-bg: #eaf3fc;
+  --color-status-done: #1a7f52;
+  --color-status-done-bg: #e9f6ef;
+  --color-status-stopped: #b42318;
+  --color-status-stopped-bg: #fef3f2;
+  --color-status-muted: #898989;
+  --color-status-muted-bg: transparent;
+
+  /* ---- Type ----------------------------------------------------------- */
+  /* design.md substitutes: Cal Sans → Poppins, body → Inter Light. */
+  --font-display: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 12px;
+  --text-body-sm: 14px;
+  --text-body: 16px;
+  --text-subheading: 18px;
+  --text-heading-sm: 20px;
+  --text-heading: 24px;
+
+  /* ---- Radii (design.md) ---------------------------------------------- */
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-pill: 9999px;
+
+  /* ---- Elevation (design.md — cards separate by shadow, not border) ---- */
+  --shadow-card: rgba(36, 36, 36, 0.05) 0px 4px 8px 0px;
+  --shadow-raised: rgba(36, 36, 36, 0.7) 0px 1px 5px -4px,
+    rgba(36, 36, 36, 0.05) 0px 4px 8px 0px;
+}
+
+/* ---- Base ------------------------------------------------------------- */
+
+html {
+  color-scheme: light; /* design.md: "Theme: light" — single-theme by intent. */
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-graphite);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  font-weight: 300;
+  letter-spacing: -0.2px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-graphite);
+  letter-spacing: 0.2px;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+/* Digits in a column must line up — every list screen depends on it. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-action-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

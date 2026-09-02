@@ -1,0 +1,318 @@
+import 'server-only'
+import { callKw, create, readOne, searchRead, write } from '@/lib/odoo/client'
+import { orNullOnRefusal } from '@/lib/odoo/errors'
+import type { Many2one, Page, Selection } from '@/lib/odoo/types'
+
+/**
+ * Staff registration, activation and employment history.
+ *
+ * Everything consequential here is an Odoo method call. In particular
+ * `action_activate` is never reimplemented: it mints the STF- sequence, calls
+ * `_ensure_employee()` to create the hr.employee, flips `state`, and
+ * reactivates linked teacher profiles. Writing `state` directly would skip all
+ * of that.
+ */
+
+/**
+ * Resolves to null when Odoo refuses the read.
+ *
+ * A refusal is an expected outcome on a role-scoped ERP — several models are
+ * legitimately invisible to some roles — so one restricted panel must not take
+ * the whole page down. It never hides a value the caller was entitled to.
+ */
+
+/* ------------------------------------------------------------- metadata --- */
+
+export interface SelectionOption {
+  value: string
+  label: string
+}
+
+export interface FieldMeta {
+  type: string
+  string: string
+  required: boolean
+  readonly: boolean
+  selection?: SelectionOption[]
+}
+
+/**
+ * Field metadata straight from Odoo.
+ *
+ * Odoo omits fields the caller may not access, so this doubles as the
+ * permission check for the form: `school.staff.address` and `notes` are
+ * restricted to base.group_system, and `date_of_birth`/`fayda_id` to the
+ * personal-data groups. Rendering only what comes back means the form adapts
+ * to the signed-in role instead of guessing — and never offers an input whose
+ * write Odoo would refuse.
+ */
+export async function staffFieldMeta(): Promise<Record<string, FieldMeta>> {
+  const raw = await callKw<Record<string, Record<string, unknown>>>(
+    'school.staff',
+    'fields_get',
+    [],
+    { attributes: ['type', 'string', 'required', 'readonly', 'selection'] },
+  )
+  const out: Record<string, FieldMeta> = {}
+  for (const [name, meta] of Object.entries(raw)) {
+    out[name] = {
+      type: String(meta.type ?? 'char'),
+      string: String(meta.string ?? name),
+      required: Boolean(meta.required),
+      readonly: Boolean(meta.readonly),
+      selection: Array.isArray(meta.selection)
+        ? (meta.selection as Array<[string, string]>).map(([value, label]) => ({ value, label }))
+        : undefined,
+    }
+  }
+  return out
+}
+
+/** True when the current user may see/write this field at all. */
+export function canUse(meta: Record<string, FieldMeta>, field: string): boolean {
+  return Object.prototype.hasOwnProperty.call(meta, field)
+}
+
+/* ----------------------------------------------------------------- read --- */
+
+export interface StaffDetail {
+  id: number
+  name: string
+  first_name: string | false
+  last_name: string | false
+  staff_id: string | false
+  department: Selection
+  job_title_id: Many2one
+  employment_type: Selection
+  employment_status: Selection
+  state: Selection
+  hire_date: string | false
+  end_date: string | false
+  phone: string | false
+  mobile: string | false
+  email: string | false
+  gender: Selection
+  primary_responsibility: Selection
+  active: boolean
+}
+
+/**
+ * What Odoo says still blocks activation, read on its own.
+ *
+ * `missing_to_activate` is a computed field that depends on `date_of_birth`,
+ * which is restricted to the personal-data groups — so computing it raises
+ * AccessError for a teacher and would take the whole record page down. It is
+ * only needed by the activation panel, which requires write access anyway.
+ */
+export async function getActivationBlockers(id: number): Promise<string | null> {
+  const row = await orNullOnRefusal(
+    readOne<{ missing_to_activate: string | false }>(id ? 'school.staff' : 'school.staff', id, [
+      'missing_to_activate',
+    ]),
+  )
+  return row ? String(row.missing_to_activate || '') : null
+}
+
+/**
+ * The HR and login links, read separately.
+ *
+ * Rendering `employee_id` means Odoo resolving an hr.employee display name,
+ * and hr.employee is not readable by a plain internal user — so including it
+ * in the main read made the whole page 403 for a teacher. Split out and
+ * optional: the record stays visible, the links simply do not.
+ */
+export interface StaffLinks {
+  employee_id: Many2one
+  user_id: Many2one
+}
+
+export function getStaffLinks(id: number): Promise<StaffLinks | null> {
+  return orNullOnRefusal(readOne<StaffLinks>('school.staff', id, ['employee_id', 'user_id'])) as Promise<
+    StaffLinks | null
+  >
+}
+
+const STAFF_DETAIL_FIELDS = [
+  'name',
+  'first_name',
+  'last_name',
+  'staff_id',
+  'department',
+  'job_title_id',
+  'employment_type',
+  'employment_status',
+  'state',
+  'hire_date',
+  'end_date',
+  'phone',
+  'mobile',
+  'email',
+  'gender',
+  'primary_responsibility',
+  'active',
+] as const
+
+export function getStaff(id: number): Promise<StaffDetail | null> {
+  return readOne<StaffDetail>('school.staff', id, STAFF_DETAIL_FIELDS)
+}
+
+/**
+ * Personal data, fetched separately and deliberately.
+ *
+ * `date_of_birth` and `fayda_id` carry a field-level group. Asking for them
+ * as a role that lacks it raises AccessError — so this returns null rather
+ * than failing the whole page, and the caller renders "restricted".
+ * This is not a workaround: the value is never obtained.
+ */
+export function getStaffPersonalData(
+  id: number,
+): Promise<{ date_of_birth: string | false; fayda_id: string | false; age: number } | null> {
+  return orNullOnRefusal(readOne('school.staff', id, ['date_of_birth', 'fayda_id', 'age']))
+}
+
+export interface ResponsibilityRow {
+  id: number
+  responsibility: Selection
+  is_primary: boolean
+  department: Selection
+  campus_id: Many2one
+  manager_id: Many2one
+  start_date: string
+  end_date: string | false
+  active: boolean
+}
+
+export function listResponsibilities(staffId: number): Promise<Page<ResponsibilityRow>> {
+  return searchRead<ResponsibilityRow>(
+    'school.staff.responsibility',
+    ['responsibility', 'is_primary', 'department', 'campus_id', 'manager_id', 'start_date', 'end_date', 'active'],
+    { domain: [['staff_id', '=', staffId]], limit: 50 },
+  )
+}
+
+export interface EmploymentRow {
+  id: number
+  job_title_id: Many2one
+  responsibility: Selection
+  manager_id: Many2one
+  campus_id: Many2one
+  date_start: string
+  date_end: string | false
+  reason: string | false
+}
+
+/**
+ * Employment history and daily status are owned by HR: only
+ * group_school_hr and group_school_admin carry an ACL row for them
+ * (security/ir.model.access.csv). A Registrar viewing a staff record therefore
+ * gets AccessError on these two reads, which is correct — so they resolve to
+ * null and the page renders "not available to your role" for that card alone
+ * rather than failing whole.
+ */
+export function listEmployment(staffId: number): Promise<Page<EmploymentRow> | null> {
+  return orNullOnRefusal(searchRead<EmploymentRow>(
+    'school.staff.employment',
+    ['job_title_id', 'responsibility', 'manager_id', 'campus_id', 'date_start', 'date_end', 'reason'],
+    { domain: [['staff_id', '=', staffId]], limit: 50 },
+  ))
+}
+
+export interface DailyStatusRow {
+  id: number
+  date: string
+  status: Selection
+  check_in: string | false
+  check_out: string | false
+  worked_hours: number
+}
+
+export function listDailyStatus(staffId: number, limit = 14): Promise<Page<DailyStatusRow> | null> {
+  return orNullOnRefusal(searchRead<DailyStatusRow>(
+    'school.staff.daily.status',
+    ['date', 'status', 'check_in', 'check_out', 'worked_hours'],
+    { domain: [['staff_id', '=', staffId]], limit, order: 'date desc' },
+  ))
+}
+
+export interface JobTitleOption {
+  id: number
+  name: string
+  department: Selection
+  responsibility: Selection
+}
+
+/** Job titles carry the responsibility they grant — see school.job.title. */
+export async function listJobTitles(): Promise<JobTitleOption[]> {
+  const page = await searchRead<JobTitleOption>(
+    'school.job.title',
+    ['name', 'department', 'responsibility'],
+    { domain: [['active', '=', true]], limit: 200, order: 'department, name' },
+  )
+  return page.rows
+}
+
+/* ---------------------------------------------------------------- write --- */
+
+export interface StaffIntake {
+  first_name: string
+  last_name: string
+  department: string
+  job_title_id: number
+  employment_status: string
+  employment_type?: string
+  gender?: string
+  phone?: string
+  mobile?: string
+  email?: string
+  hire_date?: string
+  date_of_birth?: string
+  fayda_id?: string
+  /** Responsibility the new staff member holds. Required to leave Draft. */
+  responsibility: string
+}
+
+/**
+ * Create a staff record ready for activation.
+ *
+ * The one piece of UI behaviour that has no server-side equivalent is
+ * `_onchange_job_title_id`, which seeds the primary responsibility line from
+ * `job_title_id.responsibility`. Onchange never fires over RPC, so without it
+ * `action_activate` fails on "at least one active Responsibility".
+ *
+ * Rather than re-deriving that rule here, the responsibility is an explicit
+ * field on the form (defaulted in the UI from the chosen job title) and is
+ * written inline as a One2many command — the same payload the onchange
+ * builds, in the same transaction as the staff row.
+ */
+export async function createStaff(intake: StaffIntake): Promise<number> {
+  const { responsibility, ...values } = intake
+  const payload: Record<string, unknown> = {
+    ...Object.fromEntries(Object.entries(values).filter(([, v]) => v !== undefined && v !== '')),
+    responsibility_ids: [
+      [
+        0,
+        0,
+        {
+          responsibility,
+          is_primary: true,
+          department: intake.department,
+          start_date: intake.hire_date || new Date().toISOString().slice(0, 10),
+        },
+      ],
+    ],
+  }
+  return create('school.staff', payload)
+}
+
+export function updateStaff(id: number, values: Record<string, unknown>): Promise<boolean> {
+  return write('school.staff', [id], values)
+}
+
+/* ------------------------------------------------------- state machine --- */
+
+export function addResponsibility(
+  staffId: number,
+  values: { responsibility: string; is_primary: boolean; department?: string; start_date: string },
+): Promise<number> {
+  return create('school.staff.responsibility', { staff_id: staffId, ...values })
+}
