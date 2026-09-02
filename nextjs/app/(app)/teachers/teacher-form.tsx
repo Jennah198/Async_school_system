@@ -162,11 +162,28 @@ export function TeacherForm({
       </FormSection>
 
       {mode === 'create' ? (
-        <Note>
-          Creating the profile also creates the teaching login, against the email on the staff
-          record, and Odoo emails a password reset. No password passes through this application.
-          If the staff record has no email, Odoo refuses and says so.
-        </Note>
+        <>
+          <FormSection
+            title="Teaching login"
+            hint="Creating the profile also creates the Odoo login, against the email on the staff record."
+          >
+            <TextField
+              label="Initial password"
+              name="login_password"
+              type="password"
+              autoComplete="new-password"
+              defaultValue=""
+              error={errors.login_password}
+              hint="Leave blank to have Odoo email a set-password link instead."
+            />
+          </FormSection>
+          <Note>
+            The password is handed straight to Odoo and never stored on the teacher record — it is
+            a non-stored field there too. Leave it blank only if outgoing mail is configured;
+            without a mail server the link goes nowhere and the teacher cannot sign in. If the
+            staff record has no email address, Odoo refuses and says so.
+          </Note>
+        </>
       ) : null}
 
       <FormActions>
