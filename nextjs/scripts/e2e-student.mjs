@@ -150,12 +150,26 @@ try {
   const { context: teacherCtx, page: teacherPage } = await signIn(browser, TEACHER)
   await teacherPage.goto(`${BASE}/students/${studentId}`, { waitUntil: 'domcontentloaded' })
   const teacherBody = (await teacherPage.textContent('body')) ?? ''
+  /*
+    Three acceptable outcomes, all of them Odoo refusing something:
+
+      404          the record rule hides the student entirely. This is the
+                   strongest answer — it does not even confirm the record
+                   exists — and is what the page now returns when `read`
+                   comes back empty.
+      permission   the read raised and the page explained it.
+      restricted   the record is visible but the personal-data fields are not.
+
+    What would fail is a teacher seeing another class's student in full.
+  */
+  const notFound = /could not be found/i.test(teacherBody)
   const refused = /do not have permission|Not available to your role/i.test(teacherBody)
   const restricted = /Restricted to your role/i.test(teacherBody)
   check(
     'teacher is scoped out of, or field-restricted on, this student',
-    refused || restricted,
-    refused ? 'record out of scope' : 'personal data restricted',
+    notFound || refused || restricted,
+    notFound ? 'record hidden by the record rule (404)'
+      : refused ? 'read refused' : 'personal data restricted',
   )
   check('teacher page leaks no traceback', !/Traceback|usr\/lib\/python/i.test(teacherBody))
   await teacherPage.goto(`${BASE}/students/new`, { waitUntil: 'domcontentloaded' })

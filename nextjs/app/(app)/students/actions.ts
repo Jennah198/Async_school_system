@@ -287,25 +287,20 @@ export async function registerStudentAction(
 
   const photoFile = form.get('photo')
 
-  // Birth certificate is required.
-  if (
-    !(birthCertificate instanceof File) ||
-    birthCertificate.size === 0
-  ) {
-    fieldErrors.birth_certificate =
-      'Birth certificate is required.'
-  }
+  /*
+    Documents are not required to *create* a student, only to submit the
+    registration.
 
-  // Previous grade document is required unless
-  // this is an entry-level class.
-  if (
-    !scope.is_entry_level &&
-    (!(previousGradeDocument instanceof File) ||
-      previousGradeDocument.size === 0)
-  ) {
-    fieldErrors.previous_grade_document =
-      'Previous grade document is required for this class.'
-  }
+    Odoo draws that line itself: `_check_required_fields_for_submission`
+    returns early unless `registration_status` is submitted or approved, so a
+    draft student with no birth certificate is valid as far as the backend is
+    concerned. Requiring one here was a rule the frontend invented, and it made
+    registration impossible on a deployment with nowhere to put the files.
+
+    The requirement is not gone — it moves to where Odoo puts it. Attempting to
+    submit without the documents still fails, with Odoo's own message naming
+    everything that is missing.
+  */
 
   // -------------------------------------------------------
   // Photo validation
@@ -501,18 +496,22 @@ export async function registerStudentAction(
   // -------------------------------------------------------
 
   try {
-    const birthBase64 = Buffer.from(
-      await (
-        birthCertificate as File
-      ).arrayBuffer(),
-    ).toString('base64')
+    // The birth certificate is optional at this point, so upload it only when
+    // one was actually attached. Sending an empty file made Odoo reject the
+    // upload on its extension check — and the student, already created, was
+    // reported as a failure.
+    if (birthCertificate instanceof File && birthCertificate.size > 0) {
+      const birthBase64 = Buffer.from(
+        await birthCertificate.arrayBuffer(),
+      ).toString('base64')
 
-    await uploadStudentDocument(
-      id,
-      'birth_certificate',
-      (birthCertificate as File).name,
-      birthBase64,
-    )
+      await uploadStudentDocument(
+        id,
+        'birth_certificate',
+        birthCertificate.name,
+        birthBase64,
+      )
+    }
 
     if (
       previousGradeDocument instanceof File &&
