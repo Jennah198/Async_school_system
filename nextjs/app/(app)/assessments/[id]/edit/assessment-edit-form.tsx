@@ -14,7 +14,12 @@ import {
   TextField,
   type Option,
 } from '@/components/ui/form'
-import { updateAssessmentAction, type AssessmentFormState } from '../../actions'
+import { 
+  updateAssessmentAction, 
+  deleteAssessmentAction, 
+  type AssessmentFormState,
+  type AssessmentDeleteState 
+} from '../../actions'
 
 export interface AssessmentEditValues {
   id: number
@@ -42,12 +47,18 @@ export function AssessmentEditForm({
     updateAssessmentAction,
     {},
   )
+  
+  // State for the delete action
+  const [deleteState, deleteAction, isDeleting] = useActionState<AssessmentDeleteState, FormData>(
+    deleteAssessmentAction,
+    {}
+  )
+
   const prior = state.values ?? {}
   const value = (field: keyof AssessmentEditValues) =>
     prior[field] !== undefined ? prior[field] : String(assessment[field] ?? '')
   const errors = state.fieldErrors ?? {}
 
-  // React state for auto-fill logic (initialized with the existing database values)
   const [maxMark, setMaxMark] = useState(value('max_mark'))
   const [weight, setWeight] = useState(value('weight'))
 
@@ -56,121 +67,152 @@ export function AssessmentEditForm({
     
     if (type === 'quiz') {
       setMaxMark('5')
-      setWeight('1')
+      setWeight('5')
     } else if (type === 'assignment') {
       setMaxMark('15')
-      setWeight('2')
+      setWeight('15')
     } else if (type === 'test') {
       setMaxMark('10')
-      setWeight('3')
+      setWeight('10')
     } else if (type === 'mid' || type === 'mid_term' || type === 'midterm') {
       setMaxMark('20')
-      setWeight('4')
+      setWeight('20')
     } else if (type === 'final' || type === 'exam' || type === 'final_exam') {
       setMaxMark('50')
-      setWeight('5')
+      setWeight('50')
     }
   }
 
   return (
-    <form action={formAction} className="space-y-6">
-      <input type="hidden" name="id" value={assessment.id} />
-      <FormError>{state.error}</FormError>
+    <>
+      <form action={formAction} className="space-y-6">
+        <input type="hidden" name="id" value={assessment.id} />
+        <FormError>{state.error}</FormError>
 
-      <FormSection title="Assessment">
-        <TextField
-          label="Name"
-          name="name"
-          required
-          defaultValue={value('name')}
-          error={errors.name}
-        />
-        <ReadOnlyField label="Class" value={assessment.className} />
-        <ReadOnlyField label="Subject" value={assessment.subject} />
-        <ReadOnlyField
-          label="Term"
-          value={assessment.term}
-          hint="Set by the teacher assignment this was created against."
-        />
-      </FormSection>
-
-      {setupFrozen ? (
-        <FormSection title="Setup" columns={1}>
-          <div className="space-y-3">
-            <p className="text-[12px] text-slate">
-              The mark list has been generated, so Odoo has frozen the type, date, maximum mark
-              and weight — {assessment.markCount}{' '}
-              {assessment.markCount === 1 ? 'row was' : 'rows were'} built against them. The name
-              above can still be corrected.
-            </p>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <ReadOnlyField label="Type" value={assessment.assessment_type || '—'} />
-              <ReadOnlyField label="Date" value={assessment.date || '—'} />
-              <ReadOnlyField label="Maximum mark" value={assessment.max_mark} />
-              <ReadOnlyField label="Weight" value={assessment.weight} />
-            </dl>
-          </div>
-        </FormSection>
-      ) : (
-        <FormSection
-          title="Setup"
-          hint="Editable only while the assessment is in draft. Generating the mark list fixes these."
-        >
-          <SelectField
-            label="Type"
-            name="assessment_type"
+        <FormSection title="Assessment">
+          <TextField
+            label="Name"
+            name="name"
             required
-            options={types}
-            defaultValue={value('assessment_type')}
-            onChange={handleTypeChange}
-            error={errors.assessment_type}
+            defaultValue={value('name')}
+            error={errors.name}
           />
-          <Field
-            label="Date"
-            htmlFor="date"
-            required
-            error={errors.date}
-            hint="Must fall inside the term."
+          <ReadOnlyField label="Class" value={assessment.className} />
+          <ReadOnlyField label="Subject" value={assessment.subject} />
+          <ReadOnlyField
+            label="Term"
+            value={assessment.term}
+            hint="Set by the teacher assignment this was created against."
+          />
+        </FormSection>
+
+        {setupFrozen ? (
+          <FormSection title="Setup" columns={1}>
+            <div className="space-y-3">
+              <p className="text-[12px] text-slate">
+                The mark list has been generated, so Odoo has frozen the type, date, maximum mark
+                and weight — {assessment.markCount}{' '}
+                {assessment.markCount === 1 ? 'row was' : 'rows were'} built against them. The name
+                above can still be corrected.
+              </p>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <ReadOnlyField label="Type" value={assessment.assessment_type || '—'} />
+                <ReadOnlyField label="Date" value={assessment.date || '—'} />
+                <ReadOnlyField label="Maximum mark" value={assessment.max_mark} />
+                <ReadOnlyField label="Weight" value={assessment.weight} />
+              </dl>
+            </div>
+          </FormSection>
+        ) : (
+          <FormSection
+            title="Setup"
+            hint="Editable only while the assessment is in draft. Generating the mark list fixes these."
           >
-            <EthiopianDateInput id="date" name="date" defaultValue={value('date')} />
-          </Field>
-          <TextField
-            label="Maximum mark"
-            name="max_mark"
-            type="number"
-            min={1}
-            step="0.5"
-            required
-            value={maxMark}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxMark(e.target.value)}
-            error={errors.max_mark}
-          />
-          <TextField
-            label="Weight"
-            name="weight"
-            type="number"
-            min={0.1}
-            step="0.1"
-            required
-            value={weight}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWeight(e.target.value)}
-            error={errors.weight}
-            hint="All assessments for this subject and term may not exceed 100 together."
-          />
-        </FormSection>
-      )}
+            <SelectField
+              label="Type"
+              name="assessment_type"
+              required
+              options={types}
+              defaultValue={value('assessment_type')}
+              onChange={handleTypeChange}
+              error={errors.assessment_type}
+            />
+            <Field
+              label="Date"
+              htmlFor="date"
+              required
+              error={errors.date}
+              hint="Must fall inside the term."
+            >
+              <EthiopianDateInput id="date" name="date" defaultValue={value('date')} />
+            </Field>
+            <TextField
+              label="Maximum mark"
+              name="max_mark"
+              type="number"
+              min={1}
+              step="0.5"
+              required
+              value={maxMark}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxMark(e.target.value)}
+              error={errors.max_mark}
+            />
+            <TextField
+              label="Weight"
+              name="weight"
+              type="number"
+              min={0.1}
+              step="0.1"
+              required
+              value={weight}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWeight(e.target.value)}
+              error={errors.weight}
+              hint="All assessments for this subject and term may not exceed 100 together."
+            />
+          </FormSection>
+        )}
 
-      <FormActions>
-        <Button type="submit" pending={pending}>
-          {pending ? 'Saving…' : 'Save changes'}
-        </Button>
-        <Link
-          href={`/assessments/${assessment.id}`}
-          className="rounded-[9999px] border border-silver px-5 py-2.5 text-[13px] hover:bg-paper"
-        >
-          Cancel
-        </Link>
-      </FormActions>
-    </form>
+        <FormActions>
+          <Button type="submit" pending={pending}>
+            {pending ? 'Saving…' : 'Save changes'}
+          </Button>
+          <Link
+            href={`/assessments/${assessment.id}`}
+            className="rounded-[9999px] border border-silver px-5 py-2.5 text-[13px] hover:bg-paper"
+          >
+            Cancel
+          </Link>
+        </FormActions>
+      </form>
+
+      {!setupFrozen ? (
+        <form action={deleteAction} className="mt-8 border-t border-silver pt-6">
+          <input type="hidden" name="id" value={assessment.id} />
+          
+          <div className="flex items-center justify-between rounded-[8px] border border-danger/20 bg-danger-bg/30 p-4">
+            <div>
+              <h3 className="text-[13px] font-medium text-danger">Delete Assessment</h3>
+              <p className="mt-0.5 text-[12px] text-stone">
+                Permanently remove this draft and free up its weight capacity.
+              </p>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isDeleting}
+              className="rounded-[9999px] bg-danger px-4 py-2 text-[13px] font-medium text-white hover:bg-danger/90 disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
+
+          {deleteState?.error ? (
+            <p role="alert" className="mt-2 text-[12px] text-danger">
+              {deleteState.error}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
+    </>
   )
 }

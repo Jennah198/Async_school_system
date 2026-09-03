@@ -220,6 +220,17 @@ export function updateAssessment(
   return write('school.assessment', [id], values)
 }
 
+/**
+ * Delete an assessment.
+ *
+ * Odoo's `school.assessment.unlink` refuses to delete records that have progressed
+ * beyond the draft state or have associated audit events, ensuring the integrity
+ * of academic records. This function will throw an error if Odoo rejects the deletion.
+ */
+export function deleteAssessment(id: number): Promise<boolean> {
+  return callKw<boolean>('school.assessment', 'unlink', [[id]])
+}
+
 export interface AssessmentIntake {
   assignmentId: number
   name: string
@@ -571,3 +582,9 @@ export async function generateReportCards(input: {
 export function canGenerateReportCards(): Promise<boolean> {
   return hasAccess('school.report.card.generate', 'create')
 }
+
+export interface AssessmentDeleteState {
+  error?: string
+  ok?: string
+}
+

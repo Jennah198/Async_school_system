@@ -10,6 +10,7 @@ import {
   saveMark,
   unlockAssessment,
   updateAssessment,
+  deleteAssessment, // Added this import
 } from '@/lib/odoo/models/assessment'
 
 export interface MarkListState {
@@ -273,4 +274,35 @@ export async function updateAssessmentAction(
   revalidatePath(`/assessments/${id}`)
   revalidatePath('/assessments')
   redirect(`/assessments/${id}`)
+}
+
+export interface AssessmentDeleteState {
+  error?: string
+  ok?: string
+}
+
+/**
+ * Server action to delete a draft assessment.
+ */
+export async function deleteAssessmentAction(
+  _previous: AssessmentDeleteState,
+  form: FormData,
+): Promise<AssessmentDeleteState> {
+  await requireSession()
+
+  const id = Number(String(form.get('id') ?? '').trim())
+  if (!Number.isFinite(id) || id <= 0) {
+    return { error: 'That assessment could not be identified.' }
+  }
+
+  try {
+    await deleteAssessment(id)
+  } catch (cause) {
+    return { error: toOdooError(cause).message }
+  }
+  
+  revalidatePath('/assessments')
+  redirect('/assessments') 
+  
+  return {} 
 }
