@@ -67,9 +67,22 @@ export async function searchRead<T>(
     offset?: number
     order?: string
     context?: Record<string, unknown>
+    /**
+     * Skip the companion `search_count`.
+     *
+     * A paged list needs the total to draw "showing 1-50 of 812", and pays a
+     * second query for it. A caller that only wants the rows — a dashboard
+     * panel showing the latest six registrations, a lookup of every class so
+     * their grades can be joined — does not, and on a screen making twenty
+     * reads that second query is half the traffic for a number nobody sees.
+     *
+     * `total` then reports the rows actually returned, which is the truth
+     * available without asking again.
+     */
+    withTotal?: boolean
   } = {},
 ): Promise<Page<T>> {
-  const { domain = [], limit = 50, offset = 0, order, context } = options
+  const { domain = [], limit = 50, offset = 0, order, context, withTotal = true } = options
   return guarded(async () => {
   const sid = await sessionId()
 
@@ -82,10 +95,12 @@ export async function searchRead<T>(
       ...(order ? { order } : {}),
       ...(context ? { context } : {}),
     }),
-    rawCallKw<number>(sid, model, 'search_count', [domain], context ? { context } : {}),
+    withTotal
+      ? rawCallKw<number>(sid, model, 'search_count', [domain], context ? { context } : {})
+      : Promise.resolve(null),
   ])
 
-  return { rows, total, offset, limit }
+  return { rows, total: total ?? rows.length, offset, limit }
   })
 }
 

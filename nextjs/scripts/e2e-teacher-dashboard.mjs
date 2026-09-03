@@ -85,7 +85,23 @@ async function dashboardFor(login) {
   await page.fill('#login', login)
   await page.fill('#password', PASSWORD)
   await page.click('#submit-login')
-  await page.waitForURL('**/dashboard', { timeout: 90_000 })
+  /*
+    Signing in no longer always lands on the dashboard: `landingPath` sends a
+    registrar to their submitted registrations and a teacher to their open mark
+    lists. So wait for the sign-in to complete, then go to the dashboard
+    deliberately — this suite is about that screen, not about where the bounce
+    happens to point this week.
+  */
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 90_000 })
+  await page.goto(`${BASE}/dashboard`, { waitUntil: 'domcontentloaded' })
+/*
+  The dashboard streams: Next sends a skeleton immediately and swaps the real
+  page in when Odoo answers. Landing on the URL is therefore not the same as
+  the content being there, and reading `main` too early captures the
+  placeholder. The heading only exists on the real page, so waiting for it
+  waits for exactly the right thing.
+*/
+await page.waitForSelector('main h1', { timeout: 90_000 })
   const text = (await page.locator('main').innerText()) ?? ''
   const chips = await page.locator('main dd span').allTextContents()
   const assignmentRows = await page
