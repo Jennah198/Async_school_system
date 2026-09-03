@@ -88,7 +88,15 @@ for (const [role, login] of Object.entries(ROLES)) {
   await page.fill('#login', login)
   await page.fill('#password', PASSWORD)
   await page.click('#submit-login')
-  await page.waitForURL('**/dashboard', { timeout: 90_000 })
+  /*
+    Signing in no longer always lands on the dashboard: `landingPath` sends a
+    registrar to their submitted registrations and a teacher to their open mark
+    lists. So wait for the sign-in to complete, then go to the dashboard
+    deliberately — this suite is about that screen, not about where the bounce
+    happens to point this week.
+  */
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 90_000 })
+  await page.goto(`${BASE}/dashboard`, { waitUntil: 'domcontentloaded' })
   /*
     The dashboard streams: Next sends a skeleton immediately and swaps the real
     page in when Odoo answers. Landing on the URL is therefore not the same as
